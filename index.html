@@ -423,7 +423,7 @@
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: CLEAN DARK INSPECTION & LOCK CONTROL PANEL -->
+      <!-- RIGHT COLUMN: CLEAN INTERACTION PANEL (TEXT CLUE HIDDEN -> VISUALIZED ON LEFT) -->
       <div class="md:col-span-6 p-6 flex flex-col justify-between bg-[#0e0e12]/95">
         <div>
           <!-- Modal Header -->
@@ -431,27 +431,19 @@
             <span id="modal-q-badge" class="px-2 py-0.5 rounded bg-zinc-900 border border-white/15 text-zinc-200 font-mono text-[11px] font-semibold">Q01 / 30</span>
             <span id="modal-room-badge" class="text-xs text-zinc-400 truncate">제1방: 1F 원무과 접수처</span>
           </div>
-          <div id="modal-obj-title" class="text-lg font-semibold text-zinc-100 tracking-tight mb-4">원무과 접수 데스크</div>
+          <div id="modal-obj-title" class="text-lg font-semibold text-zinc-100 tracking-tight mb-3">원무과 접수 데스크</div>
 
-          <!-- Observed Clue Text Box -->
-          <div class="p-3.5 bg-[#09090b] rounded-lg border border-white/10 mb-3 text-left">
-            <div class="flex justify-between items-center mb-1.5">
-              <span class="text-[11px] font-medium text-zinc-400">관측된 단서 (Observed Clue)</span>
-              <span id="modal-carrier-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-white/10 font-mono">Text</span>
+          <!-- Hidden raw text containers (kept for DOM compatibility; clues are visualized on Left) -->
+          <div class="hidden">
+            <span id="modal-carrier-badge">Text</span>
+            <div id="modal-clue-payload"></div>
+            <div id="modal-prop-gimmick-box">
+              <span id="modal-prop-kind-badge"></span>
+              <div id="modal-prop-desc"></div>
             </div>
-            <div id="modal-clue-payload" class="text-xs text-zinc-200 leading-relaxed break-keep"></div>
           </div>
 
-          <!-- Physical Prop Gimmick Observation Box (No answer spoiler) -->
-          <div id="modal-prop-gimmick-box" class="hidden p-3 bg-amber-950/20 rounded-lg border border-amber-500/25 mb-3 text-left">
-            <div class="flex justify-between items-center mb-1">
-              <span class="text-[11px] font-medium text-amber-400">연결된 물리 소품 관찰</span>
-              <span id="modal-prop-kind-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono">Clock</span>
-            </div>
-            <div id="modal-prop-desc" class="text-xs text-amber-100/85 leading-relaxed break-keep"></div>
-          </div>
-
-          <!-- Unlock Target Info & 2-Stage Progressive Hint System (No direct answer spoiler!) -->
+          <!-- Unlock Target & 2-Stage Progressive Hint System -->
           <div class="p-3 bg-[#09090b] rounded-lg border border-white/10 mb-4 text-left text-xs space-y-2">
             <div class="flex items-center justify-between gap-2">
               <span class="text-[11px] text-zinc-500">해금 타겟</span>
@@ -473,47 +465,52 @@
               <span id="modal-prob-rule"></span>
             </div>
           </div>
+
+          <!-- Physical Mechanism Interactive Controls (Shown for Q03, Q06, Q19, Q26) -->
+          <div id="modal-device-controls" class="hidden mb-4"></div>
         </div>
 
         <div>
-          <!-- 4-Slot Dial Display -->
-          <div class="flex justify-center gap-3 my-3">
-            <div class="flex flex-col items-center">
-              <button onclick="turnDial(0, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
-              <div id="d0" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
-              <button onclick="turnDial(0, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
+          <!-- 4-Slot Dial Input Section (Shown when code lock input is required) -->
+          <div id="modal-dial-section">
+            <div class="flex justify-center gap-3 my-3">
+              <div class="flex flex-col items-center">
+                <button onclick="turnDial(0, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
+                <div id="d0" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
+                <button onclick="turnDial(0, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
+              </div>
+              <div class="flex flex-col items-center">
+                <button onclick="turnDial(1, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
+                <div id="d1" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
+                <button onclick="turnDial(1, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
+              </div>
+              <div class="flex flex-col items-center">
+                <button onclick="turnDial(2, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
+                <div id="d2" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
+                <button onclick="turnDial(2, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
+              </div>
+              <div class="flex flex-col items-center">
+                <button onclick="turnDial(3, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
+                <div id="d3" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
+                <button onclick="turnDial(3, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
+              </div>
             </div>
-            <div class="flex flex-col items-center">
-              <button onclick="turnDial(1, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
-              <div id="d1" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
-              <button onclick="turnDial(1, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
-            </div>
-            <div class="flex flex-col items-center">
-              <button onclick="turnDial(2, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
-              <div id="d2" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
-              <button onclick="turnDial(2, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
-            </div>
-            <div class="flex flex-col items-center">
-              <button onclick="turnDial(3, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
-              <div id="d3" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
-              <button onclick="turnDial(3, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
-            </div>
-          </div>
 
-          <!-- Directional Quick Pad (Shown when DirectionalLock) -->
-          <div id="modal-dir-pad" class="hidden mb-3 p-2 bg-[#09090b] rounded-lg border border-white/10 text-center">
-            <div class="text-[10px] text-zinc-500 font-mono mb-1.5">방향 자물쇠 입력 (U:위 · D:아래 · L:왼쪽 · R:오른쪽)</div>
-            <div class="flex justify-center gap-1.5">
-              <button onclick="pushDirKey('U')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">↑ U</button>
-              <button onclick="pushDirKey('D')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">↓ D</button>
-              <button onclick="pushDirKey('L')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">← L</button>
-              <button onclick="pushDirKey('R')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">→ R</button>
-              <button onclick="clearDirKeys()" class="px-2.5 py-1 rounded bg-zinc-950 hover:bg-zinc-800 border border-white/10 text-zinc-400 font-mono text-xs">지우기</button>
+            <!-- Directional Quick Pad (Shown when DirectionalLock) -->
+            <div id="modal-dir-pad" class="hidden mb-3 p-2 bg-[#09090b] rounded-lg border border-white/10 text-center">
+              <div class="text-[10px] text-zinc-500 font-mono mb-1.5">방향 자물쇠 입력 (U:위 · D:아래 · L:왼쪽 · R:오른쪽)</div>
+              <div class="flex justify-center gap-1.5">
+                <button onclick="pushDirKey('U')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">↑ U</button>
+                <button onclick="pushDirKey('D')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">↓ D</button>
+                <button onclick="pushDirKey('L')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">← L</button>
+                <button onclick="pushDirKey('R')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">→ R</button>
+                <button onclick="clearDirKeys()" class="px-2.5 py-1 rounded bg-zinc-950 hover:bg-zinc-800 border border-white/10 text-zinc-400 font-mono text-xs">지우기</button>
+              </div>
             </div>
           </div>
 
           <div id="lock-feedback" class="text-xs py-2 px-3 rounded-md text-zinc-400 bg-[#09090b] mb-3 border border-white/10 text-center">
-            단서를 해독해 4자리 코드를 입력한 뒤 해금을 누르세요.
+            좌측 단서를 관찰해 장치를 조작하거나 코드를 입력한 뒤 해금을 누르세요.
           </div>
 
           <div class="flex gap-2">
@@ -4541,6 +4538,204 @@
       playSfx('click');
     }
 
+    // -------------------------------------------------------------
+    // PHYSICAL MECHANISM DEVICES (Interactive Hardware Gimmicks)
+    // -------------------------------------------------------------
+    let deviceState = {
+      q03Cups: [1, 2, 3, 0],           // 0:U, 1:R, 2:D, 3:L -> Target: [0, 1, 2, 3]
+      q06Hour: 10, q06Min: 30,         // Target: 3:00
+      q19Weights: [],                  // Selected specimen IDs -> Target sum: 1780g
+      q26Psi: 1250, q26WheelDeg: 0     // Target: 800 PSI
+    };
+
+    function completePhysicalDevice(objId) {
+      const obj = studioObjects.find(o => o.id === objId);
+      if (!obj || obj.solved) return;
+      const pass = (obj.passcode || '0000').toUpperCase();
+      for (let i = 0; i < 4; i++) {
+        dialChars[i] = pass[i] || '0';
+        const el = document.getElementById('d' + i);
+        if (el) el.textContent = dialChars[i];
+      }
+      checkLockSolution();
+    }
+
+    function rotateCupDevice(idx) {
+      deviceState.q03Cups[idx] = (deviceState.q03Cups[idx] + 1) % 4;
+      playSfx('click');
+      const obj = studioObjects.find(o => o.id === activeModalObjId);
+      if (obj) renderRightDeviceControls(obj);
+      if (deviceState.q03Cups.join(',') === '0,1,2,3') {
+        completePhysicalDevice(obj.id);
+      }
+    }
+
+    function adjustClockDevice(dh, dm) {
+      deviceState.q06Hour = ((deviceState.q06Hour - 1 + dh + 12) % 12) + 1;
+      deviceState.q06Min = (deviceState.q06Min + dm + 60) % 60;
+      playSfx('click');
+      const obj = studioObjects.find(o => o.id === activeModalObjId);
+      if (obj) renderRightDeviceControls(obj);
+      if (deviceState.q06Hour === 3 && deviceState.q06Min === 0) {
+        completePhysicalDevice(obj.id);
+      }
+    }
+
+    function toggleSpecimenWeight(specId, grams) {
+      const idx = deviceState.q19Weights.findIndex(w => w.id === specId);
+      if (idx >= 0) deviceState.q19Weights.splice(idx, 1);
+      else deviceState.q19Weights.push({ id: specId, grams });
+      playSfx('click');
+      const obj = studioObjects.find(o => o.id === activeModalObjId);
+      if (obj) renderRightDeviceControls(obj);
+      const sum = deviceState.q19Weights.reduce((acc, w) => acc + w.grams, 0);
+      if (sum === 1780) {
+        completePhysicalDevice(obj.id);
+      }
+    }
+
+    function turnSteamValve(deltaPsi) {
+      deviceState.q26Psi = Math.max(400, Math.min(1500, deviceState.q26Psi + deltaPsi));
+      deviceState.q26WheelDeg += (deltaPsi < 0 ? -45 : 45);
+      playSfx('click');
+      const obj = studioObjects.find(o => o.id === activeModalObjId);
+      if (obj) renderRightDeviceControls(obj);
+      if (deviceState.q26Psi === 800) {
+        completePhysicalDevice(obj.id);
+      }
+    }
+
+    // 우측 컬럼: 물리 장치 조작 UI (Q03, Q06, Q19, Q26) vs 일반 자물쇠 다이얼 분기
+    function renderRightDeviceControls(obj) {
+      const devBox = document.getElementById('modal-device-controls');
+      const dialSec = document.getElementById('modal-dial-section');
+      if (!devBox || !dialSec) return;
+
+      const q = obj.qNum;
+      if (![3, 6, 19, 26].includes(q)) {
+        devBox.classList.add('hidden');
+        devBox.innerHTML = '';
+        dialSec.classList.remove('hidden');
+        return;
+      }
+
+      // 물리 장치 문항: 우측에 물리 조작 장치만 표시하고 불필요한 4자리 숫자 다이얼 숨김
+      dialSec.classList.add('hidden');
+      devBox.classList.remove('hidden');
+
+      if (q === 3) {
+        const dirLabels = ['북(U)', '동(R)', '남(D)', '서(L)'];
+        const dirAngles = [0, 90, 180, 270];
+        const current = obj.solved ? [0, 1, 2, 3] : deviceState.q03Cups;
+        const cupsSvg = current.map((dirIdx, i) => {
+          const cx = 42 + i * 72;
+          return `
+            <g transform="translate(${cx},48)" class="cursor-pointer" onclick="rotateCupDevice(${i})">
+              <g transform="rotate(${dirAngles[dirIdx]})">
+                <rect x="-4" y="-30" width="8" height="12" rx="3" fill="#38bdf8"/>
+                <circle r="18" fill="#e4e4e7" stroke="#52525b" stroke-width="2.5"/>
+                <circle r="12" fill="#3b2414"/>
+              </g>
+              <text y="33" text-anchor="middle" fill="#d4d4d8" font-size="10" font-family="monospace">${i+1}. ${dirLabels[dirIdx]}</text>
+            </g>
+          `;
+        }).join('');
+        devBox.innerHTML = `
+          <div class="p-3.5 bg-[#09090b] rounded-lg border border-white/10">
+            <div class="text-[11px] font-mono text-zinc-400 mb-2">물리 장치 · 머그잔을 클릭해 손잡이를 회전 정렬</div>
+            <svg viewBox="0 0 300 94" class="w-full h-24 select-none">${cupsSvg}</svg>
+          </div>
+        `;
+      } else if (q === 6) {
+        const h = obj.solved ? 3 : deviceState.q06Hour;
+        const m = obj.solved ? 0 : deviceState.q06Min;
+        const isAligned = (h === 3 && m === 0);
+        devBox.innerHTML = `
+          <div class="p-3.5 bg-[#09090b] rounded-lg border border-white/10 text-center">
+            <div class="text-[11px] font-mono text-zinc-400 mb-2">물리 장치 · 괘종시계 시침/분침 기어 조작</div>
+            <div class="text-2xl font-mono font-semibold ${isAligned ? 'text-emerald-400' : 'text-zinc-100'} mb-3">
+              ${String(h).padStart(2,'0')} : ${String(m).padStart(2,'0')}
+            </div>
+            <div class="flex justify-center gap-2">
+              <button onclick="adjustClockDevice(1, 0)" class="px-3.5 py-2 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-mono text-zinc-200">시침 +1h</button>
+              <button onclick="adjustClockDevice(0, 15)" class="px-3.5 py-2 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-mono text-zinc-200">분침 +15m</button>
+            </div>
+          </div>
+        `;
+      } else if (q === 19) {
+        const specimens = [
+          { id: 'brain', label: '뇌 표본', g: 1400 },
+          { id: 'liver', label: '간 표본', g: 900 },
+          { id: 'heart', label: '심장 표본', g: 350 },
+          { id: 'lung',  label: '폐 표본', g: 450 },
+          { id: 'eye',   label: '안구 표본', g: 30 }
+        ];
+        const sum = obj.solved ? 1780 : deviceState.q19Weights.reduce((a, b) => a + b.grams, 0);
+        const isMatch = (sum === 1780);
+        const btns = specimens.map(sp => {
+          const active = obj.solved ? ['brain','heart','eye'].includes(sp.id) : deviceState.q19Weights.some(w => w.id === sp.id);
+          return `
+            <button onclick="toggleSpecimenWeight('${sp.id}', ${sp.g})"
+                    class="px-2 py-2 rounded-md border text-xs font-mono transition-colors ${
+                      active ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-300' : 'bg-zinc-900 border-white/10 text-zinc-300 hover:bg-zinc-800'
+                    }">
+              <div class="font-semibold">${sp.label}</div>
+              <div class="text-[10px] text-zinc-400">${sp.g}g ${active ? '· 올림' : ''}</div>
+            </button>
+          `;
+        }).join('');
+        devBox.innerHTML = `
+          <div class="p-3.5 bg-[#09090b] rounded-lg border border-white/10">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-[11px] font-mono text-zinc-400">물리 장치 · 정밀 저울 계량</span>
+              <span class="text-lg font-mono font-semibold ${isMatch ? 'text-emerald-400' : 'text-zinc-100'}">${String(sum).padStart(4, '0')} g</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5">${btns}</div>
+          </div>
+        `;
+      } else if (q === 26) {
+        const psi = obj.solved ? 800 : deviceState.q26Psi;
+        const isSafe = (psi === 800);
+        const needleDeg = -110 + ((psi - 400) / 1100) * 220;
+        devBox.innerHTML = `
+          <div class="p-3.5 bg-[#09090b] rounded-lg border border-white/10 flex flex-col items-center">
+            <div class="text-[11px] font-mono text-zinc-400 mb-1">물리 장치 · 고압 증기 밸브 감압</div>
+            <svg viewBox="0 0 220 118" class="w-48 h-24 mb-1">
+              <path d="M 30 102 A 80 80 0 0 1 190 102" fill="none" stroke="#27272a" stroke-width="12" stroke-linecap="round"/>
+              <path d="M 70 34 A 80 80 0 0 1 118 22" fill="none" stroke="#10b981" stroke-width="12"/>
+              <path d="M 145 30 A 80 80 0 0 1 190 102" fill="none" stroke="#be123c" stroke-width="12"/>
+              <g transform="rotate(${needleDeg} 110 102)">
+                <line x1="110" y1="102" x2="110" y2="36" stroke="#f4f4f5" stroke-width="2.5" stroke-linecap="round"/>
+              </g>
+              <circle cx="110" cy="102" r="7" fill="#52525b"/>
+              <text x="110" y="88" text-anchor="middle" fill="${isSafe ? '#34d399' : '#fb7185'}" font-family="monospace" font-size="13" font-weight="bold">${psi} PSI</text>
+            </svg>
+            <div class="flex items-center gap-3">
+              <button onclick="turnSteamValve(-50)" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-mono text-zinc-200">감압 (-50)</button>
+              <svg viewBox="0 0 44 44" class="w-9 h-9 transition-transform duration-150" style="transform: rotate(${deviceState.q26WheelDeg}deg)">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="#dc2626" stroke-width="4"/>
+                <line x1="22" y1="4" x2="22" y2="40" stroke="#dc2626" stroke-width="3"/>
+                <line x1="4" y1="22" x2="40" y2="22" stroke="#dc2626" stroke-width="3"/>
+              </svg>
+              <button onclick="turnSteamValve(50)" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-mono text-zinc-200">가압 (+50)</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function moveUvFlashlight(e) {
+      const container = e.currentTarget;
+      const rect = container.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      const overlay = document.getElementById('uv-reveal-layer');
+      if (overlay) {
+        overlay.style.clipPath = `circle(52px at ${x}% ${y}%)`;
+        overlay.style.opacity = '1';
+      }
+    }
+
     function renderPropVisualArtwork(obj, prop) {
       const stage = document.getElementById('modal-visual-stage');
       const caption = document.getElementById('modal-visual-caption');
@@ -4550,35 +4745,36 @@
       const name = obj.name || '';
       if (caption) caption.textContent = `${prop ? prop.name : obj.name} · ${obj.carrierType || 'Physical Inspection'}`;
 
-      // 1. 괘종시계 / 아날로그 시계 (Q06)
+      // 1. 괘종시계 + 붉은 혈서 메모 단서 시각화 (Q06)
       if (q === 6 || name.includes('시계')) {
         stage.innerHTML = `
-          <div class="relative w-72 h-72 flex items-center justify-center">
-            <svg viewBox="0 0 260 260" class="w-full h-full drop-shadow-2xl">
-              <defs>
-                <radialGradient id="clockFace" cx="50%" cy="45%" r="55%">
-                  <stop offset="0%" stop-color="#e7dec6"/>
-                  <stop offset="80%" stop-color="#c4b592"/>
-                  <stop offset="100%" stop-color="#8c7a56"/>
-                </radialGradient>
-              </defs>
-              <circle cx="130" cy="130" r="116" fill="#291d14" stroke="#785a32" stroke-width="8"/>
-              <circle cx="130" cy="130" r="102" fill="url(#clockFace)" stroke="#3f2d1d" stroke-width="3"/>
-              <!-- Blood Stain -->
-              <path d="M 155 70 Q 180 95 168 125 Q 192 140 175 162 Q 150 148 148 115 Z" fill="#7f1d1d" opacity="0.42"/>
-              <!-- Clock Numerals -->
-              <text x="130" y="54" text-anchor="middle" fill="#1c1917" font-family="serif" font-size="18" font-weight="bold">XII</text>
-              <text x="208" y="136" text-anchor="middle" fill="#1c1917" font-family="serif" font-size="18" font-weight="bold">III</text>
-              <text x="130" y="214" text-anchor="middle" fill="#1c1917" font-family="serif" font-size="18" font-weight="bold">VI</text>
-              <text x="52" y="136" text-anchor="middle" fill="#1c1917" font-family="serif" font-size="18" font-weight="bold">IX</text>
-              <!-- Right Angle Indicator -->
-              <path d="M 130 105 L 155 105 L 155 130" fill="none" stroke="#991b1b" stroke-width="1.5" stroke-dasharray="3 2"/>
-              <!-- Minute Hand (12 o'clock) -->
-              <line x1="130" y1="130" x2="130" y2="62" stroke="#991b1b" stroke-width="4" stroke-linecap="round"/>
-              <!-- Hour Hand (3 o'clock) -->
-              <line x1="130" y1="130" x2="188" y2="130" stroke="#18181b" stroke-width="6" stroke-linecap="round"/>
-              <circle cx="130" cy="130" r="6" fill="#18181b" stroke="#d4af37" stroke-width="2"/>
-            </svg>
+          <div class="flex flex-col items-center gap-3">
+            <div class="relative w-52 h-52 flex items-center justify-center">
+              <svg viewBox="0 0 260 260" class="w-full h-full drop-shadow-2xl">
+                <defs>
+                  <radialGradient id="clockFace" cx="50%" cy="45%" r="55%">
+                    <stop offset="0%" stop-color="#e7dec6"/>
+                    <stop offset="80%" stop-color="#c4b592"/>
+                    <stop offset="100%" stop-color="#8c7a56"/>
+                  </radialGradient>
+                </defs>
+                <circle cx="130" cy="130" r="116" fill="#291d14" stroke="#785a32" stroke-width="8"/>
+                <circle cx="130" cy="130" r="102" fill="url(#clockFace)" stroke="#3f2d1d" stroke-width="3"/>
+                <path d="M 155 70 Q 180 95 168 125 Q 192 140 175 162 Q 150 148 148 115 Z" fill="#7f1d1d" opacity="0.42"/>
+                <text x="130" y="54" text-anchor="middle" fill="#1c1917" font-family="serif" font-size="18" font-weight="bold">XII</text>
+                <text x="208" y="136" text-anchor="middle" fill="#1c1917" font-family="serif" font-size="18" font-weight="bold">III</text>
+                <text x="130" y="214" text-anchor="middle" fill="#1c1917" font-family="serif" font-size="18" font-weight="bold">VI</text>
+                <text x="52" y="136" text-anchor="middle" fill="#1c1917" font-family="serif" font-size="18" font-weight="bold">IX</text>
+                <path d="M 130 105 L 155 105 L 155 130" fill="none" stroke="#991b1b" stroke-width="1.5" stroke-dasharray="3 2"/>
+                <line x1="130" y1="130" x2="130" y2="62" stroke="#991b1b" stroke-width="4" stroke-linecap="round"/>
+                <line x1="130" y1="130" x2="188" y2="130" stroke="#18181b" stroke-width="6" stroke-linecap="round"/>
+                <circle cx="130" cy="130" r="6" fill="#18181b" stroke="#d4af37" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="w-80 bg-[#d6ccb2] text-stone-900 rounded-sm p-3.5 border border-stone-600/70 -rotate-1 font-serif shadow-xl text-xs leading-relaxed">
+              <div class="text-[10px] font-mono text-rose-900 font-bold mb-1">혈서 메모 (BLOOD NOTE)</div>
+              "괘종시계를 정확히 <b>3시 정각</b>으로 맞춰 시침과 분침이 직각(90°)을 이루게 하라."
+            </div>
           </div>
         `;
         return;
@@ -4632,41 +4828,27 @@
         return;
       }
 
-      // 3. 4개 머그잔 방향도 (Q03)
+      // 3. 간호사 야간 순찰 일지 단서 시각화 (Q03)
       if (q === 3) {
         stage.innerHTML = `
-          <div class="w-80 bg-[#141418] border border-white/10 rounded-lg p-5 shadow-2xl">
-            <div class="text-[11px] font-mono text-zinc-400 text-center mb-4">접수대 위 머그잔 손잡이 방향 관찰 (Top-Down)</div>
-            <svg viewBox="0 0 300 100" class="w-full h-24">
-              <!-- Cup 1: North (U) -->
-              <g transform="translate(40,52)">
-                <rect x="-4" y="-34" width="8" height="14" rx="3" fill="#38bdf8"/>
-                <circle r="20" fill="#e4e4e7" stroke="#52525b" stroke-width="3"/>
-                <circle r="14" fill="#3b2414"/>
-                <text y="36" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="monospace">1. 북</text>
-              </g>
-              <!-- Cup 2: East (R) -->
-              <g transform="translate(115,52)">
-                <rect x="20" y="-4" width="14" height="8" rx="3" fill="#38bdf8"/>
-                <circle r="20" fill="#e4e4e7" stroke="#52525b" stroke-width="3"/>
-                <circle r="14" fill="#3b2414"/>
-                <text y="36" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="monospace">2. 동</text>
-              </g>
-              <!-- Cup 3: South (D) -->
-              <g transform="translate(190,52)">
-                <rect x="-4" y="20" width="8" height="14" rx="3" fill="#38bdf8"/>
-                <circle r="20" fill="#e4e4e7" stroke="#52525b" stroke-width="3"/>
-                <circle r="14" fill="#3b2414"/>
-                <text y="36" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="monospace">3. 남</text>
-              </g>
-              <!-- Cup 4: West (L) -->
-              <g transform="translate(260,52)">
-                <rect x="-34" y="-4" width="14" height="8" rx="3" fill="#38bdf8"/>
-                <circle r="20" fill="#e4e4e7" stroke="#52525b" stroke-width="3"/>
-                <circle r="14" fill="#3b2414"/>
-                <text y="36" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="monospace">4. 서</text>
-              </g>
-            </svg>
+          <div class="w-[330px] bg-[#d6ccb2] text-stone-900 rounded-sm shadow-2xl p-5 border border-stone-500/70 -rotate-2 font-serif"
+               style="box-shadow: 0 24px 60px rgba(0,0,0,0.85), inset 0 0 40px rgba(92,72,42,0.35);">
+            <div class="border-b-2 border-stone-800 pb-2 mb-3 flex justify-between items-center">
+              <div>
+                <div class="text-[10px] tracking-widest uppercase text-stone-600 font-sans font-semibold">NIGHT PATROL LOG</div>
+                <div class="text-base font-bold text-stone-900 mt-0.5">간호사 야간 순찰 일지</div>
+              </div>
+              <span class="text-xs font-mono border border-stone-700 px-1.5 py-0.5">1F</span>
+            </div>
+            <ol class="text-xs space-y-2 font-mono text-stone-800 mb-3">
+              <li class="flex justify-between border-b border-stone-700/30 pb-1"><span>1. 로비 창문 점검</span><b class="text-rose-900">북쪽 (↑)</b></li>
+              <li class="flex justify-between border-b border-stone-700/30 pb-1"><span>2. 중앙 복도 통과</span><b class="text-rose-900">동쪽 (→)</b></li>
+              <li class="flex justify-between border-b border-stone-700/30 pb-1"><span>3. 비상 계단 확인</span><b class="text-rose-900">남쪽 (↓)</b></li>
+              <li class="flex justify-between"><span>4. 사물함 복귀</span><b class="text-rose-900">서쪽 (←)</b></li>
+            </ol>
+            <div class="text-[11px] italic text-stone-700 border-t border-stone-700/40 pt-2">
+              "접수대 머그잔 4개의 손잡이를 순찰 순서대로 정렬하라."
+            </div>
           </div>
         `;
         return;
@@ -4731,22 +4913,76 @@
         return;
       }
 
-      // 7. UV 형광 병원장 초상화 (Q22)
+      // 6-2. 포르말린 표본병 무게 라벨 단서 시각화 (Q19)
+      if (q === 19) {
+        stage.innerHTML = `
+          <div class="w-[330px] bg-[#d6ccb2] text-stone-900 rounded-sm shadow-2xl p-5 border border-stone-500/70 rotate-1 font-serif"
+               style="box-shadow: 0 24px 60px rgba(0,0,0,0.85), inset 0 0 40px rgba(92,72,42,0.35);">
+            <div class="border-b-2 border-stone-800 pb-2 mb-3 flex justify-between items-center">
+              <div>
+                <div class="text-[10px] tracking-widest uppercase text-stone-600 font-sans font-semibold">MORGUE SPECIMEN TAG</div>
+                <div class="text-base font-bold text-stone-900 mt-0.5">포르말린 표본 계량 지시서</div>
+              </div>
+              <span class="text-[10px] font-mono border border-rose-900 text-rose-900 px-1.5 py-0.5 font-bold">2F 영안실</span>
+            </div>
+            <div class="space-y-2 font-mono text-xs mb-3">
+              <div class="flex justify-between p-2 bg-stone-900/10 border border-stone-700/40"><span>1. 뇌 표본 (Brain)</span><b>1400 g</b></div>
+              <div class="flex justify-between p-2 bg-stone-900/10 border border-stone-700/40"><span>2. 심장 표본 (Heart)</span><b>350 g</b></div>
+              <div class="flex justify-between p-2 bg-stone-900/10 border border-stone-700/40"><span>3. 안구 표본 (Eye)</span><b>30 g</b></div>
+            </div>
+            <div class="text-[11px] italic text-stone-800 border-t border-stone-700/40 pt-2">
+              "위 세 표본병만 정확히 저울 접시에 올려 총 중량을 맞춰라."
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 7. [물리 장치 #4] UV 형광 병원장 초상화 마우스 스캔 장치 (Q22)
       if (q === 22) {
         stage.innerHTML = `
-          <div class="w-64 h-80 bg-[#1a1326] border-[8px] border-[#6b4c1e] rounded shadow-2xl relative flex flex-col items-center justify-center p-4 overflow-hidden"
-               style="box-shadow: 0 24px 60px rgba(0,0,0,0.85), inset 0 0 36px rgba(168,85,247,0.35);">
-            <svg viewBox="0 0 180 220" class="w-full h-full">
-              <!-- Silhouette of Director -->
-              <ellipse cx="90" cy="78" rx="34" ry="44" fill="#0d0914"/>
-              <path d="M 30 215 Q 45 140 90 138 Q 135 140 150 215 Z" fill="#0d0914"/>
-              <!-- UV Spotlight Glow -->
-              <circle cx="90" cy="82" r="52" fill="rgba(168,85,247,0.18)" stroke="rgba(192,132,252,0.35)" stroke-dasharray="4 3"/>
-              <!-- Glowing UV Eyes -->
-              <circle cx="76" cy="74" r="4" fill="#c084fc"/>
-              <circle cx="104" cy="74" r="4" fill="#c084fc"/>
-              <text x="90" y="106" text-anchor="middle" fill="#e9d5ff" font-family="monospace" font-size="16" font-weight="bold" letter-spacing="5">M I N D</text>
-            </svg>
+          <div class="flex flex-col items-center">
+            <div class="text-[11px] font-mono text-purple-300 mb-2">[광학 장치] 초상화 위로 마우스(UV 손전등)를 비춰보세요</div>
+            <div onmousemove="moveUvFlashlight(event)" class="w-64 h-80 bg-[#120e18] border-[8px] border-[#6b4c1e] rounded shadow-2xl relative overflow-hidden cursor-crosshair select-none"
+                 style="box-shadow: 0 24px 60px rgba(0,0,0,0.85);">
+              <!-- Base Dark Oil Painting -->
+              <svg viewBox="0 0 180 220" class="w-full h-full absolute inset-0">
+                <ellipse cx="90" cy="78" rx="34" ry="44" fill="#09070d"/>
+                <path d="M 30 215 Q 45 140 90 138 Q 135 140 150 215 Z" fill="#09070d"/>
+                <circle cx="76" cy="74" r="3" fill="#27272a"/>
+                <circle cx="104" cy="74" r="3" fill="#27272a"/>
+              </svg>
+              <!-- Hidden UV Fluorescent Layer (Revealed by mouse flashlight) -->
+              <div id="uv-reveal-layer" class="absolute inset-0 pointer-events-none transition-opacity duration-150"
+                   style="clip-path: circle(52px at 50% 40%); opacity: ${obj.solved ? '1' : '0.25'}; background: radial-gradient(circle, rgba(168,85,247,0.35), rgba(88,28,135,0.2));">
+                <svg viewBox="0 0 180 220" class="w-full h-full">
+                  <circle cx="76" cy="74" r="4.5" fill="#d8b4fe"/>
+                  <circle cx="104" cy="74" r="4.5" fill="#d8b4fe"/>
+                  <text x="90" y="108" text-anchor="middle" fill="#f3e8ff" font-family="monospace" font-size="16" font-weight="bold" letter-spacing="5">M I N D</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 8-2. 보일러 과열 경고판 단서 시각화 (Q26)
+      if (q === 26) {
+        stage.innerHTML = `
+          <div class="w-[330px] bg-[#2a1612] text-amber-100 rounded border-4 border-amber-700/80 p-5 shadow-2xl -rotate-1 font-mono"
+               style="box-shadow: 0 24px 60px rgba(0,0,0,0.85), inset 0 0 36px rgba(0,0,0,0.6);">
+            <div class="bg-amber-600/90 text-stone-950 font-bold text-xs px-2.5 py-1 text-center tracking-widest mb-3">
+              WARNING · HIGH PRESSURE BOILER
+            </div>
+            <div class="text-sm font-bold text-amber-200 mb-3 text-center">소각로 과열 감압 경고판</div>
+            <div class="space-y-2 text-xs bg-black/40 p-3 border border-amber-700/40 mb-3">
+              <div class="flex justify-between"><span class="text-zinc-400">현재 증기 압력</span><b class="text-rose-400">1250 PSI</b></div>
+              <div class="flex justify-between"><span class="text-zinc-400">위험 초과분 (감압 필요)</span><b class="text-amber-300">- 450 PSI</b></div>
+            </div>
+            <div class="text-[11px] text-amber-200/85 leading-relaxed text-center">
+              우측 증기 밸브 휠을 돌려 안전 목표 압력까지 감압하라.
+            </div>
           </div>
         `;
         return;
@@ -4775,19 +5011,24 @@
         return;
       }
 
-      // 9. 강철 금고 / 다이얼 / 기계 장치 (safe, door, console)
+      // 9. 강철 금고 / 방폭문 + 부착된 단서 메모 시각화 (safe, door)
       if (obj.type === 'safe' || obj.type === 'door') {
         stage.innerHTML = `
-          <div class="w-72 bg-[#16161a] border-2 border-zinc-700 rounded-lg p-5 shadow-2xl flex flex-col items-center">
-            <svg viewBox="0 0 180 180" class="w-40 h-40 mb-3">
-              <circle cx="90" cy="90" r="76" fill="#09090b" stroke="#52525b" stroke-width="8"/>
-              <circle cx="90" cy="90" r="56" fill="#18181b" stroke="#3f3f46" stroke-width="2" stroke-dasharray="6 4"/>
-              <line x1="90" y1="22" x2="90" y2="158" stroke="#71717a" stroke-width="4"/>
-              <line x1="22" y1="90" x2="158" y2="90" stroke="#71717a" stroke-width="4"/>
-              <circle cx="90" cy="90" r="18" fill="#27272a" stroke="${obj.solved ? '#10b981' : '#be123c'}" stroke-width="4"/>
-            </svg>
-            <div class="text-xs font-mono text-zinc-300 font-semibold">${escapeXml(obj.name)}</div>
-            <div class="text-[10px] font-mono ${obj.solved ? 'text-emerald-400' : 'text-rose-400'} mt-1">${obj.solved ? 'MECHANISM UNLOCKED' : 'SECURITY LOCK ENGAGED'}</div>
+          <div class="flex flex-col items-center gap-3">
+            <div class="w-36 h-36 bg-[#16161a] border-2 border-zinc-700 rounded-lg p-3 shadow-xl flex flex-col items-center justify-center">
+              <svg viewBox="0 0 180 180" class="w-24 h-24">
+                <circle cx="90" cy="90" r="76" fill="#09090b" stroke="#52525b" stroke-width="8"/>
+                <circle cx="90" cy="90" r="56" fill="#18181b" stroke="#3f3f46" stroke-width="2" stroke-dasharray="6 4"/>
+                <line x1="90" y1="22" x2="90" y2="158" stroke="#71717a" stroke-width="4"/>
+                <line x1="22" y1="90" x2="158" y2="90" stroke="#71717a" stroke-width="4"/>
+                <circle cx="90" cy="90" r="18" fill="#27272a" stroke="${obj.solved ? '#10b981' : '#be123c'}" stroke-width="4"/>
+              </svg>
+            </div>
+            <div class="w-[330px] bg-[#d6ccb2] text-stone-900 rounded-sm shadow-2xl p-4 border border-stone-500/70 -rotate-1 font-serif"
+                 style="box-shadow: 0 18px 40px rgba(0,0,0,0.8), inset 0 0 32px rgba(92,72,42,0.35);">
+              <div class="text-[10px] font-mono text-stone-600 font-bold border-b border-stone-700/40 pb-1 mb-2">${escapeXml(obj.name)} · 부착 메모</div>
+              <div class="text-xs leading-relaxed text-stone-800 font-mono break-keep">${escapeXml(obj.cluePayload || '')}</div>
+            </div>
           </div>
         `;
         return;
@@ -4868,8 +5109,9 @@
         propBox.classList.add('hidden');
       }
 
-      // Render Left Column Close-Up Visual Artwork
+      // Render Left Column Close-Up Clue Visual Artwork & Right Column Mechanism/Dial Controls
       renderPropVisualArtwork(obj, prop);
+      renderRightDeviceControls(obj);
 
       // Show Directional Pad if DirectionalLock
       const dirPad = document.getElementById('modal-dir-pad');
