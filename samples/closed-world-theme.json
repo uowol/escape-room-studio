@@ -1,0 +1,140 @@
+{
+  "version": "1.0",
+  "theme": {
+    "id": "asylum-404-extended",
+    "title": "폐쇄병동 404호 - 닫힌 세계 완결편",
+    "genre": "Horror",
+    "durationMinutes": 60
+  },
+  "spaces": [
+    {
+      "id": "space-room-01",
+      "name": "1층 취조실",
+      "layer": 0,
+      "floorHeight": 0.0,
+      "wallHeight": 2.6,
+      "polygon": [
+        [0.0, 0.0],
+        [4.0, 0.0],
+        [4.0, 3.0],
+        [0.0, 3.0]
+      ],
+      "props": [
+        {
+          "id": "desk-01",
+          "model": "Desk",
+          "transform": { "pos": [2.0, 0.375, 1.5] }
+        }
+      ]
+    },
+    {
+      "id": "space-room-02",
+      "name": "2층 영안실",
+      "layer": 1,
+      "floorHeight": 2.6,
+      "wallHeight": 2.6,
+      "polygon": [
+        [0.0, 0.0],
+        [4.0, 0.0],
+        [4.0, 3.0],
+        [0.0, 3.0]
+      ],
+      "floorHole": {
+        "pos": [2.0, 1.5],
+        "size": [1.0, 1.0]
+      },
+      "props": [
+        {
+          "id": "morgue-bed",
+          "model": "Stretcher",
+          "transform": { "pos": [2.0, 2.975, 1.5] }
+        }
+      ]
+    }
+  ],
+  "passages": [
+    {
+      "id": "pass-ladder-01",
+      "fromSpaceId": "space-room-01",
+      "toSpaceId": "space-room-02",
+      "directionality": "OneWay",
+      "traverseCost": "Climb",
+      "door": {
+        "id": "door-hatch",
+        "type": "FloorHatch",
+        "isLocked": false
+      }
+    },
+    {
+      "id": "pass-exit-02",
+      "fromSpaceId": "space-room-02",
+      "toSpaceId": "space-exterior",
+      "directionality": "OneWay",
+      "traverseCost": "Walk",
+      "door": {
+        "id": "door-final",
+        "type": "EMLockDoor",
+        "isLocked": true
+      }
+    }
+  ],
+  "logicGraph": {
+    "clues": [
+      {
+        "id": "clue-clock",
+        "propRef": "desk-01",
+        "payload": "10:10",
+        "carrierType": "PhysicalState"
+      },
+      {
+        "id": "clue-brass-key",
+        "propRef": "container-safe",
+        "payload": "Key-B404",
+        "carrierType": "Trace"
+      }
+    ],
+    "problems": [
+      {
+        "id": "prob-clock-angle",
+        "consumes": ["clue-clock"],
+        "rule": "ClockHandToAngle",
+        "outputGate": "gate-padlock"
+      },
+      {
+        "id": "prob-final-key",
+        "consumes": ["clue-brass-key"],
+        "rule": "InsertKeyIntoEMLock",
+        "outputGate": "gate-final-emlock"
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate-padlock",
+        "interfaceType": "MechanicalLock",
+        "condition": "Value == '0414'",
+        "unlocks": "container-safe",
+        "isOpen": false
+      },
+      {
+        "id": "gate-final-emlock",
+        "interfaceType": "ElectronicKeypad",
+        "condition": "Value == 'KeyMatched'",
+        "unlocks": "door-final",
+        "isOpen": false
+      }
+    ],
+    "containers": [
+      {
+        "id": "container-safe",
+        "name": "취조실 강철 비밀 금고",
+        "isOpen": false,
+        "containsClueId": "clue-brass-key"
+      }
+    ]
+  },
+  "director": {
+    "timeLimitMinutes": 60,
+    "tensionLevel": 1,
+    "panicThresholdFailures": 2
+  }
+}

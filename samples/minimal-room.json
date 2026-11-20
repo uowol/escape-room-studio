@@ -1,0 +1,79 @@
+{
+  "version": "1.0",
+  "theme": {
+    "id": "asylum-404",
+    "title": "폐쇄병동 404호",
+    "genre": "Horror",
+    "durationMinutes": 60
+  },
+  "spaces": [
+    {
+      "id": "space-room-01",
+      "name": "취조실",
+      "layer": 0,
+      "floorHeight": 0.0,
+      "wallHeight": 2.6,
+      "polygon": [
+        [0.0, 0.0],
+        [4.0, 0.0],
+        [4.0, 3.0],
+        [0.0, 3.0]
+      ],
+      "props": [
+        {
+          "id": "desk-01",
+          "model": "wooden_desk.glb",
+          "transform": {
+            "pos": [2.0, 0.0, 1.5],
+            "rot": [0.0, 90.0, 0.0]
+          }
+        }
+      ]
+    }
+  ],
+  "passages": [
+    {
+      "id": "pass-01",
+      "fromSpaceId": "space-room-01",
+      "toSpaceId": "space-room-02",
+      "directionality": "OneWay",
+      "traverseCost": "Walk",
+      "door": {
+        "id": "door-01",
+        "type": "EMLockDoor",
+        "isLocked": true,
+        "transform": {
+          "pos": [4.0, 0.0, 1.5],
+          "rot": [0.0, 90.0, 0.0]
+        }
+      }
+    }
+  ],
+  "logicGraph": {
+    "clues": [
+      {
+        "id": "clue-clock",
+        "propRef": "desk-01",
+        "payload": "10:10",
+        "carrierType": "PhysicalState"
+      }
+    ],
+    "problems": [
+      {
+        "id": "prob-clock-angle",
+        "consumes": ["clue-clock"],
+        "rule": "ClockHandToAngle",
+        "outputGate": "gate-padlock"
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate-padlock",
+        "interfaceType": "MechanicalLock",
+        "condition": "Value == '0414'",
+        "unlocks": "door-01",
+        "isOpen": false
+      }
+    ]
+  }
+}

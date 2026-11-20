@@ -1,0 +1,191 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RoomAsCode",
+  "description": "Room as Code (RaC) v1.0 - 방탈출 닫힌 세계 선언적 공간 및 인과율 스키마 규약",
+  "type": "object",
+  "required": ["version", "theme", "spaces", "passages", "logicGraph"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "theme": {
+      "type": "object",
+      "required": ["id", "title", "durationMinutes"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "title": { "type": "string" },
+        "genre": { "type": "string", "enum": ["Horror", "Mystery", "SciFi", "Emotional", "Adventure"] },
+        "durationMinutes": { "type": "integer", "minimum": 10, "maximum": 180 }
+      }
+    },
+    "spaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "layer", "wallHeight", "polygon"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "layer": { "type": "integer", "default": 0 },
+          "floorHeight": { "type": "number", "default": 0.0 },
+          "wallHeight": { "type": "number", "minimum": 2.0, "maximum": 5.0, "default": 2.6 },
+          "polygon": {
+            "type": "array",
+            "minItems": 3,
+            "description": "X-Z 평면상의 바닥 꼭짓점 좌표 배열 [[x, z], ...]",
+            "items": {
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "floorHole": {
+            "type": "object",
+            "description": "복층 사다리/계단 관통 구멍 (X-Z 중심 좌표 및 크기)",
+            "properties": {
+              "pos": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+              "size": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+            }
+          },
+          "props": {
+            "type": "array",
+            "description": "공간 내에 배치된 물리적 가구, 기물 및 단서 담지체(Prop)",
+            "items": {
+              "type": "object",
+              "required": ["id", "transform"],
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "model": { "type": "string" },
+                "type": { "type": "string" },
+                "targetClueId": { "type": "string", "description": "이 소품이 운반하는 논리 단서 ID" },
+                "targetObjId": { "type": "string", "description": "이 소품이 얹혀있는 부모 가구 기물 ID" },
+                "wallSnapped": { "type": "boolean", "default": false },
+                "wallSide": { "type": "string", "enum": ["N", "E", "S", "W"] },
+                "gimmick": {
+                  "type": "object",
+                  "description": "물리적 단서 관찰 기믹 (시계 각도, 컵 손잡이 방향 등)",
+                  "properties": {
+                    "kind": { "type": "string", "enum": ["clock-angle", "cup-handle", "portrait-pointer", "blood-marking", "book-spine", "none", "custom"] },
+                    "data": { "type": "object" },
+                    "description": { "type": "string" }
+                  }
+                },
+                "transform": {
+                  "type": "object",
+                  "required": ["pos"],
+                  "properties": {
+                    "pos": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+                    "rot": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3, "default": [0, 0, 0] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "passages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "fromSpaceId", "toSpaceId", "door"],
+        "properties": {
+          "id": { "type": "string" },
+          "fromSpaceId": { "type": "string" },
+          "toSpaceId": { "type": "string" },
+          "directionality": { "type": "string", "enum": ["OneWay", "TwoWay"], "default": "TwoWay" },
+          "traverseCost": { "type": "string", "enum": ["Walk", "Crawl", "Climb", "Slide"], "default": "Walk" },
+          "door": {
+            "type": "object",
+            "required": ["id", "type"],
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string", "enum": ["StandardDoor", "SecretBookcase", "FloorHatch", "EMLockDoor"] },
+              "isLocked": { "type": "boolean", "default": true },
+              "transform": {
+                "type": "object",
+                "properties": {
+                  "pos": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+                  "rot": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "logicGraph": {
+      "type": "object",
+      "required": ["clues", "problems", "gates"],
+      "properties": {
+        "clues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "payload"],
+            "properties": {
+              "id": { "type": "string" },
+              "propRef": { "type": "string" },
+              "payload": { "type": "string" },
+              "carrierType": { "type": "string", "enum": ["Text", "PhysicalState", "Trace", "AudioVisual"], "default": "Text" }
+            }
+          }
+        },
+        "problems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "consumes", "rule", "outputGate"],
+            "properties": {
+              "id": { "type": "string" },
+              "consumes": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+              "rule": { "type": "string" },
+              "outputGate": { "type": "string" }
+            }
+          }
+        },
+        "gates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "condition", "unlocks"],
+            "properties": {
+              "id": { "type": "string" },
+              "interfaceType": { "type": "string", "enum": ["MechanicalLock", "DirectionalLock", "ElectronicKeypad", "SensorSwitch"], "default": "MechanicalLock" },
+              "condition": { "type": "string" },
+              "unlocks": { "type": "string", "description": "해금할 doorId 또는 containerId" },
+              "isOpen": { "type": "boolean", "default": false }
+            }
+          }
+        },
+        "containers": {
+          "type": "array",
+          "description": "단서를 은닉하고 있는 서랍/금고 보관함",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "containsClueId"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "isOpen": { "type": "boolean", "default": false },
+              "containsClueId": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "director": {
+      "type": "object",
+      "description": "실시간 물리 환경(조명, 사운드, 문) 및 긴장감을 지배하는 가상 연출자 설정",
+      "properties": {
+        "timeLimitMinutes": { "type": "integer", "default": 60 },
+        "tensionLevel": { "type": "integer", "minimum": 1, "maximum": 5, "default": 1 },
+        "panicThresholdFailures": { "type": "integer", "default": 2 }
+      }
+    }
+  }
+}

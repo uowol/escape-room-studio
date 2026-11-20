@@ -1,0 +1,769 @@
+{
+  "version": "1.0",
+  "theme": {
+    "id": "asylum-404-abyssal-anatomy",
+    "title": "폐쇄병동 404호: 심연의 해부학 (6방 30문제 풀 스케일)",
+    "genre": "Horror",
+    "durationMinutes": 60
+  },
+  "spaces": [
+    {
+      "id": "space-r1",
+      "name": "제1방: 1F 원무과 접수처",
+      "layer": 0,
+      "floorHeight": 0.0,
+      "wallHeight": 2.6,
+      "polygon": [[0.0, 0.0], [4.0, 0.0], [4.0, 3.0], [0.0, 3.0]],
+      "props": [
+        {
+          "id": "prop-r1-01",
+          "name": "원무과 접수 데스크",
+          "model": "Desk",
+          "type": "desk",
+          "targetClueId": "clue-01",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "memo": "1994년 4월 당직표: 월(14), 목(17), 일(?)" },
+            "description": "접수대 위에 놓인 낡은 1994년 당직표 클립보드"
+          },
+          "transform": { "pos": [1.5, 0.38, 0.85], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-clock-r1",
+          "name": "원무과 벽걸이 아날로그 시계",
+          "model": "Clock",
+          "type": "clock",
+          "targetObjId": "prop-r1-01",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "gimmick": {
+            "kind": "clock-angle",
+            "data": { "timeString": "02:20", "hourAngle": 70, "minuteAngle": 120 },
+            "description": "북쪽 벽에 걸린 낡은 벽걸이 시계. 시침과 분침이 가리키는 시간은 [02:20]."
+          },
+          "transform": { "pos": [1.5, 1.85, 0.05], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-cup-r1",
+          "name": "접수대 위 4개 머그잔",
+          "model": "CupSet",
+          "type": "cup",
+          "targetObjId": "prop-r1-01",
+          "targetClueId": "clue-03",
+          "gimmick": {
+            "kind": "cup-handle",
+            "data": { "handleDirections": ["U", "R", "D", "L"], "angles": [0, 1.57, 3.14, -1.57] },
+            "description": "접수대 위 4개의 커피잔 손잡이가 [북(U) ➔ 동(R) ➔ 남(D) ➔ 서(L)] 순으로 정렬되어 있다."
+          },
+          "transform": { "pos": [1.5, 0.78, 0.75], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r1-02",
+          "name": "차트 분류 캐비닛",
+          "model": "Cabinet",
+          "type": "cabinet",
+          "targetClueId": "clue-02",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "gimmick": {
+            "kind": "blood-marking",
+            "data": { "markedText": "D동 ➔ A동 ➔ C동 ➔ B동", "codeNumbers": "4132" },
+            "description": "차트 캐비닛 서류철에 붉은색 혈흔으로 이송 경로 D-A-C-B가 마킹되어 있다."
+          },
+          "transform": { "pos": [4.5, 0.9, 0.45], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r1-03",
+          "name": "간호사 철제 사물함",
+          "model": "Locker",
+          "type": "locker",
+          "targetClueId": "clue-03",
+          "wallSnapped": true,
+          "wallSide": "W",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "lockType": "DirectionalLock", "directionSequence": "URDL" },
+            "description": "십자 방향키가 부착된 낡은 녹슨 간호사용 사물함"
+          },
+          "transform": { "pos": [0.45, 0.9, 3.8], "rot": [0, 1.57, 0] }
+        },
+        {
+          "id": "prop-r1-04",
+          "name": "원무과 다이얼 내선 전화기",
+          "model": "Phone",
+          "type": "phone",
+          "targetClueId": "clue-04",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "innerNumber": "100+250+54=404" },
+            "description": "선이 끊어진 채 내선 번호 안내판이 붙어있는 검은 다이얼 전화기"
+          },
+          "transform": { "pos": [2.2, 0.5, 1.8], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r1-05",
+          "name": "1F 중앙 복도 차단 철문",
+          "model": "Door",
+          "type": "door",
+          "targetClueId": "clue-05",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "lockCodeFormula": "1994 - 404 = 1590" },
+            "description": "중앙 복도로 이어지는 굳게 닫힌 강철 방화문"
+          },
+          "transform": { "pos": [5.85, 1.0, 2.5], "rot": [0, 1.57, 0] }
+        }
+      ]
+    },
+    {
+      "id": "space-r2",
+      "name": "제2방: 1F 정신과 취조·진료실",
+      "layer": 0,
+      "floorHeight": 0.0,
+      "wallHeight": 2.6,
+      "polygon": [[0.0, 0.0], [4.5, 0.0], [4.5, 3.5], [0.0, 3.5]],
+      "props": [
+        {
+          "id": "prop-r2-06",
+          "name": "피 묻은 대형 괘종시계",
+          "model": "Clock",
+          "type": "clock",
+          "targetClueId": "clue-06",
+          "wallSnapped": true,
+          "wallSide": "W",
+          "gimmick": {
+            "kind": "clock-angle",
+            "data": { "timeString": "03:00", "hourAngle": 90, "minuteAngle": 0, "degrees": 90 },
+            "description": "3시 정각에 멈춘 괘종시계. 시침과 분침이 정확히 90도 직각을 이룬다 (0903)."
+          },
+          "transform": { "pos": [0.45, 1.5, 1.2], "rot": [0, 1.57, 0] }
+        },
+        {
+          "id": "prop-portrait-r2",
+          "name": "병원장 설립자 초상화 액자",
+          "model": "Portrait",
+          "type": "portrait",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "gimmick": {
+            "kind": "portrait-pointer",
+            "data": { "pointingVector": "SOUTH-WEST" },
+            "description": "유화 액자 속 인물의 검지 손가락이 남서쪽 사물함을 뚜렷하게 가리키고 있다."
+          },
+          "transform": { "pos": [4.8, 1.7, 0.05], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r2-07",
+          "name": "취조실 철제 데스크",
+          "model": "Desk",
+          "type": "desk",
+          "targetClueId": "clue-07",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "mirrorSequence": "2381" },
+            "description": "로르샤흐 잉크 반점 카드가 놓인 차가운 취조용 철제 책상"
+          },
+          "transform": { "pos": [2.2, 0.38, 1.2], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r2-08",
+          "name": "릴테이프 음성 재생기",
+          "model": "Console",
+          "type": "console",
+          "targetClueId": "clue-08",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "screamCount": 96, "patientNum": 77 },
+            "description": "피험자 7번의 절규가 녹음된 아날로그 릴테이프 재생 콘솔"
+          },
+          "transform": { "pos": [3.6, 0.6, 1.0], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r2-09",
+          "name": "마약성 약품 보관장",
+          "model": "Cabinet",
+          "type": "cabinet",
+          "targetClueId": "clue-09",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "acronym": "MADK" },
+            "description": "유리문 안쪽에 4종 약품(M, A, D, K)이 진열된 철제 약품장"
+          },
+          "transform": { "pos": [1.2, 0.9, 2.7], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r2-10",
+          "name": "B1 지하 격리실 통로 해치",
+          "model": "Hatch",
+          "type": "door",
+          "targetClueId": "clue-10",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "syringeVolumeCode": "2400" },
+            "description": "바닥에 설치된 육중한 주철 지하 격리병동 진입 해치"
+          },
+          "transform": { "pos": [3.5, 0.1, 2.6], "rot": [0, 0, 0] }
+        }
+      ]
+    },
+    {
+      "id": "space-r3",
+      "name": "제3방: B1 지하 중증 격리 병동",
+      "layer": -1,
+      "floorHeight": -2.8,
+      "wallHeight": 2.8,
+      "polygon": [[0.0, 0.0], [5.0, 0.0], [5.0, 3.5], [0.0, 3.5]],
+      "props": [
+        {
+          "id": "prop-r3-11",
+          "name": "구속 벨트 침대",
+          "model": "Bed",
+          "type": "bed",
+          "targetClueId": "clue-11",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "romanNumerals": "IV-IX-II-VI" },
+            "description": "가죽 벨트 버클에 로마 숫자가 각인된 낡은 중증 환자용 구속 침대"
+          },
+          "transform": { "pos": [1.1, -2.4, 1.0], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r3-12",
+          "name": "피 묻은 정(正)자 벽면",
+          "model": "BloodWall",
+          "type": "wall-decal",
+          "targetClueId": "clue-12",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "gimmick": {
+            "kind": "blood-marking",
+            "data": { "strokeCount": [10, 6, 12] },
+            "description": "콘크리트 벽면에 피로 빗겨 쓴 바를 정(正)자 일수 카운팅 낙서"
+          },
+          "transform": { "pos": [2.6, -1.4, 0.4], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r3-13",
+          "name": "투약 기록 철제 책상",
+          "model": "Desk",
+          "type": "desk",
+          "targetClueId": "clue-13",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "sequence": [125, 250, 375, 500] },
+            "description": "투약 용량 등차수열 차트가 놓인 철제 기록 책상"
+          },
+          "transform": { "pos": [3.8, -2.4, 1.2], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r3-14",
+          "name": "심전도(ECG) 모니터",
+          "model": "ECGMonitor",
+          "type": "console",
+          "targetClueId": "clue-14",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "waveVector": "UDUR" },
+            "description": "녹색 브라운관 화면에 파형 궤적이 점멸하는 심전도 계측 장치"
+          },
+          "transform": { "pos": [1.5, -2.2, 2.6], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r3-15",
+          "name": "2F 직통 수직 환기 사다리",
+          "model": "Ladder",
+          "type": "door",
+          "targetClueId": "clue-15",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "bodyTempCode": "3650" },
+            "description": "상부 2층 영안실로 관통하는 강철 수직 사다리 윈치 해치"
+          },
+          "transform": { "pos": [4.1, -1.4, 2.7], "rot": [0, 0, 0] }
+        }
+      ]
+    },
+    {
+      "id": "space-r4",
+      "name": "제4방: 2F 해부·영안실",
+      "layer": 1,
+      "floorHeight": 2.6,
+      "wallHeight": 2.6,
+      "polygon": [[0.0, 0.0], [5.0, 0.0], [5.0, 4.0], [0.0, 4.0]],
+      "floorHole": {
+        "pos": [1.0, 3.0],
+        "size": [1.0, 1.0]
+      },
+      "props": [
+        {
+          "id": "prop-r4-16",
+          "name": "3x3 시신 안치 냉동고",
+          "model": "MorgueFridge",
+          "type": "cabinet",
+          "targetClueId": "clue-16",
+          "wallSnapped": true,
+          "wallSide": "W",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "diagonalSlots": [1, 5, 9, 2] },
+            "description": "3x3 격자 번호표가 붙은 냉각 스테인리스 냉동 도어"
+          },
+          "transform": { "pos": [1.2, 3.5, 0.8], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r4-17",
+          "name": "중앙 스테인리스 부검대",
+          "model": "AutopsyTable",
+          "type": "desk",
+          "targetClueId": "clue-17",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "bodyTemp": 29.0, "timeOfDeath": "1540" },
+            "description": "부검 소견서와 수술도구가 놓인 집중 조명 아래 해부대"
+          },
+          "transform": { "pos": [2.6, 3.0, 1.8], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r4-18",
+          "name": "흉부 X-Ray 라이트박스",
+          "model": "XRayBox",
+          "type": "console",
+          "targetClueId": "clue-18",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "layeredFilms": "7249" },
+            "description": "두 장의 X-Ray 필름이 겹쳐져 숫자가 드러나는 벽면 판독기"
+          },
+          "transform": { "pos": [4.0, 3.8, 1.0], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r4-19",
+          "name": "장기 표본 정밀 저울 금고",
+          "model": "ScaleSafe",
+          "type": "cabinet",
+          "targetClueId": "clue-19",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "organWeights": 1780 },
+            "description": "포르말린 표본 병과 합산 중량이 표시되는 디지털 저울"
+          },
+          "transform": { "pos": [2.8, 3.2, 3.2], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r4-20",
+          "name": "해부학 전집 비밀 책장",
+          "model": "BookcaseDoor",
+          "type": "door",
+          "targetClueId": "clue-20",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "gimmick": {
+            "kind": "book-spine",
+            "data": { "bones": 206, "volumes": 8, "pattern": "2068" },
+            "description": "책등 금박 문양이 다음 방으로 이어지는 회전식 비밀 서가"
+          },
+          "transform": { "pos": [4.7, 3.6, 2.2], "rot": [0, 1.57, 0] }
+        }
+      ]
+    },
+    {
+      "id": "space-r5",
+      "name": "제5방: 2F 병원장 비밀 임상 연구실",
+      "layer": 1,
+      "floorHeight": 2.6,
+      "wallHeight": 2.6,
+      "polygon": [[0.0, 0.0], [4.5, 0.0], [4.5, 4.0], [0.0, 4.0]],
+      "props": [
+        {
+          "id": "prop-r5-21",
+          "name": "병원장 대형 금고",
+          "model": "Safe",
+          "type": "cabinet",
+          "targetClueId": "clue-21",
+          "wallSnapped": true,
+          "wallSide": "W",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "dialWord": "LIFE", "dialCode": "5433" },
+            "description": "T9 전화기 다이얼 암호가 장착된 육중한 원형 금고"
+          },
+          "transform": { "pos": [1.0, 3.2, 0.9], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-bookshelf-r5",
+          "name": "비밀 연구 서고 양장본 책장",
+          "model": "Bookshelf",
+          "type": "bookshelf",
+          "targetObjId": "prop-r5-21",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "gimmick": {
+            "kind": "book-spine",
+            "data": { "bookHeights": [5, 4, 3, 3], "pattern": "5433" },
+            "description": "책장에 꽂힌 비밀 연구 일지들의 금박 띠 높이가 [5 - 4 - 3 - 3] 계단형으로 배열되어 있다."
+          },
+          "transform": { "pos": [2.0, 3.2, 0.45], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r5-22",
+          "name": "UV 반응 설립자 초상화",
+          "model": "UVPortrait",
+          "type": "portrait",
+          "targetClueId": "clue-22",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "gimmick": {
+            "kind": "portrait-pointer",
+            "data": { "uvWord": "MIND" },
+            "description": "자외선을 비추면 숨겨진 형광 영문 4글자가 발광하는 유화 액자"
+          },
+          "transform": { "pos": [2.4, 4.0, 0.4], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r5-23",
+          "name": "고속 혈청 원심분리기",
+          "model": "Centrifuge",
+          "type": "console",
+          "targetClueId": "clue-23",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "serumRatio": "3142" },
+            "description": "4개 시험관에 혈액형별 샘플이 꽂힌 고속 분리 장비"
+          },
+          "transform": { "pos": [3.6, 3.2, 1.3], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r5-24",
+          "name": "해부학 체스 책상",
+          "model": "ChessDesk",
+          "type": "desk",
+          "targetClueId": "clue-24",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "knightMove": "URUL" },
+            "description": "나이트 기물이 놓인 흑백 격자 체스판 테이블"
+          },
+          "transform": { "pos": [1.8, 3.0, 2.6], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r5-25",
+          "name": "B2 직통 화물 리프트 도어",
+          "model": "LiftDoor",
+          "type": "door",
+          "targetClueId": "clue-25",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "voltageCode": "0602" },
+            "description": "심연의 소각로로 하강하는 대형 화물 승강기 제어반"
+          },
+          "transform": { "pos": [4.2, 3.6, 3.0], "rot": [0, 1.57, 0] }
+        }
+      ]
+    },
+    {
+      "id": "space-r6",
+      "name": "제6방: B2 지하 소각로 & 최종 비상구",
+      "layer": -2,
+      "floorHeight": -5.6,
+      "wallHeight": 3.0,
+      "polygon": [[0.0, 0.0], [6.0, 0.0], [6.0, 4.0], [0.0, 4.0]],
+      "props": [
+        {
+          "id": "prop-r6-26",
+          "name": "고압 증기 방출 밸브",
+          "model": "SteamValve",
+          "type": "console",
+          "targetClueId": "clue-26",
+          "wallSnapped": true,
+          "wallSide": "W",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "reducedPressure": "0800" },
+            "description": "붉은색 원형 밸브와 감압 계측기가 달린 증기 배관"
+          },
+          "transform": { "pos": [1.1, -4.8, 1.0], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r6-27",
+          "name": "냉각수 우회 파이프",
+          "model": "CoolantPipe",
+          "type": "console",
+          "targetClueId": "clue-27",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "valveDirSeq": "DRDL" },
+            "description": "4개의 방향 지시 레버가 부착된 푸른 냉각수 파이프"
+          },
+          "transform": { "pos": [2.6, -4.8, 0.9], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r6-28",
+          "name": "반파된 마스터키 단말기",
+          "model": "KeyTerminal",
+          "type": "console",
+          "targetClueId": "clue-28",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "combinedKey": "8912" },
+            "description": "두 조각으로 쪼개진 IC 카드를 삽입하는 슬롯 단말기"
+          },
+          "transform": { "pos": [4.2, -4.8, 1.2], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r6-29",
+          "name": "4기통 비상 디젤 발전기",
+          "model": "Generator",
+          "type": "console",
+          "targetClueId": "clue-29",
+          "wallSnapped": false,
+          "gimmick": {
+            "kind": "custom",
+            "data": { "ignitionOrder": "1342" },
+            "description": "육중한 진동과 함께 실린더 번호가 점멸하는 비상 발전 설비"
+          },
+          "transform": { "pos": [2.2, -4.8, 2.9], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-r6-30",
+          "name": "최종 지상 탈출 방폭문",
+          "model": "FinalBlastDoor",
+          "type": "door",
+          "targetClueId": "clue-30",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "gimmick": {
+            "kind": "custom",
+            "data": { "exitCode": "4040" },
+            "description": "지상 햇빛이 비치는 최후의 거대 전동식 방폭 비상문"
+          },
+          "transform": { "pos": [5.7, -4.6, 2.2], "rot": [0, 1.57, 0] }
+        }
+      ]
+    }
+  ],
+  "passages": [
+    {
+      "id": "pass-r1-r2",
+      "fromSpaceId": "space-r1",
+      "toSpaceId": "space-r2",
+      "directionality": "TwoWay",
+      "traverseCost": "Walk",
+      "door": { "id": "door-r1-r2", "type": "StandardDoor", "isLocked": true }
+    },
+    {
+      "id": "pass-r2-r3",
+      "fromSpaceId": "space-r2",
+      "toSpaceId": "space-r3",
+      "directionality": "OneWay",
+      "traverseCost": "Climb",
+      "door": { "id": "door-r2-r3", "type": "FloorHatch", "isLocked": true }
+    },
+    {
+      "id": "pass-r3-r4",
+      "fromSpaceId": "space-r3",
+      "toSpaceId": "space-r4",
+      "directionality": "OneWay",
+      "traverseCost": "Climb",
+      "door": { "id": "door-r3-r4", "type": "FloorHatch", "isLocked": true }
+    },
+    {
+      "id": "pass-r4-r5",
+      "fromSpaceId": "space-r4",
+      "toSpaceId": "space-r5",
+      "directionality": "TwoWay",
+      "traverseCost": "Walk",
+      "door": { "id": "door-r4-r5", "type": "SecretBookcase", "isLocked": true }
+    },
+    {
+      "id": "pass-r5-r6",
+      "fromSpaceId": "space-r5",
+      "toSpaceId": "space-r6",
+      "directionality": "OneWay",
+      "traverseCost": "Slide",
+      "door": { "id": "door-r5-r6", "type": "EMLockDoor", "isLocked": true }
+    },
+    {
+      "id": "pass-r6-exit",
+      "fromSpaceId": "space-r6",
+      "toSpaceId": "space-exterior",
+      "directionality": "OneWay",
+      "traverseCost": "Walk",
+      "door": { "id": "door-final-exit", "type": "EMLockDoor", "isLocked": true }
+    }
+  ],
+  "logicGraph": {
+    "clues": [
+      { "id": "clue-01", "propRef": "prop-r1-01", "carrierType": "Text", "payload": "[Q01 단서] 1994년 4월 당직표: 월요일(14일) 김원장, 목요일(17일) 박과장, 일요일(??일) 최간호사. (김원장 날짜 2자리 + 최간호사 날짜 2자리)" },
+      { "id": "clue-02", "propRef": "prop-r1-02", "carrierType": "Text", "payload": "[Q02 단서] 병동 코드 [A=1, B=2, C=3, D=4]. 특별 환자 '실험체-0'의 이송 경로: D동 -> A동 -> C동 -> B동" },
+      { "id": "clue-03", "propRef": "prop-r1-03", "carrierType": "PhysicalState", "payload": "[Q03 단서] 순찰 화살표 기록: 북쪽(U) 창문 -> 동쪽(R) 복도 -> 남쪽(D) 계단 -> 서쪽(L) 사물함" },
+      { "id": "clue-04", "propRef": "prop-r1-04", "carrierType": "Text", "payload": "[Q04 단서] 내선 번호판: 원무과(100) + 약제실(250) + 보정치(54) = 404. 맨 앞에 지역코드 0을 붙여 4자리 입력" },
+      { "id": "clue-05", "propRef": "prop-r1-05", "carrierType": "Text", "payload": "[Q05 단서] 진료실 철문 개폐 코드: 병원 폐쇄 연도(1994)에서 진료실 내선번호(404)를 뺀 4자리 값" },
+
+      { "id": "clue-06", "propRef": "prop-r2-06", "carrierType": "PhysicalState", "payload": "[Q06 단서] 피 묻은 괘종시계: 3시 정각 시침·분침의 직각 각도(090도) 뒤에 가리키는 숫자(3)를 이어 붙인 4자리" },
+      { "id": "clue-07", "propRef": "prop-r2-07", "carrierType": "Trace", "payload": "[Q07 단서] 로르샤흐 데칼코마니 카드: 좌측 반점 숫자 [1 - 8 - 3 - 2]를 거울에 비춘 역순(오른쪽->왼쪽)으로 배열" },
+      { "id": "clue-08", "propRef": "prop-r2-08", "carrierType": "AudioVisual", "payload": "[Q08 단서] 최면 녹음 테이프: '피험자 7번은 매시간 15분마다(시간당 4회) 하루 24시간 동안 비명을 질렀다.' 총 횟수(2자리) + 피험자번호 연속(77)" },
+      { "id": "clue-09", "propRef": "prop-r2-09", "carrierType": "Text", "payload": "[Q09 단서] 약품 선반 4종 첫 알파벳 조합: [M]orphine - [A]tropine - [D]iazepam - [K]etamine" },
+      { "id": "clue-10", "propRef": "prop-r2-10", "carrierType": "Text", "payload": "[Q10 단서] 지하 해치 레버: 4개 주사기 용량(10ml × 20ml × 30ml × 40ml = 240,000)의 앞 4자리 숫자" },
+
+      { "id": "clue-11", "propRef": "prop-r3-11", "carrierType": "PhysicalState", "payload": "[Q11 단서] 구속복 가죽 벨트 버클 4개의 로마 숫자 각인: [IV] - [IX] - [II] - [VI]" },
+      { "id": "clue-12", "propRef": "prop-r3-12", "carrierType": "Trace", "payload": "[Q12 단서] 격리실 벽면 혈흔 정(正)자 획수: 1줄(10획), 2줄(6획), 3줄(12획)을 이어 적은 '10612'의 앞 4자리" },
+      { "id": "clue-13", "propRef": "prop-r3-13", "carrierType": "Text", "payload": "[Q13 단서] 투약 일지 등차수열: 1차(125mg) -> 2차(250mg) -> 3차(375mg) -> 4차(???mg). 앞에 0을 붙여 4자리 입력" },
+      { "id": "clue-14", "propRef": "prop-r3-14", "carrierType": "AudioVisual", "payload": "[Q14 단서] 심전도(ECG) 파형 궤적: 급상승(U) -> 급하강(D) -> 재상승(U) -> 우측 수평선(R)" },
+      { "id": "clue-15", "propRef": "prop-r3-15", "carrierType": "Text", "payload": "[Q15 단서] 수직 환기 사다리 윈치: 인간 정상 체온(36.5)과 심정지 코드(0)를 소수점 없이 조합한 4자리" },
+
+      { "id": "clue-16", "propRef": "prop-r4-16", "carrierType": "PhysicalState", "payload": "[Q16 단서] 3x3 시신 안치 냉동고 대각선 번호(1번 -> 5번 -> 9번) 뒤에 영안실 층수(2층)를 붙인 4자리" },
+      { "id": "clue-17", "propRef": "prop-r4-17", "carrierType": "Text", "payload": "[Q17 단서] 부검 소견서: 발견 시각 23:40, 시신 온도 29.0℃ (정상 37.0℃에서 시간당 1℃ 하강, 8시간 경과). 사망 시각(HHMM)은?" },
+      { "id": "clue-18", "propRef": "prop-r4-18", "carrierType": "AudioVisual", "payload": "[Q18 단서] 흉부 X-Ray 필름 중첩: 필름 A [7, _, 4, _] 와 필름 B [_, 2, _, 9] 를 라이트박스에 겹친 4자리" },
+      { "id": "clue-19", "propRef": "prop-r4-19", "carrierType": "PhysicalState", "payload": "[Q19 단서] 장기 표본 정밀 저울: 뇌(1400g) + 심장(350g) + 안구(30g) 총 합산 중량(g) 4자리" },
+      { "id": "clue-20", "propRef": "prop-r4-20", "carrierType": "Text", "payload": "[Q20 단서] 해부학 전집 비밀 책장: 성인 총 뼈 개수(206) 뒤에 전집 권수(8)를 이어 붙인 4자리" },
+
+      { "id": "clue-21", "propRef": "prop-r5-21", "carrierType": "Text", "payload": "[Q21 단서] 병원장 강철 금고: 단어 [LIFE]의 전화기 다이얼 숫자 변환 (L=5, I=4, F=3, E=3)" },
+      { "id": "clue-22", "propRef": "prop-r5-22", "carrierType": "Trace", "payload": "[Q22 단서] UV 자외선 손전등으로 초상화 눈동자를 비추자 나타난 형광 영문 4글자: [M - I - N - D]" },
+      { "id": "clue-23", "propRef": "prop-r5-23", "carrierType": "Text", "payload": "[Q23 단서] 원심분리기 혈청 배합비: A형(3방울) : B형(1방울) : AB형(4방울) : O형(2방울)" },
+      { "id": "clue-24", "propRef": "prop-r5-24", "carrierType": "PhysicalState", "payload": "[Q24 단서] 해부학 체스판 흑색 나이트의 이동 기보 화살표: 위(U) -> 오른쪽(R) -> 위(U) -> 왼쪽(L)" },
+      { "id": "clue-25", "propRef": "prop-r5-25", "carrierType": "Text", "payload": "[Q25 단서] 화물 승강기 전력 제어: 1층(220V)+2층(380V)=600V. 맨 앞에 0, 맨 뒤에 지하 2층(2)을 붙인 4자리(0602)" },
+
+      { "id": "clue-26", "propRef": "prop-r6-26", "carrierType": "PhysicalState", "payload": "[Q26 단서] 소각로 증기 밸브: 현재 압력 1250 PSI에서 위험 초과분 450 PSI를 감압한 수치(0800)" },
+      { "id": "clue-27", "propRef": "prop-r6-27", "carrierType": "PhysicalState", "payload": "[Q27 단서] 냉각수 파이프 우회 밸브 개방 방향: 아래(D) -> 오른쪽(R) -> 아래(D) -> 왼쪽(L)" },
+      { "id": "clue-28", "propRef": "prop-r6-28", "carrierType": "Trace", "payload": "[Q28 단서] 반으로 쪼개진 마스터키 보안 카드 결합: 좌측 조각 [89] + 우측 조각 [12]" },
+      { "id": "clue-29", "propRef": "prop-r6-29", "carrierType": "Text", "payload": "[Q29 단서] 디젤 비상 발전기 4기통 실린더 점화 순서: 1번 -> 3번 -> 4번 -> 2번" },
+      { "id": "clue-30", "propRef": "prop-r6-30", "carrierType": "AudioVisual", "payload": "[Q30 단서] 최종 지상 방폭 비상문 EM-Lock: 폐쇄병동 호실 번호(404) + 탈출 승인 코드(0)" }
+    ],
+    "problems": [
+      { "id": "prob-01", "consumes": ["clue-01"], "rule": "달력 요일 추론: 월=14, 목=17 이면 일=20 -> 1420", "outputGate": "gate-01" },
+      { "id": "prob-02", "consumes": ["clue-02"], "rule": "병동 알파벳-숫자 치환: D(4)-A(1)-C(3)-B(2) -> 4132", "outputGate": "gate-02" },
+      { "id": "prob-03", "consumes": ["clue-03"], "rule": "방위-방향키 치환: 북(U)-동(R)-남(D)-서(L) -> URDL", "outputGate": "gate-03" },
+      { "id": "prob-04", "consumes": ["clue-04"], "rule": "내선 주파수 합산: 0 + (100+250+54) -> 0404", "outputGate": "gate-04" },
+      { "id": "prob-05", "consumes": ["clue-05"], "rule": "연도 차감 연산: 1994 - 404 -> 1590", "outputGate": "gate-05" },
+
+      { "id": "prob-06", "consumes": ["clue-06"], "rule": "시계 각도 및 시침 결합: 090도 + 3시 -> 0903", "outputGate": "gate-06" },
+      { "id": "prob-07", "consumes": ["clue-07"], "rule": "데칼코마니 거울 대칭 역순: [1,8,3,2] -> 2381", "outputGate": "gate-07" },
+      { "id": "prob-08", "consumes": ["clue-08"], "rule": "빈도 계산: (4회×24시간=96) + 77 -> 9677", "outputGate": "gate-08" },
+      { "id": "prob-09", "consumes": ["clue-09"], "rule": "약품 두문자어(Acronym) 추출 -> MADK", "outputGate": "gate-09" },
+      { "id": "prob-10", "consumes": ["clue-10"], "rule": "용량 곱셈 앞 4자리: 240,000 -> 2400", "outputGate": "gate-10" },
+
+      { "id": "prob-11", "consumes": ["clue-11"], "rule": "로마 숫자 변환: IV(4)-IX(9)-II(2)-VI(6) -> 4926", "outputGate": "gate-11" },
+      { "id": "prob-12", "consumes": ["clue-12"], "rule": "바른 정(正) 획수 나열 앞 4자리: 10,6,12 -> 1061", "outputGate": "gate-12" },
+      { "id": "prob-13", "consumes": ["clue-13"], "rule": "등차수열(+125) 4번째 항: 375+125=500 -> 0500", "outputGate": "gate-13" },
+      { "id": "prob-14", "consumes": ["clue-14"], "rule": "ECG 피크 벡터 치환 -> UDUR", "outputGate": "gate-14" },
+      { "id": "prob-15", "consumes": ["clue-15"], "rule": "생체 상수 결합: 36.5 + 0 -> 3650", "outputGate": "gate-15" },
+
+      { "id": "prob-16", "consumes": ["clue-16"], "rule": "3x3 격자 대각선 + 층수: 159 + 2 -> 1592", "outputGate": "gate-16" },
+      { "id": "prob-17", "consumes": ["clue-17"], "rule": "시신 냉각 법칙 역산: 23:40 - 8시간 -> 1540", "outputGate": "gate-17" },
+      { "id": "prob-18", "consumes": ["clue-18"], "rule": "투명 X-Ray 레이어 중첩: [7,_,4,_]+[_,2,_,9] -> 7249", "outputGate": "gate-18" },
+      { "id": "prob-19", "consumes": ["clue-19"], "rule": "장기 표본 질량 합산: 1400+350+30 -> 1780", "outputGate": "gate-19" },
+      { "id": "prob-20", "consumes": ["clue-20"], "rule": "인체 골격 수 + 도감 권수: 206 + 8 -> 2068", "outputGate": "gate-20" },
+
+      { "id": "prob-21", "consumes": ["clue-21"], "rule": "다이얼 T9 문자-숫자 변환: LIFE -> 5433", "outputGate": "gate-21" },
+      { "id": "prob-22", "consumes": ["clue-22"], "rule": "UV 비가시 형광 문자 판독 -> MIND", "outputGate": "gate-22" },
+      { "id": "prob-23", "consumes": ["clue-23"], "rule": "혈청 방울 수 순서 배열 -> 3142", "outputGate": "gate-23" },
+      { "id": "prob-24", "consumes": ["clue-24"], "rule": "체스 나이트 이동 벡터 -> URUL", "outputGate": "gate-24" },
+      { "id": "prob-25", "consumes": ["clue-25"], "rule": "전압 합산 및 층수 패딩: 0 + 600 -> 0602", "outputGate": "gate-25" },
+
+      { "id": "prob-26", "consumes": ["clue-26"], "rule": "보일러 감압 연산: 1250 - 450 = 800 -> 0800", "outputGate": "gate-26" },
+      { "id": "prob-27", "consumes": ["clue-27"], "rule": "배관 냉각수 유체 방향 -> DRDL", "outputGate": "gate-27" },
+      { "id": "prob-28", "consumes": ["clue-28"], "rule": "물리 카드 파편 결합: 89 + 12 -> 8912", "outputGate": "gate-28" },
+      { "id": "prob-29", "consumes": ["clue-29"], "rule": "4기통 엔진 점화 순서 -> 1342", "outputGate": "gate-29" },
+      { "id": "prob-30", "consumes": ["clue-30"], "rule": "최종 병동 코드 및 탈출 플래그: 404 + 0 -> 4040", "outputGate": "gate-30" }
+    ],
+    "containers": [
+      { "id": "cont-01", "name": "접수대 하단 서랍", "isOpen": false, "containsClueId": "clue-02" },
+      { "id": "cont-02", "name": "차트 철제 캐비닛", "isOpen": false, "containsClueId": "clue-03" },
+      { "id": "cont-03", "name": "간호사 사물함", "isOpen": false, "containsClueId": "clue-04" },
+      { "id": "cont-04", "name": "전화기 비밀 단자함", "isOpen": false, "containsClueId": "clue-05" },
+
+      { "id": "cont-05", "name": "시계 추 은닉함", "isOpen": false, "containsClueId": "clue-07" },
+      { "id": "cont-06", "name": "진료 책상 비밀 서랍", "isOpen": false, "containsClueId": "clue-08" },
+      { "id": "cont-07", "name": "릴 테이프 수납함", "isOpen": false, "containsClueId": "clue-09" },
+      { "id": "cont-08", "name": "향정신성 약품 금고", "isOpen": false, "containsClueId": "clue-10" },
+
+      { "id": "cont-09", "name": "구속 침대 하단 철제함", "isOpen": false, "containsClueId": "clue-12" },
+      { "id": "cont-10", "name": "벽면 비밀 벽돌함", "isOpen": false, "containsClueId": "clue-13" },
+      { "id": "cont-11", "name": "투약 트레이 잠금함", "isOpen": false, "containsClueId": "clue-14" },
+      { "id": "cont-12", "name": "심전도 모니터 배터리함", "isOpen": false, "containsClueId": "clue-15" },
+
+      { "id": "cont-13", "name": "5번 시신 냉동고 트레이", "isOpen": false, "containsClueId": "clue-17" },
+      { "id": "cont-14", "name": "부검 메스 보관함", "isOpen": false, "containsClueId": "clue-18" },
+      { "id": "cont-15", "name": "X-Ray 필름 케이스", "isOpen": false, "containsClueId": "clue-19" },
+      { "id": "cont-16", "name": "표본 진열장 하단 금고", "isOpen": false, "containsClueId": "clue-20" },
+
+      { "id": "cont-17", "name": "병원장 강철 금고 내부", "isOpen": false, "containsClueId": "clue-22" },
+      { "id": "cont-18", "name": "초상화 후면 비밀 벽감", "isOpen": false, "containsClueId": "clue-23" },
+      { "id": "cont-19", "name": "혈청 냉장 보관함", "isOpen": false, "containsClueId": "clue-24" },
+      { "id": "cont-20", "name": "체스판 하단 비밀 공간", "isOpen": false, "containsClueId": "clue-25" },
+
+      { "id": "cont-21", "name": "증기 밸브 제어함", "isOpen": false, "containsClueId": "clue-27" },
+      { "id": "cont-22", "name": "냉각수 보조 탱크함", "isOpen": false, "containsClueId": "clue-28" },
+      { "id": "cont-23", "name": "보안 터미널 코어함", "isOpen": false, "containsClueId": "clue-29" },
+      { "id": "cont-24", "name": "발전기 마스터 릴레이함", "isOpen": false, "containsClueId": "clue-30" }
+    ],
+    "gates": [
+      { "id": "gate-01", "interfaceType": "MechanicalLock", "condition": "Value == '1420'", "unlocks": "cont-01", "isOpen": false },
+      { "id": "gate-02", "interfaceType": "ElectronicKeypad", "condition": "Value == '4132'", "unlocks": "cont-02", "isOpen": false },
+      { "id": "gate-03", "interfaceType": "DirectionalLock", "condition": "Value == 'URDL'", "unlocks": "cont-03", "isOpen": false },
+      { "id": "gate-04", "interfaceType": "MechanicalLock", "condition": "Value == '0404'", "unlocks": "cont-04", "isOpen": false },
+      { "id": "gate-05", "interfaceType": "ElectronicKeypad", "condition": "Value == '1590'", "unlocks": "door-r1-r2", "isOpen": false },
+
+      { "id": "gate-06", "interfaceType": "MechanicalLock", "condition": "Value == '0903'", "unlocks": "cont-05", "isOpen": false },
+      { "id": "gate-07", "interfaceType": "MechanicalLock", "condition": "Value == '2381'", "unlocks": "cont-06", "isOpen": false },
+      { "id": "gate-08", "interfaceType": "ElectronicKeypad", "condition": "Value == '9677'", "unlocks": "cont-07", "isOpen": false },
+      { "id": "gate-09", "interfaceType": "MechanicalLock", "condition": "Value == 'MADK'", "unlocks": "cont-08", "isOpen": false },
+      { "id": "gate-10", "interfaceType": "ElectronicKeypad", "condition": "Value == '2400'", "unlocks": "door-r2-r3", "isOpen": false },
+
+      { "id": "gate-11", "interfaceType": "MechanicalLock", "condition": "Value == '4926'", "unlocks": "cont-09", "isOpen": false },
+      { "id": "gate-12", "interfaceType": "MechanicalLock", "condition": "Value == '1061'", "unlocks": "cont-10", "isOpen": false },
+      { "id": "gate-13", "interfaceType": "ElectronicKeypad", "condition": "Value == '0500'", "unlocks": "cont-11", "isOpen": false },
+      { "id": "gate-14", "interfaceType": "DirectionalLock", "condition": "Value == 'UDUR'", "unlocks": "cont-12", "isOpen": false },
+      { "id": "gate-15", "interfaceType": "ElectronicKeypad", "condition": "Value == '3650'", "unlocks": "door-r3-r4", "isOpen": false },
+
+      { "id": "gate-16", "interfaceType": "MechanicalLock", "condition": "Value == '1592'", "unlocks": "cont-13", "isOpen": false },
+      { "id": "gate-17", "interfaceType": "ElectronicKeypad", "condition": "Value == '1540'", "unlocks": "cont-14", "isOpen": false },
+      { "id": "gate-18", "interfaceType": "MechanicalLock", "condition": "Value == '7249'", "unlocks": "cont-15", "isOpen": false },
+      { "id": "gate-19", "interfaceType": "SensorSwitch", "condition": "Value == '1780'", "unlocks": "cont-16", "isOpen": false },
+      { "id": "gate-20", "interfaceType": "ElectronicKeypad", "condition": "Value == '2068'", "unlocks": "door-r4-r5", "isOpen": false },
+
+      { "id": "gate-21", "interfaceType": "ElectronicKeypad", "condition": "Value == '5433'", "unlocks": "cont-17", "isOpen": false },
+      { "id": "gate-22", "interfaceType": "MechanicalLock", "condition": "Value == 'MIND'", "unlocks": "cont-18", "isOpen": false },
+      { "id": "gate-23", "interfaceType": "ElectronicKeypad", "condition": "Value == '3142'", "unlocks": "cont-19", "isOpen": false },
+      { "id": "gate-24", "interfaceType": "DirectionalLock", "condition": "Value == 'URUL'", "unlocks": "cont-20", "isOpen": false },
+      { "id": "gate-25", "interfaceType": "ElectronicKeypad", "condition": "Value == '0602'", "unlocks": "door-r5-r6", "isOpen": false },
+
+      { "id": "gate-26", "interfaceType": "ElectronicKeypad", "condition": "Value == '0800'", "unlocks": "cont-21", "isOpen": false },
+      { "id": "gate-27", "interfaceType": "DirectionalLock", "condition": "Value == 'DRDL'", "unlocks": "cont-22", "isOpen": false },
+      { "id": "gate-28", "interfaceType": "ElectronicKeypad", "condition": "Value == '8912'", "unlocks": "cont-23", "isOpen": false },
+      { "id": "gate-29", "interfaceType": "MechanicalLock", "condition": "Value == '1342'", "unlocks": "cont-24", "isOpen": false },
+      { "id": "gate-30", "interfaceType": "ElectronicKeypad", "condition": "Value == '4040'", "unlocks": "door-final-exit", "isOpen": false }
+    ]
+  },
+  "director": {
+    "timeLimitMinutes": 60,
+    "tensionLevel": 1,
+    "panicThresholdFailures": 2
+  }
+}
