@@ -247,6 +247,9 @@
                 1인칭 워킹
               </button>
             </div>
+            <button onclick="toggleOrbitAllFloors()" id="btn-orbit-floor-cutaway" title="조감도에서 전체 층 보기 / 현재 층만 보기 전환" class="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-[11px] font-medium text-zinc-200 transition-colors">
+              전체 층 보기
+            </button>
             <span id="hud-3d-atmosphere" class="text-[11px] font-mono text-zinc-500 hidden sm:inline">조명: 청백색 형광등</span>
           </div>
 
@@ -3772,6 +3775,19 @@
       return pGroup;
     }
 
+    let showAllFloorsInOrbit = true;
+    function toggleOrbitAllFloors() {
+      showAllFloorsInOrbit = !showAllFloorsInOrbit;
+      const btn = document.getElementById('btn-orbit-floor-cutaway');
+      if (btn) {
+        btn.textContent = showAllFloorsInOrbit ? '전체 층 보기' : '현재 층만 보기';
+        btn.className = showAllFloorsInOrbit
+          ? 'px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-[11px] font-medium text-zinc-200 transition-colors'
+          : 'px-2 py-0.5 rounded bg-amber-950/70 hover:bg-amber-900/80 border border-amber-500/40 text-[11px] font-medium text-amber-200 transition-colors';
+      }
+      rebuild3DRoom();
+    }
+
     function rebuild3DRoom() {
       if (!scene) return;
       if (unifiedBuildingGroup) scene.remove(unifiedBuildingGroup);
@@ -4125,8 +4141,8 @@
           rGroup.add(holeMesh);
         }
 
-        // 3D 조감도에서 1F 방을 편집할 때 바로 위층(2F)이 시야를 가리지 않도록 자동 층 컷어웨이
-        if (!isFps && rc.floorHeight > rcCurrent.floorHeight + 0.1) {
+        // '현재 층만 보기' 컷어웨이 모드일 때만 위층 숨김 (기본 '전체 층 보기'에서는 1F+2F 모두 표시)
+        if (!isFps && !showAllFloorsInOrbit && rc.floorHeight > rcCurrent.floorHeight + 0.1) {
           rGroup.visible = false;
         }
         unifiedBuildingGroup.add(rGroup);
@@ -4199,7 +4215,7 @@
         cp.position.set(p.x - c2f.x, 0, p.z - c2f.z);
         cGroup2f.add(cp);
       });
-      if (!isFps && rcCurrent.floorHeight < 2.0) {
+      if (!isFps && !showAllFloorsInOrbit && rcCurrent.floorHeight < 2.0) {
         cGroup2f.visible = false;
       }
       unifiedBuildingGroup.add(cGroup2f);
