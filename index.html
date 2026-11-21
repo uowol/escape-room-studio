@@ -104,14 +104,14 @@
       </div>
     </div>
 
-    <!-- Right Primary Action -->
+    <!-- Right Primary Action (Ponytail Consolidated: Single Playtest <-> Author Switch) -->
     <div class="flex items-center gap-1.5 shrink-0">
-      <button onclick="enterFpsMode()" class="bg-zinc-100 hover:bg-white text-zinc-950 font-semibold px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-colors cursor-pointer">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-        <span class="hidden sm:inline">1인칭 탐험</span>
+      <button onclick="toggleStudioMode()" id="btn-studio-mode" title="1인칭 플레이테스트 진입 (편집 스냅샷 보존 · 뒷 단계 단서 숨김)" class="bg-zinc-100 hover:bg-white text-zinc-950 font-semibold px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-colors cursor-pointer">
+        <span id="studio-mode-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+        <span id="studio-mode-label">플레이테스트</span>
       </button>
 
-      <button onclick="openImportModal()" title="RaC JSON 내보내기 / 불러오기" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-medium px-2.5 py-1.5 rounded-md text-xs border border-white/10 flex items-center gap-1.5 transition-colors">
+      <button onclick="openImportModal()" title="RaC JSON 내보내기 / 불러오기 / AI 에이전트 연동" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-medium px-2.5 py-1.5 rounded-md text-xs border border-white/10 flex items-center gap-1.5 transition-colors">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
         <span class="hidden md:inline">RaC JSON</span>
       </button>
@@ -152,6 +152,21 @@
         </div>
         <div id="room-puzzle-list" class="space-y-1">
           <!-- JS로 현재 방의 5개 문제 버튼 렌더링 -->
+        </div>
+
+        <!-- Creator Quick Authoring Actions -->
+        <div id="author-left-actions" class="mt-3 pt-3 border-t border-white/10 space-y-1.5">
+          <button onclick="addNewPuzzleObject()" class="w-full py-1.5 px-2 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-200 text-[11px] font-medium transition-colors">
+            + 현재 방에 퍼즐/소품 추가
+          </button>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="startBlankTheme()" class="py-1 px-1.5 rounded bg-zinc-950 hover:bg-zinc-900 border border-white/10 text-zinc-400 hover:text-zinc-200 text-[10px] transition-colors">
+              빈 테마 시작
+            </button>
+            <button onclick="restoreAsylumPreset()" class="py-1 px-1.5 rounded bg-zinc-950 hover:bg-zinc-900 border border-white/10 text-zinc-400 hover:text-zinc-200 text-[10px] transition-colors">
+              404호 복원
+            </button>
+          </div>
         </div>
       </div>
     </aside>
@@ -375,23 +390,148 @@
 
           <div id="prop-pass-group">
             <label class="text-amber-400 font-medium text-[10px] block mb-1">정답 코드 (Condition)</label>
-            <input type="text" maxlength="8" id="prop-passcode" value="1420" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-amber-500/30 rounded px-2 py-1 text-amber-300 font-mono font-semibold text-xs focus:border-amber-400 outline-none">
+            <input type="text" maxlength="8" id="prop-passcode" value="1420" oninput="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-amber-500/30 rounded px-2 py-1 text-amber-300 font-mono font-semibold text-xs focus:border-amber-400 outline-none">
           </div>
 
           <div>
             <label class="text-zinc-500 block mb-1 text-[10px]">소품 이름</label>
-            <input type="text" id="prop-name" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-100 font-mono text-xs focus:border-white/30 outline-none">
+            <input type="text" id="prop-name" oninput="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-100 font-mono text-xs focus:border-white/30 outline-none">
+          </div>
+
+          <div>
+            <label class="text-zinc-500 block mb-1 text-[10px]">관측 단서 (Clue)</label>
+            <textarea id="prop-clue-edit" rows="2" oninput="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-200 font-mono text-[11px] focus:border-white/30 outline-none resize-none"></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">선행 퍼즐 (스토리 순서)</label>
+              <select id="prop-requires" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-zinc-200 font-mono text-[10px] outline-none"></select>
+            </div>
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">물리 장치 (Mechanism)</label>
+              <select id="prop-mechanism" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-zinc-200 font-mono text-[10px] outline-none">
+                <option value="">일반 자물쇠</option>
+                <option value="rotary-dial">머그잔 회전</option>
+                <option value="clock-hands">괘종시계 바늘</option>
+                <option value="balance-scale">장기 저울</option>
+                <option value="uv-scan">UV 스캔</option>
+                <option value="pressure-valve">증기 밸브</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">단서 시각화 템플릿</label>
+              <select id="prop-visual-tpl" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-zinc-200 font-mono text-[10px] outline-none">
+                <option value="">기본 자동</option>
+                <option value="document">문서 / 메모지</option>
+                <option value="blueprint">도면 / 차트</option>
+                <option value="crt">CRT 모니터</option>
+                <option value="photo">사진 / 초상화</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">해금 스토리 파편</label>
+              <input type="text" id="prop-story-beat" placeholder="해금 시 서사 대사..." oninput="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-200 text-[10px] outline-none">
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-1.5">
             <div>
               <label class="text-zinc-500 block mb-1 text-[10px]">X 좌표 (m)</label>
-              <input type="number" step="0.1" id="prop-x" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-100 font-mono text-xs">
+              <input type="number" step="0.1" id="prop-x" oninput="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-100 font-mono text-xs">
             </div>
             <div>
               <label class="text-zinc-500 block mb-1 text-[10px]">Z 좌표 (m)</label>
-              <input type="number" step="0.1" id="prop-z" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-100 font-mono text-xs">
+              <input type="number" step="0.1" id="prop-z" oninput="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-100 font-mono text-xs">
             </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">소품 재질 (Material)</label>
+              <select id="prop-material" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-zinc-200 font-mono text-[10px] outline-none">
+                <option value="">기본 자동</option>
+                <option value="wood">낡은 목재 (wood)</option>
+                <option value="rustedMetal">부식 철재 (rustedMetal)</option>
+                <option value="surgicalSteel">수술용 스틸 (surgicalSteel)</option>
+                <option value="concrete">콘크리트 (concrete)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">단서 시각화 미리보기</label>
+              <button onclick="openPuzzleModalForSelected()" class="w-full py-1 px-2 rounded bg-zinc-800 hover:bg-zinc-700 border border-white/15 text-zinc-200 text-[10px] font-medium transition-colors">
+                모달 즉시 확인
+              </button>
+            </div>
+          </div>
+
+          <button onclick="deleteSelectedObject()" class="w-full py-1.5 px-2 rounded bg-rose-950/50 hover:bg-rose-900/70 border border-rose-500/30 text-rose-300 text-[11px] font-medium transition-colors">
+            선택 오브젝트 삭제
+          </button>
+        </div>
+      </details>
+
+      <!-- Current Space (Room) Geometry & PBR Texture Editor -->
+      <details class="bg-[#09090b] rounded-lg border border-white/10 text-xs">
+        <summary class="px-2.5 py-2 cursor-pointer text-[11px] font-medium text-zinc-400 hover:text-zinc-200 select-none flex justify-between items-center">
+          <span>현재 방(Space) 크기 · 위치 · 재질</span>
+          <span id="space-layer-pill" class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 font-mono border border-white/10">1F</span>
+        </summary>
+        <div class="p-2.5 pt-1 space-y-2 border-t border-white/10">
+          <div class="grid grid-cols-2 gap-1.5">
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">가로 W (m)</label>
+              <input type="number" step="0.5" min="3" max="15" id="space-w" oninput="updateCurrentSpaceProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-100 font-mono text-xs">
+            </div>
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">세로 H (m)</label>
+              <input type="number" step="0.5" min="3" max="12" id="space-h" oninput="updateCurrentSpaceProps()" class="w-full bg-[#111114] border border-white/10 rounded px-2 py-1 text-zinc-100 font-mono text-xs">
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">위치 X</label>
+              <input type="number" step="0.5" id="space-wx" oninput="updateCurrentSpaceProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-zinc-100 font-mono text-[11px]">
+            </div>
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">위치 Z</label>
+              <input type="number" step="0.5" id="space-wz" oninput="updateCurrentSpaceProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-zinc-100 font-mono text-[11px]">
+            </div>
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">층 (Floor)</label>
+              <select id="space-floor" onchange="updateCurrentSpaceProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1 py-1 text-zinc-100 font-mono text-[10px]">
+                <option value="0">1F (0m)</option>
+                <option value="2.6">2F (+2.6m)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">벽 텍스처</label>
+              <select id="space-wall-mat" onchange="updateCurrentSpaceProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-zinc-200 font-mono text-[10px]">
+                <option value="plaster">회반죽 (plaster)</option>
+                <option value="concrete">콘크리트 (concrete)</option>
+                <option value="wood">목재 패널 (wood)</option>
+                <option value="tile">타일 (tile)</option>
+                <option value="surgicalSteel">스틸 (steel)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-zinc-500 block mb-1 text-[10px]">바닥 텍스처</label>
+              <select id="space-floor-mat" onchange="updateCurrentSpaceProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-zinc-200 font-mono text-[10px]">
+                <option value="tile">병원 타일 (tile)</option>
+                <option value="concrete">콘크리트 (concrete)</option>
+                <option value="wood">마루 목재 (wood)</option>
+                <option value="rustedMetal">철판 (metal)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="text-zinc-500 block mb-1 text-[10px]">벽 색조 (Tint)</label>
+            <input type="color" id="space-wall-tint" oninput="updateCurrentSpaceProps()" class="w-full h-6 bg-[#111114] border border-white/10 rounded cursor-pointer">
           </div>
         </div>
       </details>
@@ -643,26 +783,35 @@
     </div>
   </div>
 
-  <!-- THEME JSON IMPORT / EXPORT MODAL -->
+  <!-- THEME JSON IMPORT / EXPORT & AI-NATIVE AUTHORING MODAL -->
   <div id="import-modal" onclick="if(event.target === this) this.classList.add('hidden');" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-xl w-[480px] max-w-full p-5 shadow-2xl relative">
-      <button onclick="document.getElementById('import-modal').classList.add('hidden')" title="닫기 (ESC)" class="absolute top-3 right-3 text-slate-400 hover:text-white text-lg font-bold">✕</button>
-      <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2 mb-2">
-        <span>📥</span> 테마 JSON 불러오기 & 내보내기
-      </h3>
-      <p class="text-xs text-slate-400 mb-3">
-        Room as Code (RaC) JSON 데이터를 붙여넣거나 파일로 저장할 수 있습니다.
+    <div class="bg-[#111114] border border-white/15 rounded-xl w-[560px] max-w-full p-5 shadow-2xl relative">
+      <button onclick="document.getElementById('import-modal').classList.add('hidden')" title="닫기 (ESC)" class="absolute top-3 right-3 text-zinc-400 hover:text-white text-base font-bold">✕</button>
+      <h3 class="text-sm font-semibold text-zinc-100 mb-1">RaC JSON 저작 · AI 에이전트 연동 · 무결성 검증</h3>
+      <p class="text-xs text-zinc-400 mb-3">
+        개인 AI 에이전트에게 아래 프롬프트를 전달해 테마 RaC JSON을 생성한 뒤, 여기에 붙여넣으면 3D 공간·단서 시각화·온톨로지 그래프가 즉시 컴파일됩니다.
       </p>
 
       <div class="space-y-3">
-        <textarea id="import-json-textarea" rows="6" placeholder="여기에 RaC JSON 데이터를 붙여넣으세요..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500"></textarea>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="copyAiAgentRacPrompt()" class="py-1.5 px-2.5 rounded-md bg-amber-950/50 hover:bg-amber-900/60 border border-amber-500/40 text-amber-200 text-xs font-medium transition-colors">
+            AI 에이전트용 RaC 프롬프트 복사
+          </button>
+          <button onclick="runStudioIntegrityValidation()" class="py-1.5 px-2.5 rounded-md bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-200 text-xs font-medium transition-colors">
+            닫힌 세계 무결성 검증
+          </button>
+        </div>
+
+        <div id="validation-result-box" class="hidden p-2.5 rounded-lg bg-[#09090b] border border-white/10 text-[11px] font-mono leading-relaxed max-h-28 overflow-y-auto"></div>
+
+        <textarea id="import-json-textarea" rows="8" placeholder="여기에 RaC JSON 데이터를 붙여넣으세요..." class="w-full bg-[#09090b] border border-white/10 rounded-lg p-2.5 text-xs font-mono text-zinc-300 focus:outline-none focus:border-white/30"></textarea>
 
         <div class="flex gap-2">
-          <button onclick="importThemeFromJsonText()" class="w-1/2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs shadow">
-            📥 JSON 적용하기
+          <button onclick="importThemeFromJsonText()" class="w-1/2 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold py-2 rounded-md text-xs transition-colors">
+            JSON 즉시 컴파일 & 적용
           </button>
-          <button onclick="downloadThemeJsonFile()" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-lg text-xs border border-slate-700">
-            💾 JSON 파일 다운로드
+          <button onclick="downloadThemeJsonFile()" class="w-1/2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-medium py-2 rounded-md text-xs border border-white/15 transition-colors">
+            JSON 파일 다운로드
           </button>
         </div>
       </div>
@@ -710,17 +859,17 @@
       },
       "2f": {
         id: "2f", name: "2F 비밀 연구층", height: 2.6,
-        rooms: [3, 4],
+        rooms: [3, 4, 5],
         corridorId: "corridor-2f",
-        corridorName: "2F 비밀 연구 암실 통로",
-        totalW: 17.5, totalH: 6.0,
+        corridorName: "2F 비밀 연구 복도",
+        totalW: 25.0, totalH: 5.5,
         corridor: {
-          x: 7.0, z: 0.0, w: 3.0, h: 5.5,
-          wallColor: 0x2e1065, floorColor: 0x0f0728, lightColor: 0xa855f7,
-          atmosphere: "UV 자외선 스트립 & 표본 선반",
+          x: 12.5, z: 0.0, w: 3.0, h: 5.0,
+          wallColor: 0x334155, floorColor: 0x1a2024, lightColor: 0x94a3b8,
+          atmosphere: "차가운 표본 선반 & 비상등",
           props: [
-            { type: "sample-shelf", name: "장기 표본 진열장", x: 8.5, z: 1.5, w: 0.6, d: 1.4, color: "#8b5cf6" },
-            { type: "uv-lamp", name: "천장 자외선 램프", x: 8.5, z: 3.5, w: 0.8, d: 0.2, color: "#c084fc" }
+            { type: "sample-shelf", name: "장기 표본 진열장", x: 14.0, z: 1.5, w: 0.6, d: 1.4, color: "#64748b" },
+            { type: "uv-lamp", name: "천장 비상등", x: 14.0, z: 3.5, w: 0.8, d: 0.2, color: "#94a3b8" }
           ]
         }
       },
@@ -749,50 +898,56 @@
       {
         idx: 0, id: "space-r1", floorId: "1f", shortName: "제1방: 1F 접수처", fullName: "제1방: 1F 원무과 접수처",
         layerLabel: "1F 지상", floorHeight: 0.0, wallHeight: 2.6, w: 6.0, h: 5.0,
-        worldX: 0.0, worldZ: 0.0,
-        passageInfo: "TwoWay ➔ 제2방 진료실 (중앙 복도 경유)",
+        worldX: 0.0, worldZ: 0.0, hasWestDoor: false, hasEastDoor: true,
+        materials: { wall: "plaster", floor: "tile" },
+        passageInfo: "TwoWay ➔ 제2방 진료실 (1F 중앙 복도 경유)",
         floorColor: 0x1e293b, wallColor: 0x475569, lightColor: 0xe0f2fe, atmosphere: "차가운 청백색 형광등",
         doorId: "door-r1-r2"
       },
       {
         idx: 1, id: "space-r2", floorId: "1f", shortName: "제2방: 1F 진료실", fullName: "제2방: 1F 정신과 취조·진료실",
         layerLabel: "1F 지상", floorHeight: 0.0, wallHeight: 2.6, w: 6.5, h: 5.0,
-        worldX: 9.0, worldZ: 0.0,
-        passageInfo: "OneWay 해치 ➔ 제3방 지하병동 (수직 갱도 경유)",
+        worldX: 9.0, worldZ: 0.0, hasWestDoor: true, hasEastDoor: true,
+        materials: { wall: "plaster", floor: "wood" },
+        passageInfo: "TwoWay ➔ 제3방 1F 격리병동 직결",
         floorColor: 0x261f1a, wallColor: 0x574c43, lightColor: 0xfef3c7, atmosphere: "어두운 호박색 최면등",
         doorId: "door-r2-r3"
       },
       {
-        idx: 2, id: "space-r3", floorId: "b1", shortName: "제3방: B1 격리병동", fullName: "제3방: B1 지하 중증 격리 병동",
-        layerLabel: "B1 지하 (-2.8m)", floorHeight: -2.8, wallHeight: 2.8, w: 7.0, h: 5.0,
-        worldX: 3.0, worldZ: 0.0,
-        passageInfo: "🔒 OneWay 퇴로차단 · 수직사다리 ➔ 2F",
-        floorColor: 0x1c1c20, wallColor: 0x383436, lightColor: 0xe2e8f0, atmosphere: "차가운 지하 격리 비상등",
+        idx: 2, id: "space-r3", floorId: "1f", shortName: "제3방: 1F 격리병동", fullName: "제3방: 1F 중증 격리 병동 (계단실 연결)",
+        layerLabel: "1F 지상", floorHeight: 0.0, wallHeight: 2.6, w: 7.0, h: 5.0,
+        worldX: 15.5, worldZ: 0.0, hasWestDoor: true, hasEastDoor: true,
+        materials: { wall: "concrete", floor: "concrete" },
+        passageInfo: "동쪽 실물 계단실 ➔ 2F 영안실 상승",
+        floorColor: 0x1c1c20, wallColor: 0x383436, lightColor: 0xe2e8f0, atmosphere: "차가운 격리 비상등",
         doorId: "door-r3-r4"
       },
       {
-        idx: 3, id: "space-r4", floorId: "2f", shortName: "제4방: 2F 영안실", fullName: "제4방: 2F 해부·영안실 (바닥 Hole)",
-        layerLabel: "2F 복층 (+2.6m)", floorHeight: 2.6, wallHeight: 2.6, w: 7.0, h: 5.5,
-        worldX: 0.0, worldZ: 0.0,
-        passageInfo: "🕳️ 바닥 Hole · 비밀연구복도 ➔ 제5방",
-        hasHole: true, holePos: [1.5, 4.2], holeSize: [1.1, 1.1],
+        idx: 3, id: "space-r4", floorId: "2f", shortName: "제4방: 2F 영안실", fullName: "제4방: 2F 해부·영안실 (계단실 도착)",
+        layerLabel: "2F 상층 (+2.6m)", floorHeight: 2.6, wallHeight: 2.6, w: 7.0, h: 5.0,
+        worldX: 15.5, worldZ: 0.0, hasWestDoor: true, hasEastDoor: true,
+        materials: { wall: "tile", floor: "tile" },
+        passageInfo: "2F 비밀 복도 ➔ 제5방 원장밀실",
+        hasHole: false,
         floorColor: 0x1a2024, wallColor: 0x343f45, lightColor: 0xdbeafe, atmosphere: "차가운 영안실 수술등",
         doorId: "door-r4-r5"
       },
       {
         idx: 4, id: "space-r5", floorId: "2f", shortName: "제5방: 2F 원장밀실", fullName: "제5방: 2F 병원장 비밀 임상 연구실",
-        layerLabel: "2F 복층 (+2.6m)", floorHeight: 2.6, wallHeight: 2.6, w: 6.5, h: 5.5,
-        worldX: 10.0, worldZ: 0.0,
-        passageInfo: "OneWay 화물리프트 ➔ B2 소각로",
+        layerLabel: "2F 상층 (+2.6m)", floorHeight: 2.6, wallHeight: 2.6, w: 6.5, h: 5.0,
+        worldX: 6.0, worldZ: 0.0, hasWestDoor: true, hasEastDoor: true,
+        materials: { wall: "wood", floor: "wood" },
+        passageInfo: "서쪽 보안문 ➔ 제6방 2F 특수 소각로",
         floorColor: 0x1f1b18, wallColor: 0x3c342e, lightColor: 0xfef3c7, atmosphere: "어두운 연구실 스탠드등",
         doorId: "door-r5-r6"
       },
       {
-        idx: 5, id: "space-r6", floorId: "b2", shortName: "제6방: B2 소각로", fullName: "제6방: B2 지하 소각로 & 최종 비상구",
-        layerLabel: "B2 심연 (-5.6m)", floorHeight: -5.6, wallHeight: 3.0, w: 8.0, h: 5.5,
-        worldX: 3.0, worldZ: 0.0,
-        passageInfo: "🚨 최종 방폭 비상탈출구 (Victory)",
-        floorColor: 0x1a1817, wallColor: 0x36302c, lightColor: 0xffedd5, atmosphere: "소각로 용광로 화염광",
+        idx: 5, id: "space-r6", floorId: "2f", shortName: "제6방: 2F 소각로", fullName: "제6방: 2F 특수 소각로 & 최종 비상탈출구",
+        layerLabel: "2F 상층 (+2.6m)", floorHeight: 2.6, wallHeight: 2.6, w: 6.0, h: 5.0,
+        worldX: 0.0, worldZ: 0.0, hasWestDoor: false, hasEastDoor: true,
+        materials: { wall: "concrete", floor: "rustedMetal" },
+        passageInfo: "최종 비상탈출구 (Victory)",
+        floorColor: 0x1a1817, wallColor: 0x36302c, lightColor: 0xffedd5, atmosphere: "소각로 비상등",
         doorId: "door-final-exit"
       }
     ];
@@ -1232,15 +1387,15 @@
           return sp;
         }),
         passages: [
-          { id: "pass-r1-r2", fromSpaceId: "space-r1", toSpaceId: "space-r2", directionality: "TwoWay", traverseCost: "Walk", door: { id: "door-r1-r2", type: "StandardDoor", isLocked: !studioObjects[4].solved } },
-          { id: "pass-r2-r3", fromSpaceId: "space-r2", toSpaceId: "space-r3", directionality: "OneWay", traverseCost: "Climb", door: { id: "door-r2-r3", type: "FloorHatch", isLocked: !studioObjects[9].solved } },
-          { id: "pass-r3-r4", fromSpaceId: "space-r3", toSpaceId: "space-r4", directionality: "OneWay", traverseCost: "Climb", door: { id: "door-r3-r4", type: "FloorHatch", isLocked: !studioObjects[14].solved } },
-          { id: "pass-r4-r5", fromSpaceId: "space-r4", toSpaceId: "space-r5", directionality: "TwoWay", traverseCost: "Walk", door: { id: "door-r4-r5", type: "SecretBookcase", isLocked: !studioObjects[19].solved } },
-          { id: "pass-r5-r6", fromSpaceId: "space-r5", toSpaceId: "space-r6", directionality: "OneWay", traverseCost: "Slide", door: { id: "door-r5-r6", type: "EMLockDoor", isLocked: !studioObjects[24].solved } },
-          { id: "pass-r6-exit", fromSpaceId: "space-r6", toSpaceId: "space-exterior", directionality: "OneWay", traverseCost: "Walk", door: { id: "door-final-exit", type: "EMLockDoor", isLocked: !studioObjects[29].solved } }
+          { id: "pass-r1-r2", fromSpaceId: "space-r1", toSpaceId: "space-r2", directionality: "TwoWay", traverseCost: "Walk", door: { id: "door-r1-r2", type: "StandardDoor", isLocked: !(studioObjects[4] && studioObjects[4].solved) } },
+          { id: "pass-r2-r3", fromSpaceId: "space-r2", toSpaceId: "space-r3", directionality: "OneWay", traverseCost: "Climb", door: { id: "door-r2-r3", type: "FloorHatch", isLocked: !(studioObjects[9] && studioObjects[9].solved) } },
+          { id: "pass-r3-r4", fromSpaceId: "space-r3", toSpaceId: "space-r4", directionality: "OneWay", traverseCost: "Climb", door: { id: "door-r3-r4", type: "FloorHatch", isLocked: !(studioObjects[14] && studioObjects[14].solved) } },
+          { id: "pass-r4-r5", fromSpaceId: "space-r4", toSpaceId: "space-r5", directionality: "TwoWay", traverseCost: "Walk", door: { id: "door-r4-r5", type: "SecretBookcase", isLocked: !(studioObjects[19] && studioObjects[19].solved) } },
+          { id: "pass-r5-r6", fromSpaceId: "space-r5", toSpaceId: "space-r6", directionality: "OneWay", traverseCost: "Slide", door: { id: "door-r5-r6", type: "EMLockDoor", isLocked: !(studioObjects[24] && studioObjects[24].solved) } },
+          { id: "pass-r6-exit", fromSpaceId: "space-r6", toSpaceId: "space-exterior", directionality: "OneWay", traverseCost: "Walk", door: { id: "door-final-exit", type: "EMLockDoor", isLocked: !(studioObjects[29] && studioObjects[29].solved) } }
         ],
         logicGraph: {
-          totalPuzzles: 30,
+          totalPuzzles: studioObjects.length,
           solvedPuzzles: studioObjects.filter(o => o.solved).length,
           clues: studioObjects.map(o => ({
             id: o.clueId,
@@ -2467,12 +2622,15 @@
       document.getElementById('insp-q-badge').textContent = qCode;
       document.getElementById('btn-open-puzzle-txt').textContent = `${obj.solved ? '해금 완료 · 다시 보기' : '이 퍼즐 조사 및 풀기'} (${qCode})`;
 
-      // 결속된 물리 소품(Prop Ontology) 표시
+      const prereqObj = obj.requiresSolvedId ? studioObjects.find(o => o.id === obj.requiresSolvedId) : null;
+      const clueRevealed = (studioMode !== 'playtest') || !prereqObj || prereqObj.solved || obj.solved;
+
+      // 결속된 물리 소품(Prop Ontology) 표시 (단서 해금 전에는 스포일러 차단)
       const linkedProp = PROP_ONTOLOGY.find(p => p.targetObjId === obj.id);
       const propBox = document.getElementById('insp-prop-link-box');
       const propTxt = document.getElementById('insp-prop-link');
       if (propBox && propTxt) {
-        if (linkedProp) {
+        if (linkedProp && clueRevealed) {
           propBox.classList.remove('hidden');
           propTxt.textContent = `${linkedProp.name} — ${linkedProp.gimmick.description}`;
         } else {
@@ -2480,7 +2638,14 @@
         }
       }
 
-      document.getElementById('insp-clue-txt').textContent = obj.cluePayload || '';
+      const visBadge = document.getElementById('insp-clue-vis');
+      if (visBadge) {
+        visBadge.textContent = clueRevealed ? 'Revealed' : 'Hidden';
+        visBadge.className = clueRevealed ? 'font-mono text-[10px] text-emerald-400' : 'font-mono text-[10px] text-zinc-500';
+      }
+      document.getElementById('insp-clue-txt').textContent = clueRevealed
+        ? (obj.cluePayload || '')
+        : `[단서 미발견] 선행 퍼즐(Q${String(prereqObj.qNum).padStart(2,'0')} ${prereqObj.name})을 해결하면 단서가 드러납니다.`;
       document.getElementById('insp-rule-txt').textContent = obj.probRule || '';
       document.getElementById('insp-gate-type').textContent = obj.interfaceType || 'MechanicalLock';
       document.getElementById('insp-unlock-target').textContent = obj.unlocksName || obj.unlocksId || '';
@@ -2489,6 +2654,43 @@
       document.getElementById('prop-x').value = obj.x;
       document.getElementById('prop-z').value = obj.z;
       document.getElementById('prop-passcode').value = obj.passcode || '1234';
+
+      const clueEditEl = document.getElementById('prop-clue-edit');
+      if (clueEditEl) clueEditEl.value = obj.cluePayload || '';
+
+      const reqSel = document.getElementById('prop-requires');
+      if (reqSel) {
+        const roomPeers = studioObjects.filter(o => o.roomIdx === obj.roomIdx && o.id !== obj.id);
+        reqSel.innerHTML = '<option value="">없음 (자유 진입)</option>' + roomPeers.map(p =>
+          `<option value="${p.id}" ${obj.requiresSolvedId === p.id ? 'selected' : ''}>Q${String(p.qNum).padStart(2,'0')} ${p.name}</option>`
+        ).join('');
+      }
+
+      const mechSel = document.getElementById('prop-mechanism');
+      if (mechSel) mechSel.value = obj.mechanism ? obj.mechanism.kind : '';
+
+      const visSel = document.getElementById('prop-visual-tpl');
+      if (visSel) visSel.value = (obj.visualSpec && obj.visualSpec.template) ? obj.visualSpec.template : '';
+
+      const storyEl = document.getElementById('prop-story-beat');
+      if (storyEl) storyEl.value = obj.storyBeat || '';
+
+      const matSel = document.getElementById('prop-material');
+      if (matSel) matSel.value = (obj.material && obj.material.preset) ? obj.material.preset : '';
+
+      // 현재 방(Space) 구조·재질 편집 패널 동기화
+      const rc = ROOM_CONFIGS[currentRoomIdx];
+      if (rc) {
+        const sw = document.getElementById('space-w'); if (sw) sw.value = rc.w;
+        const sh = document.getElementById('space-h'); if (sh) sh.value = rc.h;
+        const swx = document.getElementById('space-wx'); if (swx) swx.value = rc.worldX;
+        const swz = document.getElementById('space-wz'); if (swz) swz.value = rc.worldZ;
+        const sfl = document.getElementById('space-floor'); if (sfl) sfl.value = String(rc.floorHeight);
+        const swm = document.getElementById('space-wall-mat'); if (swm) swm.value = (rc.materials && rc.materials.wall) || 'plaster';
+        const sfm = document.getElementById('space-floor-mat'); if (sfm) sfm.value = (rc.materials && rc.materials.floor) || 'tile';
+        const swt = document.getElementById('space-wall-tint'); if (swt) swt.value = '#' + (rc.wallColor || 0x475569).toString(16).padStart(6, '0');
+        const pill = document.getElementById('space-layer-pill'); if (pill) pill.textContent = rc.floorHeight >= 2 ? '2F' : '1F';
+      }
 
       const solvedBadge = document.getElementById('insp-solved-badge');
       if (obj.solved) {
@@ -2510,10 +2712,66 @@
       obj.z = parseFloat(document.getElementById('prop-z').value) || obj.z;
       obj.passcode = document.getElementById('prop-passcode').value.trim().toUpperCase();
 
+      const clueEditEl = document.getElementById('prop-clue-edit');
+      if (clueEditEl) obj.cluePayload = clueEditEl.value;
+      const reqSel = document.getElementById('prop-requires');
+      if (reqSel) obj.requiresSolvedId = reqSel.value || null;
+      const mechSel = document.getElementById('prop-mechanism');
+      if (mechSel) {
+        const mk = mechSel.value;
+        obj.mechanism = mk ? { kind: mk, targetState: obj.passcode } : null;
+      }
+      const visSel = document.getElementById('prop-visual-tpl');
+      if (visSel) {
+        const tpl = visSel.value;
+        obj.visualSpec = tpl ? { template: tpl, title: obj.name, lines: [obj.cluePayload || '단서 내용을 입력하세요.'] } : null;
+      }
+      const storyEl = document.getElementById('prop-story-beat');
+      if (storyEl) obj.storyBeat = storyEl.value.trim();
+      const matSel = document.getElementById('prop-material');
+      if (matSel) {
+        obj.material = matSel.value ? { preset: matSel.value } : null;
+      }
+
       renderRoomSidebarAndProgress();
       render2DCadObjects();
-      syncObjectTo3D(obj);
+      rebuild3DRoom();
       updateInspectorValues(obj);
+      updateCodeView();
+    }
+
+    function updateCurrentSpaceProps() {
+      const rc = ROOM_CONFIGS[currentRoomIdx];
+      if (!rc) return;
+      const w = parseFloat(document.getElementById('space-w')?.value);
+      const h = parseFloat(document.getElementById('space-h')?.value);
+      const wx = parseFloat(document.getElementById('space-wx')?.value);
+      const wz = parseFloat(document.getElementById('space-wz')?.value);
+      const fh = parseFloat(document.getElementById('space-floor')?.value);
+      const wallMat = document.getElementById('space-wall-mat')?.value;
+      const floorMat = document.getElementById('space-floor-mat')?.value;
+      const wallTint = document.getElementById('space-wall-tint')?.value;
+
+      if (!isNaN(w) && w >= 3) { rc.w = w; roomW = w; }
+      if (!isNaN(h) && h >= 3) { rc.h = h; roomH = h; }
+      if (!isNaN(wx)) rc.worldX = wx;
+      if (!isNaN(wz)) rc.worldZ = wz;
+      if (!isNaN(fh)) {
+        rc.floorHeight = fh;
+        rc.floorId = fh >= 2 ? '2f' : '1f';
+        rc.layerLabel = fh >= 2 ? '2F 상층 (+2.6m)' : '1F 지상';
+      }
+      rc.materials = { wall: wallMat || 'plaster', floor: floorMat || 'tile' };
+      if (wallTint && /^#[0-9a-fA-F]{6}$/.test(wallTint)) {
+        rc.wallColor = parseInt(wallTint.slice(1), 16);
+      }
+
+      const pill = document.getElementById('space-layer-pill');
+      if (pill) pill.textContent = rc.floorHeight >= 2 ? '2F' : '1F';
+      updateCadGeometryOnly(rc.w, rc.h);
+      render2DCadObjects();
+      renderRoomSidebarAndProgress();
+      rebuild3DRoom();
       updateCodeView();
     }
 
@@ -3368,15 +3626,18 @@
         const doorObj = studioObjects.find(o => o.roomIdx === rc.idx && o.isBossDoor);
         const isDoorOpen = doorObj ? doorObj.solved : false;
 
-        // 1-1. Room Floor (0.002 offset + PBR BumpMap & Shadow Reception)
+        // 1-1. Room Floor (Space.materials.floor PBR Ontology)
         const fGeo = new THREE.PlaneGeometry(rw, rh);
         fGeo.rotateX(-Math.PI / 2);
         fGeo.translate(rw / 2, 0.002, rh / 2);
-        const floorTex = getProceduralTileTexture(rc.floorColor, false);
         const concretePbr = getPbrTexturePack('concrete');
+        const floorPreset = (rc.materials && rc.materials.floor) || 'tile';
+        const floorPbr = floorPreset === 'tile'
+          ? { map: getProceduralTileTexture(rc.floorColor, false), bumpMap: concretePbr.bumpMap }
+          : getPbrTexturePack(floorPreset === 'wood' ? 'wood' : floorPreset === 'rustedMetal' ? 'rustedMetal' : 'concrete');
         const fMesh = new THREE.Mesh(fGeo, new THREE.MeshStandardMaterial({
-          color: rc.floorColor, map: floorTex, bumpMap: concretePbr.bumpMap, bumpScale: 0.018,
-          roughness: 0.58, metalness: 0.12
+          color: rc.floorColor, map: floorPbr.map, bumpMap: floorPbr.bumpMap, bumpScale: 0.014,
+          roughness: floorPreset === 'rustedMetal' ? 0.55 : 0.62, metalness: floorPreset === 'rustedMetal' ? 0.45 : 0.12
         }));
         fMesh.receiveShadow = true;
         rGroup.add(fMesh);
@@ -3412,7 +3673,8 @@
         const doorZStart = Math.max(1.0, (rh - 1.2) / 2);
         const doorZEnd = doorZStart + 1.2;
         const doorZMid = (doorZStart + doorZEnd) / 2;
-        const hasWestEntrance = (rc.idx === 1 || rc.idx === 4); // 제2방(1F 진료실), 제5방(2F 원장밀실) 복도 연결 서쪽 입구
+        const hasWestEntrance = !!rc.hasWestDoor;
+        const hasEastEntrance = rc.hasEastDoor !== false;
 
         addTrim(0, 0.02, rw, 0.02); // North
         if (hasWestEntrance) {
@@ -3422,22 +3684,32 @@
           addTrim(0.02, rh, 0.02, 0); // West (solid)
         }
         addTrim(rw, rh - 0.02, 0, rh - 0.02); // South
-        if (doorZStart > 0.05) addTrim(rw - 0.02, 0, rw - 0.02, doorZStart);
-        if (rh > doorZEnd + 0.05) addTrim(rw - 0.02, doorZEnd, rw - 0.02, rh);
+        if (hasEastEntrance) {
+          if (doorZStart > 0.05) addTrim(rw - 0.02, 0, rw - 0.02, doorZStart);
+          if (rh > doorZEnd + 0.05) addTrim(rw - 0.02, doorZEnd, rw - 0.02, rh);
+        } else {
+          addTrim(rw - 0.02, 0, rw - 0.02, rh); // East (solid)
+        }
 
-        // 1-3. Walls (Smooth Weathered Plaster PBR, subtle bumpScale to avoid sponge artifacts)
-        const wallTex = getProceduralWallTexture(rc.wallColor);
+        // 1-3. Walls (Space.materials.wall PBR Ontology)
+        const wallPreset = (rc.materials && rc.materials.wall) || 'plaster';
+        const wallMap = wallPreset === 'plaster'
+          ? getProceduralWallTexture(rc.wallColor)
+          : wallPreset === 'tile'
+            ? getProceduralTileTexture(rc.wallColor, true)
+            : getPbrTexturePack(wallPreset === 'wood' ? 'wood' : wallPreset === 'surgicalSteel' ? 'surgicalSteel' : 'concrete').map;
         const wMat = new THREE.MeshStandardMaterial({
-          color: rc.wallColor, map: wallTex, bumpMap: concretePbr.bumpMap, bumpScale: 0.004,
-          side: THREE.DoubleSide, roughness: 0.85, transparent: !isFps, opacity: wallAlpha, depthWrite: true
+          color: rc.wallColor, map: wallMap, bumpMap: concretePbr.bumpMap, bumpScale: 0.004,
+          side: THREE.DoubleSide, roughness: wallPreset === 'surgicalSteel' ? 0.45 : 0.84,
+          metalness: wallPreset === 'surgicalSteel' ? 0.35 : 0.05,
+          transparent: !isFps, opacity: wallAlpha, depthWrite: true
         });
         const frameMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85, metalness: 0.4 });
 
         createWallMesh(rGroup, 0, 0, rw, 0, wh, 0, wMat); // North
         if (hasWestEntrance) {
-          // West Wall with open corridor entrance (진료실 · 원장밀실 입구 개통)
-          createWallMesh(rGroup, 0, doorZStart, 0, 0, wh, 0, wMat); // West Part 1
-          if (rh > doorZEnd) createWallMesh(rGroup, 0, rh, 0, doorZEnd, wh, 0, wMat); // West Part 2
+          createWallMesh(rGroup, 0, doorZStart, 0, 0, wh, 0, wMat);
+          if (rh > doorZEnd) createWallMesh(rGroup, 0, rh, 0, doorZEnd, wh, 0, wMat);
           const wLintel = new THREE.Mesh(new THREE.PlaneGeometry(1.2, wh - 2.1), wMat);
           wLintel.position.set(0, 2.1 + (wh - 2.1) / 2, doorZMid);
           wLintel.rotation.y = Math.PI / 2;
@@ -3452,40 +3724,33 @@
           createWallMesh(rGroup, 0, rh, 0, 0, wh, 0, wMat); // West (solid)
         }
         createWallMesh(rGroup, rw, rh, 0, rh, wh, 0, wMat); // South
-        createWallMesh(rGroup, rw, 0, rw, doorZStart, wh, 0, wMat); // East Part 1
-        if (rh > doorZEnd) createWallMesh(rGroup, rw, doorZEnd, rw, rh, wh, 0, wMat); // East Part 2
 
-        // Lintel above East door
-        const lintelGeo = new THREE.PlaneGeometry(1.2, wh - 2.1);
-        const lintelMesh = new THREE.Mesh(lintelGeo, wMat);
-        lintelMesh.position.set(rw, 2.1 + (wh - 2.1) / 2, doorZMid);
-        lintelMesh.rotation.y = -Math.PI / 2;
-        rGroup.add(lintelMesh);
+        if (hasEastEntrance) {
+          createWallMesh(rGroup, rw, 0, rw, doorZStart, wh, 0, wMat);
+          if (rh > doorZEnd) createWallMesh(rGroup, rw, doorZEnd, rw, rh, wh, 0, wMat);
+          const lintelMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2, wh - 2.1), wMat);
+          lintelMesh.position.set(rw, 2.1 + (wh - 2.1) / 2, doorZMid);
+          lintelMesh.rotation.y = -Math.PI / 2;
+          const leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.14, 0.10), frameMat);
+          leftPost.position.set(rw, 1.07, doorZStart);
+          const rightPost = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.14, 0.10), frameMat);
+          rightPost.position.set(rw, 1.07, doorZEnd);
+          const topHeader = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.10, 1.32), frameMat);
+          topHeader.position.set(rw, 2.15, doorZMid);
+          rGroup.add(lintelMesh, leftPost, rightPost, topHeader);
 
-        // Doorway Architrave Frame (East)
-        const leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.14, 0.10), frameMat);
-        leftPost.position.set(rw, 1.07, doorZStart);
-        const rightPost = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.14, 0.10), frameMat);
-        rightPost.position.set(rw, 1.07, doorZEnd);
-        const topHeader = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.10, 1.32), frameMat);
-        topHeader.position.set(rw, 2.15, doorZMid);
-        rGroup.add(leftPost, rightPost, topHeader);
-
-        // Hinges & Door Warning Lamp
-        [0.3, 1.1, 1.9].forEach(hY => {
-          const hinge = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.10, 10), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85 }));
-          hinge.position.set(rw - 0.02, hY, doorZStart + 0.02);
-          rGroup.add(hinge);
-        });
-        const lampMat = new THREE.MeshStandardMaterial({
-          color: isDoorOpen ? 0x10b981 : 0xef4444,
-          emissive: isDoorOpen ? 0x10b981 : 0xef4444,
-          emissiveIntensity: 0.8
-        });
-        const doorLamp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.30), lampMat);
-        doorLamp.name = `doorLamp_${rc.idx}`;
-        doorLamp.position.set(rw - 0.08, 2.26, doorZMid);
-        rGroup.add(doorLamp);
+          const lampMat = new THREE.MeshStandardMaterial({
+            color: isDoorOpen ? 0x10b981 : 0xef4444,
+            emissive: isDoorOpen ? 0x10b981 : 0xef4444,
+            emissiveIntensity: 0.8
+          });
+          const doorLamp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.30), lampMat);
+          doorLamp.name = `doorLamp_${rc.idx}`;
+          doorLamp.position.set(rw - 0.08, 2.26, doorZMid);
+          rGroup.add(doorLamp);
+        } else {
+          createWallMesh(rGroup, rw, 0, rw, rh, wh, 0, wMat); // East (solid, no floating door!)
+        }
 
         // Door leaf is rendered exclusively by create3DMeshForObject(doorObj) to prevent double-door overlap & perpendicular clipping
 
@@ -3755,13 +4020,44 @@
       });
       unifiedBuildingGroup.add(cGroup2f);
 
-      // 4. Inter-Floor Architectural Passages (Hatch Stairwell only; duplicate 5.4m ladderShaft removed to stop piercing 1F Room 1 doorway & overlapping Q15)
+      // 4. Real 2-Story Enclosed Stairwell (x: 22.5 ~ 25.0, z: 0 ~ 5.0, y: 0.0 -> 2.6m connecting 1F Room 2 & 2F Room 3)
       const stairGroup = new THREE.Group();
-      stairGroup.position.set(14.2, -2.8, 3.8);
-      const stairRamp = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 2.8), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7, roughness: 0.5 }));
-      stairRamp.position.set(0, 1.4, 0);
-      stairRamp.rotation.x = 0.45;
-      stairGroup.add(stairRamp);
+      stairGroup.name = "realStairwell_1f_2f";
+      stairGroup.position.set(22.5, 0, 0);
+      const stW = 2.5, stD = 5.0, stH = 5.2;
+      const stFloorMat = new THREE.MeshStandardMaterial({ color: 0x262f3d, map: corrPbr.map, roughness: 0.72 });
+      const stWallMat = new THREE.MeshStandardMaterial({
+        color: 0x3b4454, map: c1WallTex, bumpMap: corrPbr.bumpMap, bumpScale: 0.004,
+        side: THREE.DoubleSide, roughness: 0.85, transparent: !isFps, opacity: wallAlpha
+      });
+      const stBase = new THREE.Mesh(new THREE.BoxGeometry(stW, 0.08, stD), stFloorMat);
+      stBase.position.set(stW / 2, 0.04, stD / 2);
+      stairGroup.add(stBase);
+      // Enclosed outer walls (North, South, East)
+      createWallMesh(stairGroup, 0, 0, stW, 0, stH, 0, stWallMat);
+      createWallMesh(stairGroup, stW, stD, 0, stD, stH, 0, stWallMat);
+      createWallMesh(stairGroup, stW, 0, stW, stD, stH, 0, stWallMat);
+      // 12 Concrete Steps rising from z=3.9 (y=0.0) to z=1.1 (y=2.6) + 2F Landing
+      const stepMat = new THREE.MeshStandardMaterial({ color: 0x475569, map: corrPbr.map, roughness: 0.65 });
+      const railMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.75, roughness: 0.35 });
+      const numSteps = 12;
+      for (let i = 0; i < numSteps; i++) {
+        const sy = (i + 1) * (2.6 / numSteps);
+        const sz = 3.85 - i * (2.6 / numSteps);
+        const step = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.16, 0.24), stepMat);
+        step.position.set(1.35, sy - 0.08, sz);
+        stairGroup.add(step);
+      }
+      // 2F Landing platform connecting directly to 2F Room 3 East doorway
+      const landing2f = new THREE.Mesh(new THREE.BoxGeometry(stW, 0.12, 1.4), stFloorMat);
+      landing2f.position.set(stW / 2, 2.54, 0.7);
+      const landingBridge = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 2.4), stFloorMat);
+      landingBridge.position.set(0.45, 2.54, 2.5);
+      // Handrail along stairs
+      const handrail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 3.6), railMat);
+      handrail.position.set(0.65, 2.05, 2.55);
+      handrail.rotation.x = Math.atan2(2.6, 2.6);
+      stairGroup.add(landing2f, landingBridge, handrail);
       unifiedBuildingGroup.add(stairGroup);
 
       scene.add(unifiedBuildingGroup);
@@ -3816,9 +4112,10 @@
 
       const group = new THREE.Group();
       const baseColor = obj.solved ? 0x10b981 : parseInt((obj.color || '#3b82f6').replace('#', '0x'), 16);
-      const pbrWood = getPbrTexturePack('wood');
-      const pbrRust = getPbrTexturePack('rustedMetal');
-      const pbrSteel = getPbrTexturePack('surgicalSteel');
+      const ovPreset = obj.material && obj.material.preset ? obj.material.preset : null;
+      const pbrWood = getPbrTexturePack(ovPreset || 'wood');
+      const pbrRust = getPbrTexturePack(ovPreset || 'rustedMetal');
+      const pbrSteel = getPbrTexturePack(ovPreset || 'surgicalSteel');
 
       const metalMat = new THREE.MeshStandardMaterial({
         color: 0x64748b, map: pbrRust.map, bumpMap: pbrRust.bumpMap, bumpScale: 0.03,
@@ -5073,9 +5370,183 @@
       22: { kind: "uv-scan",        targetState: { revealed: true } },
       26: { kind: "pressure-valve", targetState: 800, tolerance: 0 }
     };
-    studioObjects.forEach(o => {
-      if (MECHANISM_REGISTRY[o.qNum]) o.mechanism = MECHANISM_REGISTRY[o.qNum];
-    });
+    const DEFAULT_ASYLUM_SNAPSHOT = JSON.parse(JSON.stringify(studioObjects));
+
+    function initProgressiveNarrativeDefaults() {
+      // 방 내 순차 스토리 체인(requiresSolvedId) 및 기본 storyBeat 자동 결속
+      for (let r = 0; r < ROOM_CONFIGS.length; r++) {
+        const list = studioObjects.filter(o => o.roomIdx === r).sort((a, b) => a.qNum - b.qNum);
+        for (let i = 0; i < list.length; i++) {
+          const obj = list[i];
+          if (MECHANISM_REGISTRY[obj.qNum] && !obj.mechanism) obj.mechanism = MECHANISM_REGISTRY[obj.qNum];
+          if (i > 0 && obj.requiresSolvedId === undefined) obj.requiresSolvedId = list[i - 1].id;
+          if (!obj.storyBeat) {
+            obj.storyBeat = i < list.length - 1
+              ? `[단서 연결] ${obj.name}에서 실마리를 찾았다. 이제 '${list[i + 1].name}' 쪽을 살펴보자.`
+              : `[공간 돌파] ${obj.name}의 봉인이 풀렸다. 다음 구역으로 나아갈 수 있다.`;
+          }
+        }
+      }
+    }
+    initProgressiveNarrativeDefaults();
+
+    // -------------------------------------------------------------
+    // ITERATION 8 SLICE 1: AUTHOR <-> PLAYTEST SNAPSHOT & PUZZLE CRUD
+    // -------------------------------------------------------------
+    let studioMode = 'author'; // 'author' | 'playtest'
+    let authorSnapshot = null;
+
+    function toggleStudioMode() {
+      const btn = document.getElementById('btn-studio-mode');
+      const dot = document.getElementById('studio-mode-dot');
+      const label = document.getElementById('studio-mode-label');
+      const leftActions = document.getElementById('author-left-actions');
+      const sbLeft = document.getElementById('sidebar-left');
+      const sbRight = document.getElementById('sidebar-right');
+
+      if (studioMode === 'author') {
+        // Author -> Playtest: 스냅샷 보존 + 진행 초기화 + 1인칭 3D 전면 진입 + 사이드바 접힘
+        authorSnapshot = {
+          objects: JSON.parse(JSON.stringify(studioObjects)),
+          inventory: Array.from(playerInventory),
+          roomIdx: currentRoomIdx
+        };
+        studioMode = 'playtest';
+        studioObjects.forEach(o => { o.solved = false; });
+        playerInventory.clear();
+        failureCount = 0;
+        if (btn) btn.className = "bg-amber-950/80 hover:bg-amber-900 text-amber-200 font-semibold px-3 py-1.5 rounded-md text-xs border border-amber-500/40 flex items-center gap-1.5 transition-colors cursor-pointer";
+        if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse";
+        if (label) label.textContent = "제작으로 복귀";
+        if (leftActions) leftActions.classList.add('hidden');
+        if (sbLeft) sbLeft.classList.add('hidden');
+        if (sbRight) sbRight.classList.add('hidden');
+        setViewLayout('3d-only');
+        setCameraMode('fps');
+        showDirectorWhisper("플레이테스트 시작: 1인칭 시점으로 전환되었습니다. 선행 단서를 풀어야 뒷 단계 단서가 열립니다.");
+      } else {
+        // Playtest -> Author: 보존된 편집 스냅샷 원복 + 2D/3D 분할 제작 화면 복귀
+        if (document.pointerLockElement) document.exitPointerLock();
+        if (authorSnapshot) {
+          studioObjects.length = 0;
+          authorSnapshot.objects.forEach(o => studioObjects.push(o));
+          playerInventory.clear();
+          authorSnapshot.inventory.forEach(id => playerInventory.add(id));
+          currentRoomIdx = authorSnapshot.roomIdx;
+        }
+        studioMode = 'author';
+        if (btn) btn.className = "bg-zinc-100 hover:bg-white text-zinc-950 font-semibold px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-colors cursor-pointer";
+        if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-600";
+        if (label) label.textContent = "플레이테스트";
+        if (leftActions) leftActions.classList.remove('hidden');
+        if (sbLeft) sbLeft.classList.remove('hidden');
+        if (sbRight) sbRight.classList.remove('hidden');
+        setCameraMode('orbit');
+        setViewLayout('split');
+        showDirectorWhisper("제작 모드로 복귀했습니다. 편집 스냅샷이 원복되었습니다.");
+      }
+      renderInventoryHud();
+      rebuild3DRoom();
+      rebuild3DObjectsForCurrentRoom();
+      render2DCadObjects();
+      renderRoomSidebarAndProgress();
+      const first = studioObjects.find(o => o.roomIdx === currentRoomIdx);
+      if (first) selectObject(first.id);
+      updateCodeView();
+    }
+
+    function addNewPuzzleObject() {
+      const roomObjs = studioObjects.filter(o => o.roomIdx === currentRoomIdx);
+      const nextQ = studioObjects.reduce((m, o) => Math.max(m, o.qNum || 0), 0) + 1;
+      const rc = ROOM_CONFIGS[currentRoomIdx] || ROOM_CONFIGS[0];
+      const prevObj = roomObjs.length > 0 ? roomObjs[roomObjs.length - 1] : null;
+      const newObj = {
+        qNum: nextQ,
+        id: `prop-custom-${Date.now().toString(36)}`,
+        roomIdx: currentRoomIdx,
+        type: "desk",
+        name: `새 단서 기물 #${nextQ}`,
+        x: Math.min(rc.w - 0.8, 1.2 + (roomObjs.length % 4) * 1.1),
+        z: Math.min(rc.h - 0.8, 1.4 + Math.floor(roomObjs.length / 4) * 1.1),
+        w: 0.9, d: 0.7, color: "#64748b", rotY: 0,
+        clueId: `clue-c-${nextQ}`, carrierType: "Text",
+        cluePayload: "여기에 플레이어가 관측할 단서 내용을 작성하세요.",
+        probId: `prob-c-${nextQ}`, probRule: "사용자 정의 풀이 규칙",
+        gateId: `gate-c-${nextQ}`, interfaceType: "MechanicalLock", passcode: "1234",
+        unlocksId: `cont-c-${nextQ}`, unlocksName: "다음 단서 해금",
+        isBossDoor: false, solved: false,
+        requiresSolvedId: prevObj ? prevObj.id : null,
+        storyBeat: `[새 스토리] 새 단서 기물 #${nextQ}의 비밀이 풀렸다.`,
+        visualSpec: { template: "document", title: `단서 문서 #${nextQ}`, lines: ["여기에 플레이어가 관측할 단서 내용을 작성하세요."] }
+      };
+      studioObjects.push(newObj);
+      rebuild3DObjectsForCurrentRoom();
+      render2DCadObjects();
+      renderRoomSidebarAndProgress();
+      selectObject(newObj.id);
+      updateCodeView();
+      playSfx('click');
+    }
+
+    function deleteSelectedObject() {
+      if (!selectedObjectId) return;
+      const idx = studioObjects.findIndex(o => o.id === selectedObjectId);
+      if (idx < 0) return;
+      const removed = studioObjects.splice(idx, 1)[0];
+      // 삭제된 오브젝트를 선행 조건으로 참조하던 항목 정리
+      studioObjects.forEach(o => { if (o.requiresSolvedId === removed.id) o.requiresSolvedId = null; });
+      const next = studioObjects.find(o => o.roomIdx === currentRoomIdx) || studioObjects[0] || null;
+      selectedObjectId = next ? next.id : null;
+      rebuild3DObjectsForCurrentRoom();
+      render2DCadObjects();
+      renderRoomSidebarAndProgress();
+      if (next) updateInspectorValues(next);
+      updateCodeView();
+      showDirectorWhisper(`[삭제 완료] '${removed.name}' 오브젝트를 제거했습니다.`);
+    }
+
+    function startBlankTheme() {
+      studioObjects.length = 0;
+      playerInventory.clear();
+      currentRoomIdx = 0;
+      const starter = {
+        qNum: 1, id: "prop-blank-01", roomIdx: 0, type: "desk", name: "첫 번째 단서 책상",
+        x: 2.2, z: 2.0, w: 1.2, d: 0.7, color: "#64748b", rotY: 0,
+        clueId: "clue-b1", carrierType: "Text",
+        cluePayload: "빈 테마의 첫 번째 단서입니다. 우측 '제작자 편집'에서 단서와 정답, 스토리 파편을 자유롭게 바꿔보세요.",
+        probId: "prob-b1", probRule: "기본 비밀번호 0404 입력",
+        gateId: "gate-b1", interfaceType: "MechanicalLock", passcode: "0404",
+        unlocksId: "door-blank-exit", unlocksName: "첫 번째 탈출구 해금",
+        isBossDoor: true, solved: false, requiresSolvedId: null,
+        storyBeat: "[스토리 시작] 첫 번째 자물쇠가 열리며 숨겨진 진실이 드러나기 시작했다.",
+        visualSpec: { template: "document", title: "크리에이터 첫 번째 메모", lines: ["빈 테마의 첫 번째 단서입니다.", "정답 코드: 0404 (우측 패널에서 수정 가능)"] }
+      };
+      studioObjects.push(starter);
+      renderInventoryHud();
+      rebuild3DRoom();
+      rebuild3DObjectsForCurrentRoom();
+      render2DCadObjects();
+      renderRoomSidebarAndProgress();
+      selectObject(starter.id);
+      updateCodeView();
+      showDirectorWhisper("새 빈 테마로 전환했습니다. 좌측 '+ 현재 방에 퍼즐/소품 추가'로 방탈출을 설계해 보세요.");
+    }
+
+    function restoreAsylumPreset() {
+      studioObjects.length = 0;
+      JSON.parse(JSON.stringify(DEFAULT_ASYLUM_SNAPSHOT)).forEach(o => studioObjects.push(o));
+      initProgressiveNarrativeDefaults();
+      playerInventory.clear();
+      currentRoomIdx = 0;
+      renderInventoryHud();
+      rebuild3DRoom();
+      rebuild3DObjectsForCurrentRoom();
+      render2DCadObjects();
+      renderRoomSidebarAndProgress();
+      if (studioObjects[0]) selectObject(studioObjects[0].id);
+      updateCodeView();
+      showDirectorWhisper("《폐쇄병동 404호》 6방 30문제 기본 프리셋을 복원했습니다.");
+    }
 
     const playerInventory = new Set();
 
@@ -5350,6 +5821,73 @@
       const q = obj.qNum;
       const name = obj.name || '';
       if (caption) caption.textContent = `${prop ? prop.name : obj.name} · ${obj.carrierType || 'Physical Inspection'}`;
+
+      // Playtest 모드에서만 선행 퍼즐 미해결 시 뒷 단계 단서 시각화 숨김 (Author 모드에서는 즉시 미리보기)
+      const prereqObj = obj.requiresSolvedId ? studioObjects.find(o => o.id === obj.requiresSolvedId) : null;
+      if (studioMode === 'playtest' && prereqObj && !prereqObj.solved && !obj.solved) {
+        stage.innerHTML = `
+          <div class="w-80 p-6 rounded-lg bg-[#0d0d11] border border-white/10 text-center space-y-3 shadow-2xl">
+            <div class="w-10 h-10 mx-auto rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-500">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            </div>
+            <div class="text-xs font-mono text-zinc-500 tracking-wider">CLUE HIDDEN</div>
+            <div class="text-sm font-semibold text-zinc-200">아직 단서를 발견하지 못했습니다</div>
+            <p class="text-xs text-zinc-400 leading-relaxed break-keep">
+              먼저 <span class="text-amber-300 font-medium">Q${String(prereqObj.qNum).padStart(2,'0')} ${prereqObj.name}</span>을(를) 해결하면 이 기물의 단서가 드러납니다.
+            </p>
+          </div>`;
+        return;
+      }
+
+      // 0. 선언적 visualSpec 템플릿 렌더러 (AI 에이전트/크리에이터 커스텀 테마 RaC JSON 자동 시각화)
+      if (obj.visualSpec && obj.visualSpec.template) {
+        const vs = obj.visualSpec;
+        const lines = Array.isArray(vs.lines) && vs.lines.length > 0 ? vs.lines : [obj.cluePayload || ''];
+        const title = vs.title || obj.name;
+        if (vs.template === 'document') {
+          stage.innerHTML = `
+            <div class="w-80 bg-[#dfd5bc] text-stone-900 rounded-sm p-5 border border-stone-600/70 -rotate-1 font-serif shadow-2xl space-y-2.5">
+              <div class="flex justify-between items-center border-b border-stone-700/40 pb-1.5">
+                <span class="font-bold text-sm tracking-tight">${title}</span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 bg-stone-800/15 rounded">${vs.badge || 'EVIDENCE'}</span>
+              </div>
+              <div class="text-xs leading-relaxed space-y-1.5">${lines.map(l => `<p>${l}</p>`).join('')}</div>
+              ${vs.highlight ? `<div class="mt-2 pt-2 border-t border-red-900/30 text-xs font-bold text-red-900">${vs.highlight}</div>` : ''}
+            </div>`;
+          return;
+        }
+        if (vs.template === 'blueprint') {
+          stage.innerHTML = `
+            <div class="w-80 bg-[#0b1f3a] text-sky-100 rounded p-4 border-2 border-sky-400/40 font-mono shadow-2xl space-y-2" style="background-image: linear-gradient(rgba(56,189,248,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.08) 1px, transparent 1px); background-size: 16px 16px;">
+              <div class="flex justify-between text-[11px] text-sky-300 border-b border-sky-400/30 pb-1">
+                <span>BLUEPRINT // ${title}</span>
+                <span>${vs.badge || 'SPEC'}</span>
+              </div>
+              <div class="text-xs leading-relaxed text-sky-100/90 space-y-1">${lines.map(l => `<div>&gt; ${l}</div>`).join('')}</div>
+            </div>`;
+          return;
+        }
+        if (vs.template === 'crt') {
+          stage.innerHTML = `
+            <div class="w-80 bg-[#06120a] text-emerald-400 rounded-lg p-4 border-4 border-zinc-700 font-mono shadow-2xl space-y-2">
+              <div class="text-[10px] text-emerald-500/80 border-b border-emerald-500/20 pb-1 flex justify-between">
+                <span>CRT-TERMINAL :: ${title}</span><span>ONLINE</span>
+              </div>
+              <div class="text-xs leading-relaxed space-y-1">${lines.map(l => `<div>$ ${l}</div>`).join('')}</div>
+            </div>`;
+          return;
+        }
+        if (vs.template === 'photo') {
+          stage.innerHTML = `
+            <div class="w-72 bg-zinc-200 p-3 pb-5 rounded-sm shadow-2xl rotate-1 text-zinc-900">
+              <div class="h-40 bg-zinc-900 rounded-sm flex items-center justify-center p-4 text-center text-zinc-300 text-xs font-serif border border-zinc-700">
+                ${lines.join('<br/>')}
+              </div>
+              <div class="mt-2.5 text-center font-serif text-xs font-semibold text-zinc-800">${title}</div>
+            </div>`;
+          return;
+        }
+      }
 
       // 1. 괘종시계 + 붉은 혈서 메모 단서 시각화 (Q06)
       if (q === 6 || name.includes('시계')) {
@@ -5695,10 +6233,18 @@
       const hintBtn = document.getElementById('btn-modal-hint');
       if (s1) { s1.classList.add('hidden'); s1.textContent = ''; }
       if (s2) { s2.classList.add('hidden'); }
+      const prereqObj = obj.requiresSolvedId ? studioObjects.find(o => o.id === obj.requiresSolvedId) : null;
+      const clueHidden = (studioMode === 'playtest') && !!(prereqObj && !prereqObj.solved && !obj.solved);
       if (hintBtn) {
-        hintBtn.disabled = false;
-        hintBtn.textContent = '힌트 보기 (1/2)';
-        hintBtn.className = 'px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-200 text-[11px] font-medium transition-colors';
+        if (clueHidden) {
+          hintBtn.disabled = true;
+          hintBtn.textContent = '선행 단서 필요';
+          hintBtn.className = 'px-2.5 py-1 rounded bg-zinc-900 border border-white/10 text-zinc-500 text-[11px] font-medium cursor-not-allowed';
+        } else {
+          hintBtn.disabled = false;
+          hintBtn.textContent = '힌트 보기 (1/2)';
+          hintBtn.className = 'px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-200 text-[11px] font-medium transition-colors';
+        }
       }
 
       // Check Prop Ontology for physical gimmick carrier
@@ -5863,6 +6409,9 @@
         playSfx('unlock');
         const rewardItem = grantRewardItemForPuzzle(obj);
         renderModalItemApplyBox(obj);
+        if (!rewardItem && obj.storyBeat) {
+          showDirectorWhisper(obj.storyBeat);
+        }
 
         fb.className = "text-xs font-bold py-2 px-3 rounded text-emerald-300 bg-emerald-950 border border-emerald-500 shadow text-center";
         fb.textContent = `철컥! [${code}] 정답 일치! ${obj.unlocksName} 성공!${rewardItem ? ` (+ ${rewardItem.name} 획득)` : ''}`;
@@ -6075,11 +6624,93 @@
       });
     }
 
+    function copyAiAgentRacPrompt() {
+      const promptText = [
+        "당신은 Room as Code (RaC v2) 방탈출 설계자입니다. 아래 JSON 형식으로 새로운 방탈출 테마를 작성해 주세요.",
+        "- 각 퍼즐은 requiresSolvedId로 앞 퍼즐과 연결하여 플레이어가 스토리를 순차적으로 알아가게 설계하세요.",
+        "- 단서 시각화는 visualSpec.template ('document' | 'blueprint' | 'crt' | 'photo')으로 지정하세요.",
+        "- 물리 장치는 mechanism.kind ('rotary-dial' | 'clock-hands' | 'balance-scale' | 'uv-scan' | 'pressure-valve')로 지정하세요.",
+        "- 아이템은 자유롭게 이름 짓되 interactions[].effect는 'unlock' | 'revealClue' | 'activate' | 'combine' 4원자 중 하나를 사용하세요.",
+        "",
+        "출력 JSON 스키마 예시:",
+        JSON.stringify({
+          themeTitle: "테마 제목",
+          directorPersona: { name: "극중 인물 이름", role: "역할" },
+          objects: [
+            {
+              qNum: 1, id: "prop-1", roomIdx: 0, type: "desk", name: "기물 이름",
+              x: 2.0, z: 1.5, w: 1.0, d: 0.7, passcode: "0414",
+              cluePayload: "단서 내용", probRule: "풀이 규칙", unlocksName: "해금 대상",
+              requiresSolvedId: null, storyBeat: "해금 시 드러나는 스토리 파편",
+              visualSpec: { template: "document", title: "문서 제목", lines: ["첫 줄", "둘째 줄"], highlight: "핵심 힌트" }
+            }
+          ]
+        }, null, 2)
+      ].join("\n");
+      navigator.clipboard.writeText(promptText).then(() => {
+        showDirectorWhisper("AI 에이전트용 RaC v2 프롬프트가 클립보드에 복사되었습니다. 개인 에이전트에 붙여넣어 보세요.");
+      }).catch(() => {
+        const ta = document.getElementById('import-json-textarea');
+        if (ta) ta.value = promptText;
+      });
+    }
+
+    function runStudioIntegrityValidation() {
+      const box = document.getElementById('validation-result-box');
+      if (!box) return;
+      const errors = [];
+      const warnings = [];
+      const objMap = new Map(studioObjects.map(o => [o.id, o]));
+
+      // 1. 정답 누락 및 빈 단서 검사
+      studioObjects.forEach(o => {
+        if (!o.passcode || !String(o.passcode).trim()) {
+          errors.push(`[정답 누락] Q${String(o.qNum).padStart(2,'0')} ${o.name}`);
+        }
+        if (!o.cluePayload || !String(o.cluePayload).trim()) {
+          warnings.push(`[단서 비어있음] Q${String(o.qNum).padStart(2,'0')} ${o.name}`);
+        }
+      });
+
+      // 2. 선행 퍼즐(requiresSolvedId) 순환 교착(Deadlock) DFS 탐지
+      const color = new Map();
+      function hasCycle(id) {
+        color.set(id, 1);
+        const o = objMap.get(id);
+        if (o && o.requiresSolvedId && objMap.has(o.requiresSolvedId)) {
+          const c = color.get(o.requiresSolvedId) || 0;
+          if (c === 1 || (c === 0 && hasCycle(o.requiresSolvedId))) return true;
+        }
+        color.set(id, 2);
+        return false;
+      }
+      studioObjects.forEach(o => {
+        if ((color.get(o.id) || 0) === 0 && hasCycle(o.id)) {
+          errors.push(`[순환 교착 Deadlock] Q${String(o.qNum).padStart(2,'0')} ${o.name}의 선행 조건이 순환합니다.`);
+        }
+      });
+
+      box.classList.remove('hidden');
+      if (errors.length === 0) {
+        box.className = "p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono leading-relaxed";
+        box.innerHTML = `PASS · 닫힌 세계 무결성 검증 통과 (퍼즐 ${studioObjects.length}개, 오류 0건, 경고 ${warnings.length}건)`
+          + (warnings.length ? `<div class="mt-1 text-amber-300">${warnings.join('<br/>')}</div>` : '');
+      } else {
+        box.className = "p-2.5 rounded-lg bg-rose-950/50 border border-rose-500/40 text-rose-300 text-[11px] font-mono leading-relaxed";
+        box.innerHTML = `FAIL · 오류 ${errors.length}건 감지:<br/>${errors.join('<br/>')}`;
+      }
+    }
+
     function openImportModal() {
       const modal = document.getElementById('import-modal');
       const textarea = document.getElementById('import-json-textarea');
+      const vBox = document.getElementById('validation-result-box');
+      if (vBox) vBox.classList.add('hidden');
       if (modal && textarea) {
-        textarea.value = JSON.stringify(buildRacJsonSnapshot(), null, 2);
+        textarea.value = JSON.stringify({
+          ...buildRacJsonSnapshot(),
+          objects: studioObjects
+        }, null, 2);
         modal.classList.remove('hidden');
       }
     }
@@ -6090,14 +6721,44 @@
 
       try {
         const data = JSON.parse(textarea.value.trim());
-        if (data.logicGraph && data.logicGraph.gates) {
-          // RaC Schema format
+        if (Array.isArray(data.objects) && data.objects.length > 0) {
+          // AI 에이전트 또는 크리에이터가 생성한 풀 RaC v2 테마 컴파일
+          studioObjects.length = 0;
+          data.objects.forEach((raw, idx) => {
+            studioObjects.push({
+              qNum: raw.qNum || (idx + 1),
+              id: raw.id || `prop-ai-${idx + 1}`,
+              roomIdx: typeof raw.roomIdx === 'number' ? raw.roomIdx : 0,
+              type: raw.type || 'desk',
+              name: raw.name || `기물 #${idx + 1}`,
+              x: typeof raw.x === 'number' ? raw.x : (1.5 + (idx % 3) * 1.3),
+              z: typeof raw.z === 'number' ? raw.z : (1.5 + Math.floor(idx / 3) * 1.2),
+              w: raw.w || 1.0, d: raw.d || 0.7, color: raw.color || '#64748b', rotY: raw.rotY || 0,
+              clueId: raw.clueId || `clue-ai-${idx + 1}`, carrierType: raw.carrierType || 'Text',
+              cluePayload: raw.cluePayload || '', probId: raw.probId || `prob-ai-${idx + 1}`,
+              probRule: raw.probRule || '', gateId: raw.gateId || `gate-ai-${idx + 1}`,
+              interfaceType: raw.interfaceType || 'MechanicalLock',
+              passcode: String(raw.passcode || '1234').toUpperCase(),
+              unlocksId: raw.unlocksId || `cont-ai-${idx + 1}`,
+              unlocksName: raw.unlocksName || '다음 단서 해금',
+              isBossDoor: !!raw.isBossDoor, solved: !!raw.solved,
+              requiresSolvedId: raw.requiresSolvedId || null,
+              storyBeat: raw.storyBeat || '',
+              mechanism: raw.mechanism || null,
+              visualSpec: raw.visualSpec || null
+            });
+          });
+          if (data.directorPersona && data.directorPersona.name) {
+            const pName = document.getElementById('director-persona-name');
+            if (pName) pName.textContent = data.directorPersona.name;
+          }
+          currentRoomIdx = studioObjects[0].roomIdx || 0;
+        } else if (data.logicGraph && data.logicGraph.gates) {
           data.logicGraph.gates.forEach(g => {
             const obj = studioObjects.find(o => o.gateId === g.id);
             if (obj && g.passcode) obj.passcode = g.passcode;
           });
         } else if (Array.isArray(data)) {
-          // Lightweight state format
           data.forEach(item => {
             const obj = studioObjects.find(o => o.id === item.id);
             if (obj) {
@@ -6107,13 +6768,15 @@
           });
         }
         document.getElementById('import-modal').classList.add('hidden');
+        rebuild3DRoom();
+        rebuild3DObjectsForCurrentRoom();
         renderRoomSidebarAndProgress();
         render2DCadObjects();
-        rebuild3DObjectsForCurrentRoom();
+        if (studioObjects[0]) selectObject(studioObjects[0].id);
         updateCodeView();
-        alert("✅ 테마 JSON이 성공적으로 반영되었습니다!");
+        showDirectorWhisper(`RaC JSON 컴파일 완료! (${studioObjects.length}개 퍼즐·단서 시각화 반영)`);
       } catch (err) {
-        alert("❌ 올바른 JSON 형식이 아닙니다: " + err.message);
+        alert("올바른 JSON 형식이 아닙니다: " + err.message);
       }
     }
 

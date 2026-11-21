@@ -50,6 +50,16 @@
               "size": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
             }
           },
+          "materials": {
+            "type": "object",
+            "description": "공간 벽·바닥 PBR 텍스처 프리셋 및 색조 온톨로지",
+            "properties": {
+              "wall": { "type": "string", "enum": ["concrete", "plaster", "wood", "tile", "surgicalSteel", "rustedMetal"], "default": "plaster" },
+              "floor": { "type": "string", "enum": ["tile", "concrete", "wood", "surgicalSteel", "rustedMetal"], "default": "tile" },
+              "wallTint": { "type": "string" },
+              "floorTint": { "type": "string" }
+            }
+          },
           "props": {
             "type": "array",
             "description": "공간 내에 배치된 물리적 가구, 기물 및 단서 담지체(Prop)",
@@ -65,6 +75,14 @@
                 "targetObjId": { "type": "string", "description": "이 소품이 얹혀있는 부모 가구 기물 ID" },
                 "wallSnapped": { "type": "boolean", "default": false },
                 "wallSide": { "type": "string", "enum": ["N", "E", "S", "W"] },
+                "material": {
+                  "type": "object",
+                  "description": "소품 PBR 텍스처 프리셋 및 색조",
+                  "properties": {
+                    "preset": { "type": "string", "enum": ["wood", "rustedMetal", "surgicalSteel", "concrete"], "default": "wood" },
+                    "tint": { "type": "string" }
+                  }
+                },
                 "gimmick": {
                   "type": "object",
                   "description": "물리적 단서 관찰 기믹 (시계 각도, 컵 손잡이 방향 등)",
