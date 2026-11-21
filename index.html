@@ -142,6 +142,9 @@
         <div id="room-switcher-list" class="space-y-1">
           <!-- JS로 6개 방 버튼 렌더링 -->
         </div>
+        <button onclick="addNewSpace()" class="w-full mt-2 py-1 px-2 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-300 text-[10px] font-medium transition-colors">
+          + 현재 층에 새 방 추가
+        </button>
       </div>
 
       <!-- Current Room 5 Puzzles Quick List -->
@@ -449,6 +452,46 @@
             </div>
           </div>
 
+          <div>
+            <label class="text-zinc-500 block mb-1 text-[10px]">3D 모델링 (Model Preset)</label>
+            <select id="prop-model-preset" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-zinc-200 font-mono text-[10px] outline-none">
+              <option value="">자동 (이름/타입 기반)</option>
+              <optgroup label="책상 · 테이블">
+                <option value="desk-terminal">접수 데스크 + CRT 모니터</option>
+                <option value="desk-chess">체스 테이블</option>
+                <option value="desk-autopsy">스테인리스 부검대</option>
+                <option value="desk-plain">일반 목재 책상</option>
+              </optgroup>
+              <optgroup label="수납 · 장치">
+                <option value="cabinet">4단 철제 파일 캐비닛</option>
+                <option value="locker">철제 사물함</option>
+                <option value="pipe-manifold">고압 증기 파이프 · 밸브</option>
+                <option value="safe">다이얼 철제 금고</option>
+                <option value="generator">비상 발전기</option>
+                <option value="scale">정밀 표본 저울</option>
+              </optgroup>
+              <optgroup label="전자 · 의료 기기">
+                <option value="phone">다이얼 내선 전화기</option>
+                <option value="reel-recorder">릴 테이프 녹음기</option>
+                <option value="xray-lightbox">X-Ray 라이트박스</option>
+                <option value="console">전자 제어 콘솔</option>
+              </optgroup>
+              <optgroup label="소품 · 기물">
+                <option value="clock">엔틱 괘종시계</option>
+                <option value="hospital-bed">구속복 철제 침대</option>
+                <option value="specimen-shelf">표본 진열장</option>
+                <option value="portrait">벽걸이 초상화 액자</option>
+                <option value="ladder">수직 안전 사다리</option>
+              </optgroup>
+              <optgroup label="문 · 통로">
+                <option value="door-standard">강철 보안문</option>
+                <option value="door-hatch">바닥 해치</option>
+                <option value="door-lift">화물 리프트</option>
+                <option value="door-bookshelf">비밀 책장문</option>
+              </optgroup>
+            </select>
+          </div>
+
           <div class="grid grid-cols-2 gap-1.5">
             <div>
               <label class="text-zinc-500 block mb-1 text-[10px]">소품 재질 (Material)</label>
@@ -532,6 +575,16 @@
           <div>
             <label class="text-zinc-500 block mb-1 text-[10px]">벽 색조 (Tint)</label>
             <input type="color" id="space-wall-tint" oninput="updateCurrentSpaceProps()" class="w-full h-6 bg-[#111114] border border-white/10 rounded cursor-pointer">
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-white/10 text-[10px] text-zinc-300">
+            <label class="flex items-center gap-1.5 cursor-pointer select-none">
+              <input type="checkbox" id="space-door-west" onchange="updateCurrentSpaceProps()" class="accent-emerald-500">
+              <span>서쪽 문 개통</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer select-none">
+              <input type="checkbox" id="space-door-east" onchange="updateCurrentSpaceProps()" class="accent-emerald-500">
+              <span>동쪽 문 개통</span>
+            </label>
           </div>
         </div>
       </details>
@@ -829,7 +882,7 @@
         rooms: [0, 1],
         corridorId: "corridor-1f",
         corridorName: "1F 중앙 폐쇄 복도",
-        totalW: 16.5, totalH: 5.5,
+        totalW: 25.0, totalH: 5.5,
         corridor: {
           x: 6.0, z: 0.0, w: 3.0, h: 5.0,
           wallColor: 0x334155, floorColor: 0x0f172a, lightColor: 0x38bdf8,
@@ -2260,9 +2313,10 @@
         g.appendChild(pGroup);
       });
 
-      // Render Each Room in this Floor
-      floor.rooms.forEach(rIdx => {
-        const r = ROOM_CONFIGS[rIdx];
+      // Render Each Room in this Floor (Dynamic filter so newly added rooms & 1F 3-rooms all appear & can be dragged)
+      const floorRooms = ROOM_CONFIGS.filter(r => r.floorId === floor.id);
+      floorRooms.forEach(r => {
+        const rIdx = r.idx;
         const rX = m + r.worldX * scale;
         const rY = m + r.worldZ * scale;
         const rW = r.w * scale;
@@ -2270,8 +2324,57 @@
         const isCurrent = (rIdx === currentRoomIdx);
 
         const rGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        rGroup.setAttribute('class', 'cursor-pointer hover:opacity-90');
-        rGroup.onclick = () => { switchRoom(rIdx); };
+        rGroup.setAttribute('class', 'cursor-grab active:cursor-grabbing hover:opacity-95');
+
+        // Pointer drag (0.5m grid snap) with 4px threshold separating click vs drag
+        rGroup.onpointerdown = (ev) => {
+          ev.stopPropagation();
+          const svg = document.getElementById('cad-svg');
+          if (!svg) return;
+          const startClientX = ev.clientX;
+          const startClientY = ev.clientY;
+          const origWX = r.worldX;
+          const origWZ = r.worldZ;
+          let moved = false;
+
+          const getSvgPt = (cx, cy) => {
+            const pt = svg.createSVGPoint();
+            pt.x = cx; pt.y = cy;
+            const ctm = svg.getScreenCTM();
+            return ctm ? pt.matrixTransform(ctm.inverse()) : { x: cx, y: cy };
+          };
+          const startPt = getSvgPt(startClientX, startClientY);
+
+          const onMove = (me) => {
+            if (!moved && Math.hypot(me.clientX - startClientX, me.clientY - startClientY) < 4) return;
+            moved = true;
+            const curPt = getSvgPt(me.clientX, me.clientY);
+            const dxM = (curPt.x - startPt.x) / scale;
+            const dzM = (curPt.y - startPt.y) / scale;
+            const snapX = Math.max(-5, Math.round((origWX + dxM) * 2) / 2);
+            const snapZ = Math.max(-5, Math.round((origWZ + dzM) * 2) / 2);
+            if (r.worldX !== snapX || r.worldZ !== snapZ) {
+              r.worldX = snapX;
+              r.worldZ = snapZ;
+              if (rIdx === currentRoomIdx) {
+                const swx = document.getElementById('space-wx'); if (swx) swx.value = r.worldX;
+                const swz = document.getElementById('space-wz'); if (swz) swz.value = r.worldZ;
+              }
+              renderFloorCadView(floor, scale);
+              rebuild3DRoom();
+              updateCodeView();
+            }
+          };
+
+          const onUp = () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            if (!moved) switchRoom(rIdx);
+          };
+
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+        };
 
         const rRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         rRect.setAttribute('x', rX);
@@ -2283,6 +2386,28 @@
         rRect.setAttribute('stroke', isCurrent ? '#6366f1' : '#475569');
         rRect.setAttribute('stroke-width', isCurrent ? '3' : '1.5');
         rGroup.appendChild(rRect);
+
+        // Doorway opening markers on West / East walls
+        if (r.hasWestDoor) {
+          const wDoor = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          wDoor.setAttribute('x', rX - 3);
+          wDoor.setAttribute('y', rY + rH / 2 - 10);
+          wDoor.setAttribute('width', 6);
+          wDoor.setAttribute('height', 20);
+          wDoor.setAttribute('rx', 2);
+          wDoor.setAttribute('fill', '#10b981');
+          rGroup.appendChild(wDoor);
+        }
+        if (r.hasEastDoor !== false) {
+          const eDoor = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          eDoor.setAttribute('x', rX + rW - 3);
+          eDoor.setAttribute('y', rY + rH / 2 - 10);
+          eDoor.setAttribute('width', 6);
+          eDoor.setAttribute('height', 20);
+          eDoor.setAttribute('rx', 2);
+          eDoor.setAttribute('fill', '#10b981');
+          rGroup.appendChild(eDoor);
+        }
 
         // Room Name & Status
         const rTitle = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -2302,7 +2427,7 @@
         rSize.setAttribute('font-size', '9');
         rSize.setAttribute('font-family', 'monospace');
         rSize.setAttribute('text-anchor', 'middle');
-        rSize.textContent = `${r.w}×${r.h}m · ${r.passageInfo}`;
+        rSize.textContent = `${r.w}×${r.h}m (${r.worldX}, ${r.worldZ}) · 드래그 이동`;
         rGroup.appendChild(rSize);
 
         // Render Room Objects (Puzzles) Mini Icons
@@ -2678,6 +2803,9 @@
       const matSel = document.getElementById('prop-material');
       if (matSel) matSel.value = (obj.material && obj.material.preset) ? obj.material.preset : '';
 
+      const modelSel = document.getElementById('prop-model-preset');
+      if (modelSel) modelSel.value = obj.modelPreset || '';
+
       // 현재 방(Space) 구조·재질 편집 패널 동기화
       const rc = ROOM_CONFIGS[currentRoomIdx];
       if (rc) {
@@ -2690,6 +2818,8 @@
         const sfm = document.getElementById('space-floor-mat'); if (sfm) sfm.value = (rc.materials && rc.materials.floor) || 'tile';
         const swt = document.getElementById('space-wall-tint'); if (swt) swt.value = '#' + (rc.wallColor || 0x475569).toString(16).padStart(6, '0');
         const pill = document.getElementById('space-layer-pill'); if (pill) pill.textContent = rc.floorHeight >= 2 ? '2F' : '1F';
+        const dw = document.getElementById('space-door-west'); if (dw) dw.checked = !!rc.hasWestDoor;
+        const de = document.getElementById('space-door-east'); if (de) de.checked = rc.hasEastDoor !== false;
       }
 
       const solvedBadge = document.getElementById('insp-solved-badge');
@@ -2732,6 +2862,10 @@
       if (matSel) {
         obj.material = matSel.value ? { preset: matSel.value } : null;
       }
+      const modelSel = document.getElementById('prop-model-preset');
+      if (modelSel) {
+        obj.modelPreset = modelSel.value || null;
+      }
 
       renderRoomSidebarAndProgress();
       render2DCadObjects();
@@ -2765,14 +2899,57 @@
       if (wallTint && /^#[0-9a-fA-F]{6}$/.test(wallTint)) {
         rc.wallColor = parseInt(wallTint.slice(1), 16);
       }
+      const dw = document.getElementById('space-door-west');
+      const de = document.getElementById('space-door-east');
+      if (dw) rc.hasWestDoor = dw.checked;
+      if (de) rc.hasEastDoor = de.checked;
 
       const pill = document.getElementById('space-layer-pill');
       if (pill) pill.textContent = rc.floorHeight >= 2 ? '2F' : '1F';
       updateCadGeometryOnly(rc.w, rc.h);
       render2DCadObjects();
+      if (cadViewMode === 'floor') updateCadViewBox();
       renderRoomSidebarAndProgress();
       rebuild3DRoom();
       updateCodeView();
+    }
+
+    function addNewSpace() {
+      const curRc = ROOM_CONFIGS[currentRoomIdx] || ROOM_CONFIGS[0];
+      const floorId = curRc.floorId || '1f';
+      const floorHeight = floorId === '2f' ? 2.6 : 0.0;
+      const newIdx = ROOM_CONFIGS.length;
+      const sameFloor = ROOM_CONFIGS.filter(r => r.floorId === floorId);
+      const maxX = sameFloor.reduce((m, r) => Math.max(m, r.worldX + r.w), 0);
+      const newRoom = {
+        idx: newIdx,
+        id: `space-r${newIdx + 1}`,
+        floorId,
+        shortName: `제${newIdx + 1}방: ${floorId.toUpperCase()} 새 공간`,
+        fullName: `제${newIdx + 1}방: ${floorId.toUpperCase()} 사용자 정의 방`,
+        layerLabel: floorId === '2f' ? '2F 상층 (+2.6m)' : '1F 지상',
+        floorHeight,
+        wallHeight: 2.6,
+        w: 6.0, h: 5.0,
+        worldX: Math.min(maxX, 24.0), worldZ: 6.0,
+        hasWestDoor: true, hasEastDoor: false,
+        materials: { wall: 'plaster', floor: 'tile' },
+        passageInfo: '층별 통합 도면에서 드래그로 배치',
+        floorColor: 0x1e293b, wallColor: 0x475569, lightColor: 0xe0f2fe,
+        atmosphere: '기본 실내 조명',
+        doorId: `door-r${newIdx + 1}`
+      };
+      ROOM_CONFIGS.push(newRoom);
+      if (FLOOR_CONFIGS[floorId]) {
+        FLOOR_CONFIGS[floorId].totalW = Math.max(FLOOR_CONFIGS[floorId].totalW, newRoom.worldX + newRoom.w + 2);
+        FLOOR_CONFIGS[floorId].totalH = Math.max(FLOOR_CONFIGS[floorId].totalH, newRoom.worldZ + newRoom.h + 2);
+      }
+      switchRoom(newIdx);
+      setCadViewMode('floor');
+      rebuild3DRoom();
+      renderRoomSidebarAndProgress();
+      updateCodeView();
+      showDirectorWhisper(`새 방 '${newRoom.shortName}'을 추가했습니다. 층별 통합 도면에서 드래그해 원하는 위치에 붙여보세요.`);
     }
 
     // -------------------------------------------------------------
@@ -3948,6 +4125,10 @@
           rGroup.add(holeMesh);
         }
 
+        // 3D 조감도에서 1F 방을 편집할 때 바로 위층(2F)이 시야를 가리지 않도록 자동 층 컷어웨이
+        if (!isFps && rc.floorHeight > rcCurrent.floorHeight + 0.1) {
+          rGroup.visible = false;
+        }
         unifiedBuildingGroup.add(rGroup);
       });
 
@@ -4018,6 +4199,9 @@
         cp.position.set(p.x - c2f.x, 0, p.z - c2f.z);
         cGroup2f.add(cp);
       });
+      if (!isFps && rcCurrent.floorHeight < 2.0) {
+        cGroup2f.visible = false;
+      }
       unifiedBuildingGroup.add(cGroup2f);
 
       // 4. Real 2-Story Enclosed Stairwell (x: 22.5 ~ 25.0, z: 0 ~ 5.0, y: 0.0 -> 2.6m connecting 1F Room 2 & 2F Room 3)
@@ -4102,6 +4286,32 @@
       }
     }
 
+    const MODEL_PRESET_MAP = {
+      'desk-terminal':  { type: 'desk',     hint: '접수' },
+      'desk-chess':     { type: 'desk',     hint: '체스' },
+      'desk-autopsy':   { type: 'desk',     hint: '부검' },
+      'desk-plain':     { type: 'desk',     hint: '' },
+      'cabinet':        { type: 'cabinet',  hint: '' },
+      'locker':         { type: 'locker',   hint: '' },
+      'pipe-manifold':  { type: 'locker',   hint: '파이프' },
+      'phone':          { type: 'console',  hint: '전화' },
+      'reel-recorder':  { type: 'console',  hint: '녹음기' },
+      'xray-lightbox':  { type: 'console',  hint: 'X-Ray' },
+      'console':        { type: 'console',  hint: '' },
+      'safe':           { type: 'safe',     hint: '' },
+      'generator':      { type: 'safe',     hint: '발전기' },
+      'scale':          { type: 'safe',     hint: '저울' },
+      'clock':          { type: 'artifact', hint: '시계' },
+      'hospital-bed':   { type: 'artifact', hint: '침대' },
+      'specimen-shelf': { type: 'artifact', hint: '표본' },
+      'portrait':       { type: 'artifact', hint: '초상화' },
+      'ladder':         { type: 'ladder',   hint: '' },
+      'door-standard':  { type: 'door',     hint: '' },
+      'door-hatch':     { type: 'door',     hint: '해치' },
+      'door-lift':      { type: 'door',     hint: '리프트' },
+      'door-bookshelf': { type: 'door',     hint: '책장' }
+    };
+
     function create3DMeshForObject(obj, targetParent) {
       if (meshMap.has(obj.id)) {
         const oldGroup = meshMap.get(obj.id);
@@ -4141,9 +4351,11 @@
 
       const w = obj.w || 0.8;
       const d = obj.d || 0.6;
-      const name = obj.name || "";
+      const presetSpec = obj.modelPreset ? MODEL_PRESET_MAP[obj.modelPreset] : null;
+      const renderType = presetSpec ? presetSpec.type : obj.type;
+      const name = presetSpec ? presetSpec.hint : (obj.name || "");
 
-      if (obj.type === 'desk') {
+      if (renderType === 'desk') {
         // Medical / Office Desk with aged wood PBR surface, drawers, legs, monitor & clutter
         const topH = 0.72;
         const topMat = name.includes("부검")
@@ -4232,7 +4444,7 @@
           group.add(binder, lampBase, lampArm, lampShade);
         }
 
-      } else if (obj.type === 'cabinet') {
+      } else if (renderType === 'cabinet') {
         // Multi-Drawer Filing Cabinet / Drug Shelf (Precise drawer seam bounds, zero floating bar)
         const cabH = 1.65;
         const body = new THREE.Mesh(new THREE.BoxGeometry(w, cabH, d), new THREE.MeshStandardMaterial({
@@ -4261,7 +4473,7 @@
           group.add(plate, handle);
         }
 
-      } else if (obj.type === 'locker') {
+      } else if (renderType === 'locker') {
         // Hospital Steel Locker / Pipe Manifold
         if (name.includes("매니폴드") || name.includes("파이프")) {
           // Heavy Industrial Coolant Pipe Manifold
@@ -4317,7 +4529,7 @@
           });
         }
 
-      } else if (obj.type === 'console') {
+      } else if (renderType === 'console') {
         // High-Tech / Medical Electronic Console
         if (name.includes("전화") || name.includes("다이얼")) {
           // Retro Dial Telephone on Stand
@@ -4380,7 +4592,7 @@
           group.add(stand, panel, screen);
         }
 
-      } else if (obj.type === 'safe') {
+      } else if (renderType === 'safe') {
         // Heavy Armored Steel Safe / Precision Instrument / Generator
         if (name.includes("발전기")) {
           // Industrial Diesel Generator
@@ -4433,7 +4645,7 @@
           group.add(dial);
         }
 
-      } else if (obj.type === 'door') {
+      } else if (renderType === 'door') {
         const isBoss = obj.isBossDoor;
         const doorPivot = new THREE.Group();
         const doorW = isBoss ? 0.18 : (obj.w || 0.2);
@@ -4543,7 +4755,7 @@
           obj.rotY = 0;
         }
 
-      } else if (obj.type === 'ladder') {
+      } else if (renderType === 'ladder') {
         // Vertical Shaft Safety Ladder with Hoop Cage (Weathered Steel PBR)
         const rungMat = metalMat;
         const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.6), rungMat); p1.position.set(-0.25, 1.3, 0);
@@ -6745,7 +6957,9 @@
               requiresSolvedId: raw.requiresSolvedId || null,
               storyBeat: raw.storyBeat || '',
               mechanism: raw.mechanism || null,
-              visualSpec: raw.visualSpec || null
+              visualSpec: raw.visualSpec || null,
+              modelPreset: raw.modelPreset || null,
+              material: raw.material || null
             });
           });
           if (data.directorPersona && data.directorPersona.name) {
