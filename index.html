@@ -396,15 +396,50 @@
         </div>
       </details>
 
-      <!-- Director & Global FSM Status -->
+      <!-- Player Inventory (Item Ontology: Free Identity + Closed 4-Atom Effects) -->
+      <div class="p-2.5 bg-[#09090b] rounded-lg border border-white/10 space-y-2 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-medium text-zinc-400">소지품 (Inventory)</span>
+          <span id="inv-count-badge" class="font-mono text-[10px] text-zinc-500">0개</span>
+        </div>
+        <div id="inv-slot-list" class="flex flex-wrap gap-1.5 min-h-[24px]">
+          <span class="text-[10px] text-zinc-600">획득한 아이템 없음</span>
+        </div>
+        <button id="btn-inv-combine" onclick="combineEligibleInventoryItems()" class="hidden w-full py-1.5 px-2 rounded bg-amber-950/50 hover:bg-amber-900/60 border border-amber-500/40 text-amber-200 text-[11px] font-medium transition-colors">
+          아이템 조합하기
+        </button>
+      </div>
+
+      <!-- Director Persona & Global FSM Status -->
       <div class="p-2.5 bg-[#09090b] rounded-lg border border-white/10 text-[11px] font-mono space-y-1.5">
         <div class="flex justify-between"><span class="text-zinc-500">전체 진행</span><span id="insp-total-prog" class="text-emerald-400 font-medium">0 / 30 완료</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">현재 방</span><span id="insp-room-prog" class="text-zinc-200 font-medium">0 / 5 완료</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">오답 누적</span><span id="insp-failures" class="text-amber-400">0회 (2회 암전)</span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Director 조명</span><span id="insp-light-stat" class="text-emerald-400">정상 (100%)</span></div>
+        <button onclick="openDirectorIntercomBarter()" class="w-full mt-1.5 py-1.5 px-2 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-200 font-sans text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+          <span>인터폰 호출 (당직 간호사)</span>
+        </button>
       </div>
     </aside>
 
+  </div>
+
+  <!-- DIRECTOR PERSONA WHISPER / BARTER BANNER -->
+  <div id="director-whisper-banner" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] bg-[#111114]/95 border border-amber-500/40 rounded-lg shadow-2xl p-3 text-xs backdrop-blur">
+    <div class="flex items-start justify-between gap-2">
+      <div>
+        <div id="director-persona-name" class="text-[11px] font-semibold text-amber-400">404호 야간 당직 간호사</div>
+        <div id="director-whisper-text" class="text-zinc-200 mt-1 leading-relaxed break-keep"></div>
+      </div>
+      <button onclick="dismissDirectorBanner()" class="text-zinc-500 hover:text-zinc-200 text-xs px-1">✕</button>
+    </div>
+    <div id="director-barter-box" class="hidden mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+      <span id="director-barter-status" class="font-mono text-[11px] text-zinc-400">0 / 5회</span>
+      <button id="btn-director-barter-tap" onclick="tapDirectorBarterButton()" class="px-3 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-[11px] transition-colors">
+        인터폰 두드리기
+      </button>
+    </div>
   </div>
 
   <!-- INTERACTIVE MODAL: RESIDENT-EVIL STYLE 2-COLUMN VISUAL INSPECTION & LOCK MODAL -->
@@ -466,8 +501,14 @@
             </div>
           </div>
 
-          <!-- Physical Mechanism Interactive Controls (Shown for Q03, Q06, Q19, Q26) -->
+          <!-- Physical Mechanism Interactive Controls (Driven by obj.mechanism.kind) -->
           <div id="modal-device-controls" class="hidden mb-4"></div>
+
+          <!-- Eligible Inventory Item Apply Controls (Driven by ITEM_INTERACTIONS) -->
+          <div id="modal-item-apply-box" class="hidden mb-4 p-2.5 rounded-lg bg-amber-950/30 border border-amber-500/30 space-y-1.5">
+            <div class="text-[11px] font-medium text-amber-300">소지품 적용 가능</div>
+            <div id="modal-item-apply-list" class="flex flex-wrap gap-1.5"></div>
+          </div>
         </div>
 
         <div>
@@ -5006,14 +5047,178 @@
       }
     }
 
-    // 우측 컬럼: 물리 장치 조작 UI (Q03, Q06, Q19, Q26) vs 일반 자물쇠 다이얼 분기
+    // -------------------------------------------------------------
+    // ONTOLOGY V2: ITEM INVENTORY (4-ATOM EFFECTS) + MECHANISM CONTRACT + DIRECTOR PERSONA
+    // -------------------------------------------------------------
+    const ITEM_CATALOG = {
+      "item-cardkey":   { id: "item-cardkey",   name: "원무과 보안 카드키", consumable: false, rewardOnQNum: 1 },
+      "item-battery":   { id: "item-battery",   name: "AA 건전지",         consumable: true,  rewardOnQNum: 4 },
+      "item-bear-head": { id: "item-bear-head", name: "곰인형 머리",       consumable: true,  rewardOnQNum: 8 },
+      "item-uv-empty":  { id: "item-uv-empty",  name: "방전된 UV 손전등",  consumable: true,  rewardOnQNum: 17 },
+      "item-uv-ready":  { id: "item-uv-ready",  name: "작동 UV 손전등",    consumable: false }
+    };
+
+    const ITEM_INTERACTIONS = [
+      { id: "ix-cardkey-r1", itemId: "item-cardkey",   targetQNum: 5,  effect: "unlock",     message: "보안 카드키를 리더기에 대자 1F 중앙 복도 철문이 열렸습니다!" },
+      { id: "ix-bear-r2",    itemId: "item-bear-head", targetQNum: 10, effect: "activate",   message: "곰인형 머리를 해치 옆 받침대에 올리자 잠금 해제 신호가 울립니다!" },
+      { id: "ix-combine-uv", itemId: "item-battery",   targetItemId: "item-uv-empty", effect: "combine", resultId: "item-uv-ready", message: "건전지를 장착해 [작동 UV 손전등]을 완성했습니다!" },
+      { id: "ix-uv-r4",      itemId: "item-uv-ready",  targetQNum: 22, effect: "revealClue", message: "작동 UV 손전등으로 초상화를 비추자 숨겨진 코드가 선명히 드러납니다!" }
+    ];
+
+    // 5대 물리 장치(Mechanism) 스키마를 대상 퍼즐에 선언적으로 결속
+    const MECHANISM_REGISTRY = {
+      3:  { kind: "rotary-dial",    targetState: [0, 1, 2, 3] },
+      6:  { kind: "clock-hands",    targetState: { hour: 3, minute: 0 } },
+      19: { kind: "balance-scale",  targetState: 1780, tolerance: 0 },
+      22: { kind: "uv-scan",        targetState: { revealed: true } },
+      26: { kind: "pressure-valve", targetState: 800, tolerance: 0 }
+    };
+    studioObjects.forEach(o => {
+      if (MECHANISM_REGISTRY[o.qNum]) o.mechanism = MECHANISM_REGISTRY[o.qNum];
+    });
+
+    const playerInventory = new Set();
+
+    function renderInventoryHud() {
+      const listEl = document.getElementById('inv-slot-list');
+      const cntEl = document.getElementById('inv-count-badge');
+      const combBtn = document.getElementById('btn-inv-combine');
+      if (!listEl || !cntEl) return;
+
+      const items = Array.from(playerInventory).map(id => ITEM_CATALOG[id]).filter(Boolean);
+      cntEl.textContent = `${items.length}개`;
+      if (items.length === 0) {
+        listEl.innerHTML = '<span class="text-[10px] text-zinc-600">획득한 아이템 없음</span>';
+      } else {
+        listEl.innerHTML = items.map(it => `
+          <span class="px-2 py-0.5 rounded bg-zinc-900 border border-amber-500/30 text-amber-200 font-mono text-[10px]">
+            ${it.name}${it.consumable ? '' : ' · 영구'}
+          </span>
+        `).join('');
+      }
+      const canCombine = ITEM_INTERACTIONS.some(
+        ix => ix.effect === 'combine' && playerInventory.has(ix.itemId) && playerInventory.has(ix.targetItemId)
+      );
+      if (combBtn) combBtn.classList.toggle('hidden', !canCombine);
+    }
+
+    function grantRewardItemForPuzzle(obj) {
+      const reward = Object.values(ITEM_CATALOG).find(it => it.rewardOnQNum === obj.qNum);
+      if (!reward || playerInventory.has(reward.id)) return null;
+      playerInventory.add(reward.id);
+      renderInventoryHud();
+      showDirectorWhisper(`[소지품 획득] ${reward.name}을(를) 챙겼습니다. 필요한 장치에서 적용해 보세요.`);
+      return reward;
+    }
+
+    function combineEligibleInventoryItems() {
+      const ix = ITEM_INTERACTIONS.find(
+        r => r.effect === 'combine' && playerInventory.has(r.itemId) && playerInventory.has(r.targetItemId)
+      );
+      if (!ix) return;
+      if (ITEM_CATALOG[ix.itemId]?.consumable) playerInventory.delete(ix.itemId);
+      if (ITEM_CATALOG[ix.targetItemId]?.consumable) playerInventory.delete(ix.targetItemId);
+      if (ix.resultId && ITEM_CATALOG[ix.resultId]) playerInventory.add(ix.resultId);
+      playSfx('unlock');
+      renderInventoryHud();
+      showDirectorWhisper(ix.message);
+    }
+
+    function renderModalItemApplyBox(obj) {
+      const box = document.getElementById('modal-item-apply-box');
+      const list = document.getElementById('modal-item-apply-list');
+      if (!box || !list) return;
+      const eligible = ITEM_INTERACTIONS.filter(
+        ix => ix.targetQNum === obj.qNum && playerInventory.has(ix.itemId) && !obj.solved
+      );
+      if (eligible.length === 0) {
+        box.classList.add('hidden');
+        list.innerHTML = '';
+        return;
+      }
+      box.classList.remove('hidden');
+      list.innerHTML = eligible.map(ix => {
+        const it = ITEM_CATALOG[ix.itemId];
+        return `<button onclick="applyInventoryItemToActiveModal('${ix.id}')" class="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-[11px] transition-colors">${it.name} 적용 (${ix.effect})</button>`;
+      }).join('');
+    }
+
+    function applyInventoryItemToActiveModal(ixId) {
+      const ix = ITEM_INTERACTIONS.find(r => r.id === ixId);
+      const obj = studioObjects.find(o => o.id === activeModalObjId);
+      if (!ix || !obj || !playerInventory.has(ix.itemId)) return;
+      if (ITEM_CATALOG[ix.itemId]?.consumable) playerInventory.delete(ix.itemId);
+      renderInventoryHud();
+      showDirectorWhisper(ix.message);
+      completePhysicalDevice(obj.id);
+      renderModalItemApplyBox(obj);
+    }
+
+    // Director Persona (극중 인물: 404호 야간 당직 간호사) & 룰 기반 거래(Barter)
+    let directorBarterState = { active: false, taps: 0, timerId: null };
+
+    function showDirectorWhisper(text, showBarter = false) {
+      const banner = document.getElementById('director-whisper-banner');
+      const txtEl = document.getElementById('director-whisper-text');
+      const barterBox = document.getElementById('director-barter-box');
+      if (!banner || !txtEl) return;
+      txtEl.textContent = text;
+      if (barterBox) barterBox.classList.toggle('hidden', !showBarter);
+      banner.classList.remove('hidden');
+      if (!showBarter) {
+        clearTimeout(banner._hideTimer);
+        banner._hideTimer = setTimeout(() => banner.classList.add('hidden'), 5500);
+      }
+    }
+
+    function dismissDirectorBanner() {
+      const banner = document.getElementById('director-whisper-banner');
+      if (banner) banner.classList.add('hidden');
+      directorBarterState.active = false;
+      clearTimeout(directorBarterState.timerId);
+    }
+
+    function openDirectorIntercomBarter() {
+      const unsolved = studioObjects.find(o => o.roomIdx === currentRoomIdx && !o.solved);
+      if (!unsolved) {
+        showDirectorWhisper("이 방의 퍼즐은 이미 모두 푸셨네요. 어서 다음 방으로 이동하세요.");
+        return;
+      }
+      directorBarterState = { active: true, taps: 0, targetObj: unsolved, timerId: null };
+      document.getElementById('director-barter-status').textContent = "0 / 5회 (제한 3초)";
+      showDirectorWhisper("힌트가 필요하신가요? 그냥은 재미없죠. 3초 안에 인터폰 버튼을 5번 두드려 보이시면 힌트를 드릴게요.", true);
+      playSfx('click');
+    }
+
+    function tapDirectorBarterButton() {
+      if (!directorBarterState.active) return;
+      playSfx('click');
+      if (directorBarterState.taps === 0) {
+        directorBarterState.timerId = setTimeout(() => {
+          if (directorBarterState.active && directorBarterState.taps < 5) {
+            directorBarterState.active = false;
+            showDirectorWhisper("아쉽네요, 시간이 지났어요. 다시 도전해 보실래요?");
+          }
+        }, 3000);
+      }
+      directorBarterState.taps++;
+      document.getElementById('director-barter-status').textContent = `${directorBarterState.taps} / 5회`;
+      if (directorBarterState.taps >= 5) {
+        directorBarterState.active = false;
+        clearTimeout(directorBarterState.timerId);
+        const target = directorBarterState.targetObj;
+        showDirectorWhisper(`[거래 성사 · Q${String(target.qNum).padStart(2, '0')}] ${getStage1Hint(target)}`);
+      }
+    }
+
+    // 우측 컬럼: 물리 장치(obj.mechanism.kind 선언 기반) vs 일반 자물쇠 다이얼 분기
     function renderRightDeviceControls(obj) {
       const devBox = document.getElementById('modal-device-controls');
       const dialSec = document.getElementById('modal-dial-section');
       if (!devBox || !dialSec) return;
 
-      const q = obj.qNum;
-      if (![3, 6, 19, 26].includes(q)) {
+      const mechKind = obj.mechanism ? obj.mechanism.kind : null;
+      if (!['rotary-dial', 'clock-hands', 'balance-scale', 'pressure-valve'].includes(mechKind)) {
         devBox.classList.add('hidden');
         devBox.innerHTML = '';
         dialSec.classList.remove('hidden');
@@ -5024,7 +5229,7 @@
       dialSec.classList.add('hidden');
       devBox.classList.remove('hidden');
 
-      if (q === 3) {
+      if (mechKind === 'rotary-dial') {
         const dirLabels = ['북(U)', '동(R)', '남(D)', '서(L)'];
         const dirAngles = [0, 90, 180, 270];
         const current = obj.solved ? [0, 1, 2, 3] : deviceState.q03Cups;
@@ -5037,17 +5242,17 @@
                 <circle r="18" fill="#e4e4e7" stroke="#52525b" stroke-width="2.5"/>
                 <circle r="12" fill="#3b2414"/>
               </g>
-              <text y="33" text-anchor="middle" fill="#d4d4d8" font-size="10" font-family="monospace">${i+1}. ${dirLabels[dirIdx]}</text>
+              <text y="43" text-anchor="middle" fill="#d4d4d8" font-size="10" font-family="monospace">${i+1}. ${dirLabels[dirIdx]}</text>
             </g>
           `;
         }).join('');
         devBox.innerHTML = `
           <div class="p-3.5 bg-[#09090b] rounded-lg border border-white/10">
             <div class="text-[11px] font-mono text-zinc-400 mb-2">물리 장치 · 머그잔을 클릭해 손잡이를 회전 정렬</div>
-            <svg viewBox="0 0 300 94" class="w-full h-24 select-none">${cupsSvg}</svg>
+            <svg viewBox="0 0 300 106" class="w-full h-28 select-none">${cupsSvg}</svg>
           </div>
         `;
-      } else if (q === 6) {
+      } else if (mechKind === 'clock-hands') {
         const h = obj.solved ? 3 : deviceState.q06Hour;
         const m = obj.solved ? 0 : deviceState.q06Min;
         const isAligned = (h === 3 && m === 0);
@@ -5063,7 +5268,7 @@
             </div>
           </div>
         `;
-      } else if (q === 19) {
+      } else if (mechKind === 'balance-scale') {
         const specimens = [
           { id: 'brain', label: '뇌 표본', g: 1400 },
           { id: 'liver', label: '간 표본', g: 900 },
@@ -5094,7 +5299,7 @@
             <div class="grid grid-cols-3 gap-1.5">${btns}</div>
           </div>
         `;
-      } else if (q === 26) {
+      } else if (mechKind === 'pressure-valve') {
         const psi = obj.solved ? 800 : deviceState.q26Psi;
         const isSafe = (psi === 800);
         const needleDeg = -110 + ((psi - 400) / 1100) * 220;
@@ -5510,9 +5715,10 @@
         propBox.classList.add('hidden');
       }
 
-      // Render Left Column Close-Up Clue Visual Artwork & Right Column Mechanism/Dial Controls
+      // Render Left Column Close-Up Clue Visual Artwork & Right Column Mechanism/Item/Dial Controls
       renderPropVisualArtwork(obj, prop);
       renderRightDeviceControls(obj);
+      renderModalItemApplyBox(obj);
 
       // Show Directional Pad if DirectionalLock
       const dirPad = document.getElementById('modal-dir-pad');
@@ -5655,9 +5861,11 @@
       if (code === correctCode) {
         obj.solved = true;
         playSfx('unlock');
+        const rewardItem = grantRewardItemForPuzzle(obj);
+        renderModalItemApplyBox(obj);
 
         fb.className = "text-xs font-bold py-2 px-3 rounded text-emerald-300 bg-emerald-950 border border-emerald-500 shadow text-center";
-        fb.textContent = `🎉 철컥! [${code}] 정답 일치! ${obj.unlocksName} 성공!`;
+        fb.textContent = `철컥! [${code}] 정답 일치! ${obj.unlocksName} 성공!${rewardItem ? ` (+ ${rewardItem.name} 획득)` : ''}`;
 
         syncObjectTo3D(obj);
         if (obj.isBossDoor) {
@@ -5683,11 +5891,12 @@
 
         if (failureCount % 2 === 0) {
           triggerDirectorBlackout();
+          showDirectorWhisper("틀리셨네요... 너무 서두르시면 불이 꺼져 버린답니다. 힌트가 필요하면 인터폰을 눌러 보세요.");
           fb.className = "text-xs font-bold py-2 px-3 rounded text-rose-200 bg-rose-950 border border-rose-500 animate-pulse text-center";
-          fb.textContent = `⚠️ [Director 경고] 오답 누적! 병동 조명이 강제 암전됩니다! (정답 힌트: ${correctCode})`;
+          fb.textContent = `[Director 경고] 오답 누적! 병동 조명이 강제 암전됩니다. 힌트 버튼이나 인터폰을 활용해 보세요.`;
         } else {
           fb.className = "text-xs font-bold py-2 px-3 rounded text-rose-300 bg-rose-950 border border-rose-500 text-center";
-          fb.textContent = `❌ [${code}] 불일치! 단서와 추론 규칙을 다시 확인하세요. (힌트: ${correctCode})`;
+          fb.textContent = `[${code}] 불일치! 좌측 단서를 다시 확인하거나 힌트를 열어보세요.`;
         }
       }
     }

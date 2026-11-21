@@ -155,8 +155,20 @@
             "required": ["id", "condition", "unlocks"],
             "properties": {
               "id": { "type": "string" },
-              "interfaceType": { "type": "string", "enum": ["MechanicalLock", "DirectionalLock", "ElectronicKeypad", "SensorSwitch"], "default": "MechanicalLock" },
+              "interfaceType": { "type": "string", "enum": ["MechanicalLock", "DirectionalLock", "ElectronicKeypad", "SensorSwitch", "ItemSocket", "PhysicalMechanism"], "default": "MechanicalLock" },
               "condition": { "type": "string" },
+              "requiredItemId": { "type": "string", "description": "해금에 필요한 소지 아이템 ID (선택)" },
+              "mechanism": {
+                "type": "object",
+                "description": "물리 장치 조작 스펙 (UI 하드코딩 대신 RaC 계약으로 선언)",
+                "required": ["kind", "targetState"],
+                "properties": {
+                  "kind": { "type": "string", "enum": ["rotary-dial", "clock-hands", "balance-scale", "uv-scan", "pressure-valve", "custom"] },
+                  "params": { "type": "object" },
+                  "targetState": {},
+                  "tolerance": { "type": "number", "default": 0 }
+                }
+              },
               "unlocks": { "type": "string", "description": "해금할 doorId 또는 containerId" },
               "isOpen": { "type": "boolean", "default": false }
             }
@@ -164,15 +176,48 @@
         },
         "containers": {
           "type": "array",
-          "description": "단서를 은닉하고 있는 서랍/금고 보관함",
+          "description": "단서 또는 아이템을 은닉하고 있는 서랍/금고 보관함",
           "items": {
             "type": "object",
-            "required": ["id", "name", "containsClueId"],
+            "required": ["id", "name"],
             "properties": {
               "id": { "type": "string" },
               "name": { "type": "string" },
               "isOpen": { "type": "boolean", "default": false },
-              "containsClueId": { "type": "string" }
+              "containsClueId": { "type": "string" },
+              "containsItemId": { "type": "string", "description": "개방 시 플레이어 인벤토리에 지급되는 아이템 ID" }
+            }
+          }
+        },
+        "items": {
+          "type": "array",
+          "description": "플레이어가 획득·소지·적용할 수 있는 물리 아이템 (정체성은 자유롭게, 효과는 닫힌 4원자로 정의)",
+          "items": {
+            "type": "object",
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "tags": { "type": "array", "items": { "type": "string" } },
+              "consumable": { "type": "boolean", "default": true },
+              "visual": { "type": "string", "description": "아이콘/프리셋 식별자" }
+            }
+          }
+        },
+        "interactions": {
+          "type": "array",
+          "description": "아이템을 대상(Gate/Prop/Container/Item)에 적용했을 때의 닫힌 세계 결정론적 상태 전이 4원자",
+          "items": {
+            "type": "object",
+            "required": ["id", "itemId", "targetId", "effect"],
+            "properties": {
+              "id": { "type": "string" },
+              "itemId": { "type": "string" },
+              "targetId": { "type": "string", "description": "적용 대상 ID (Gate, Door, Prop, Container 또는 조합할 다른 Item ID)" },
+              "effect": { "type": "string", "enum": ["unlock", "revealClue", "activate", "combine"] },
+              "resultId": { "type": "string", "description": "revealClue 시 노출할 clueId, combine 시 생성할 itemId, activate 시 활성화할 propId/gateId" },
+              "message": { "type": "string" }
             }
           }
         }
@@ -180,11 +225,43 @@
     },
     "director": {
       "type": "object",
-      "description": "실시간 물리 환경(조명, 사운드, 문) 및 긴장감을 지배하는 가상 연출자 설정",
+      "description": "실시간 물리 환경(조명, 사운드, 문) 및 극중 인물 개입을 지배하는 가상 연출자 설정",
       "properties": {
         "timeLimitMinutes": { "type": "integer", "default": 60 },
         "tensionLevel": { "type": "integer", "minimum": 1, "maximum": 5, "default": 1 },
-        "panicThresholdFailures": { "type": "integer", "default": 2 }
+        "panicThresholdFailures": { "type": "integer", "default": 2 },
+        "persona": {
+          "type": "object",
+          "description": "극중 등장인물 페르소나 (분장·말투·역할)",
+          "properties": {
+            "name": { "type": "string" },
+            "role": { "type": "string" },
+            "tone": { "type": "string" }
+          }
+        },
+        "rules": {
+          "type": "array",
+          "description": "플레이어 상태 관측 기반 결정론적 개입 규칙 (LLM 훅 확장 가능)",
+          "items": {
+            "type": "object",
+            "required": ["id", "trigger", "action"],
+            "properties": {
+              "id": { "type": "string" },
+              "trigger": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": {
+                  "kind": { "type": "string", "enum": ["stallSeconds", "consecutiveFailures", "roomEntered", "helpRequested"] },
+                  "threshold": { "type": "number" },
+                  "spaceId": { "type": "string" }
+                }
+              },
+              "action": { "type": "string", "enum": ["whisper", "blackout", "nudgeHint", "lockDoor", "barter"] },
+              "cooldownSeconds": { "type": "number", "default": 30 },
+              "payload": { "type": "object" }
+            }
+          }
+        }
       }
     }
   }
