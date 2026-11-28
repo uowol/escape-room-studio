@@ -7,7 +7,11 @@ import {
   getPropDetailTexture,
   getProceduralTileTexture,
   getProceduralWallTexture,
-  loadGlbCached
+  getBoxGeo,
+  getCylGeo,
+  getPlaneGeo,
+  loadGlbCached,
+  disposeObject3D
 } from './pbr.js';
 import {
   playSfx,
@@ -16,12 +20,20 @@ import {
   audioCtx
 } from './audio.js';
 import {
+  initLightPool,
+  syncLightPool,
+  hasActiveLightingAnimation,
   setupRoomLightFixtures,
   setupCorridorLightFixtures,
   clearActiveFixtures,
   updateLightFixtures,
   setDirectorLightMultiplier,
   setFpsLightingMultiplier,
+  setLightFixtureOn,
+  extinguishGuidanceLightsForProp,
+  resetAllLightsForMode,
+  getMountedLightCount,
+  getLightTargetPropIds,
   activeFixtures
 } from './lighting.js';
 import { validateRaC } from '../engine/validator.js';
@@ -64,6 +76,7 @@ import { CraftBuilder } from './builder.js';
         }
       }
     };
+    const DEFAULT_FLOOR_CONFIGS = JSON.parse(JSON.stringify(FLOOR_CONFIGS));
 
     // -------------------------------------------------------------
     // 1. 6 ROOMS & 30 PUZZLES MASTER DATA (Single Contract Spine)
@@ -78,7 +91,8 @@ import { CraftBuilder } from './builder.js';
         floorColor: 0x1e293b, wallColor: 0x475569, lightColor: 0xe0f2fe, atmosphere: "차가운 청백색 형광등",
         doorId: "door-r1-r2",
         lights: [
-          { id: "light-r1-fl1", kind: "fluorescent", pos: [3.0, 2.4, 2.5], color: "#c8dcff", intensity: 2.8, distance: 4.5, flicker: true }
+          { id: "light-r1-fl1", kind: "fluorescent", pos: [3.0, 2.42, 2.5], color: "#c8dcff", intensity: 1.4, distance: 5.5, flicker: true, initiallyOn: true },
+          { id: "light-r1-q02", kind: "pin-spot", pos: [4.1, 2.42, 0.95], targetPos: [4.5, 0.95, 0.45], color: "#ffe4b5", intensity: 2.2, distance: 5.5, flicker: false, initiallyOn: false, targetPropId: "prop-r1-02" }
         ]
       },
       {
@@ -90,7 +104,7 @@ import { CraftBuilder } from './builder.js';
         floorColor: 0x261f1a, wallColor: 0x574c43, lightColor: 0xfef3c7, atmosphere: "어두운 호박색 최면등",
         doorId: "door-r2-r3",
         lights: [
-          { id: "light-r2-lamp1", kind: "lamp", pos: [2.2, 2.3, 1.8], color: "#ffaa44", intensity: 2.4, distance: 4.0, flicker: false }
+          { id: "light-r2-lamp1", kind: "ceiling", pos: [3.2, 2.44, 2.5], color: "#ffcf8a", intensity: 1.4, distance: 5.5, flicker: false, initiallyOn: false }
         ]
       },
       {
@@ -102,7 +116,7 @@ import { CraftBuilder } from './builder.js';
         floorColor: 0x1c1c20, wallColor: 0x383436, lightColor: 0xe2e8f0, atmosphere: "차가운 격리 비상등",
         doorId: "door-r3-r4",
         lights: [
-          { id: "light-r3-em1", kind: "emergency", pos: [2.5, 2.3, 2.5], color: "#ff3322", intensity: 2.2, distance: 4.0, flicker: true }
+          { id: "light-r3-em1", kind: "emergency", pos: [3.5, 2.42, 0.08], wallSide: "N", color: "#ff4433", intensity: 1.5, distance: 5.5, flicker: true, initiallyOn: false }
         ]
       },
       {
@@ -115,7 +129,7 @@ import { CraftBuilder } from './builder.js';
         floorColor: 0x1a2024, wallColor: 0x343f45, lightColor: 0xdbeafe, atmosphere: "차가운 영안실 수술등",
         doorId: "door-r4-r5",
         lights: [
-          { id: "light-r4-surg1", kind: "surgical", pos: [3.5, 2.4, 2.5], color: "#d6f0ff", intensity: 3.6, distance: 4.6, flicker: false }
+          { id: "light-r4-surg1", kind: "surgical", pos: [3.5, 2.42, 2.5], color: "#d6f0ff", intensity: 2.0, distance: 5.5, flicker: false, initiallyOn: false }
         ]
       },
       {
@@ -127,7 +141,7 @@ import { CraftBuilder } from './builder.js';
         floorColor: 0x1f1b18, wallColor: 0x3c342e, lightColor: 0xfef3c7, atmosphere: "어두운 연구실 스탠드등",
         doorId: "door-r5-r6",
         lights: [
-          { id: "light-r5-lamp1", kind: "lamp", pos: [2.5, 2.3, 2.2], color: "#ffdfa0", intensity: 2.6, distance: 4.2, flicker: false }
+          { id: "light-r5-lamp1", kind: "ceiling", pos: [3.2, 2.44, 2.5], color: "#ffdfa0", intensity: 1.5, distance: 5.5, flicker: false, initiallyOn: false }
         ]
       },
       {
@@ -139,7 +153,7 @@ import { CraftBuilder } from './builder.js';
         floorColor: 0x1a1817, wallColor: 0x36302c, lightColor: 0xffedd5, atmosphere: "소각로 비상등",
         doorId: "door-final-exit",
         lights: [
-          { id: "light-r6-em1", kind: "emergency", pos: [3.0, 2.4, 2.5], color: "#ff4d1a", intensity: 3.0, distance: 4.6, flicker: true }
+          { id: "light-r6-em1", kind: "emergency", pos: [3.0, 2.42, 0.08], wallSide: "N", color: "#ff4d1a", intensity: 1.8, distance: 5.5, flicker: true, initiallyOn: false }
         ]
       }
     ];
@@ -215,6 +229,9 @@ import { CraftBuilder } from './builder.js';
       }
     ];
 
+    const DEFAULT_PROP_ONTOLOGY = JSON.parse(JSON.stringify(PROP_ONTOLOGY));
+    const carriedIds = new Set(); // objects/props currently picked up by CraftBuilder (hidden, excluded from wall carving)
+
     // -------------------------------------------------------------
     // 3. INTERIOR PARTITION WALLS (Atmospheric Concept Dividers)
     // -------------------------------------------------------------
@@ -226,6 +243,7 @@ import { CraftBuilder } from './builder.js';
       { roomIdx: 4, type: "bookshelf-wall", x1: 3.5, z1: 1.5, x2: 3.5, z2: 5.5, h: 2.5, name: "원장실 서재 분할 양면 책장 가벽" },
       { roomIdx: 5, type: "wire-mesh", x1: 3.2, z1: 0.0, x2: 3.2, z2: 3.2, h: 2.8, name: "소각로 고열 방호 철망 파티션" }
     ];
+    const DEFAULT_ROOM_PARTITIONS = JSON.parse(JSON.stringify(ROOM_PARTITIONS));
 
     // -------------------------------------------------------------
     // 4. 30 INTERACTIVE PUZZLE OBJECTS (Wall-Snapped & Smart-Oriented)
@@ -239,7 +257,8 @@ import { CraftBuilder } from './builder.js';
         cluePayload: "1994년 4월 당직표: [월요일: 14일 김원장] [목요일: 17일 박과장] [일요일: ??일 최간호사] — 메모: '김원장 당직일(2자리)과 최간호사 당직일(2자리)을 이어 적어라. (검산: 북쪽 벽에 멈춘 시계의 24시간제 시각과 일치한다)'",
         probId: "prob-01", probRule: "월=14일, 목=17일이면 일요일은 20일 ➔ 김원장(14) + 최간호사(20) = 1420",
         gateId: "gate-01", interfaceType: "MechanicalLock", passcode: "1420",
-        unlocksId: "cont-01", unlocksName: "접수대 하단 서랍 (Q02 단서 해금)", isBossDoor: false, solved: false
+        unlocksId: "cont-01", unlocksName: "접수대 하단 서랍 (Q02 단서 해금)", isBossDoor: false, solved: false,
+        onUnlockEffects: [{ kind: "lightOn", targetId: "light-r1-q02", sfx: "spark" }]
       },
       {
         qNum: 2, id: "prop-r1-02", roomIdx: 0, type: "cabinet", name: "차트 분류 캐비닛",
@@ -518,7 +537,10 @@ import { CraftBuilder } from './builder.js';
     let selectedObjectId = "prop-r1-01";
     let failureCount = 0;
     let timerElapsedSeconds = 0;
-    const timeLimitSeconds = 60 * 60;
+    let timeLimitSeconds = 60 * 60;
+    let activeThemeId = "asylum-404";
+    let activeThemeTitle = "폐쇄병동 404호: 심연의 해부학 (6방 30문제 풀 스케일)";
+    let activeThemeGenre = "Horror"; // 'Horror' | 'Mystery' | 'Adventure'
 
     const DEFAULT_ROOM_CONFIGS = JSON.parse(JSON.stringify(ROOM_CONFIGS));
     const DEFAULT_PASSAGES = [
@@ -544,10 +566,10 @@ import { CraftBuilder } from './builder.js';
       return {
         version: "1.0",
         theme: {
-          id: "asylum-404-abyssal-anatomy",
-          title: "폐쇄병동 404호: 심연의 해부학 (6방 30문제 풀 스케일)",
-          genre: "Horror",
-          durationMinutes: 60
+          id: activeThemeId === "asylum-404" ? "asylum-404-abyssal-anatomy" : activeThemeId,
+          title: activeThemeTitle,
+          genre: activeThemeGenre,
+          durationMinutes: Math.max(1, Math.round(timeLimitSeconds / 60))
         },
         spaces: ROOM_CONFIGS.map(rc => {
           const roomObjs = studioObjects.filter(o => o.roomIdx === rc.idx);
@@ -651,6 +673,7 @@ import { CraftBuilder } from './builder.js';
             if (o.requiresSolvedId !== undefined && o.requiresSolvedId !== null) g.requiresSolvedId = o.requiresSolvedId;
             if (o.storyBeat) g.storyBeat = o.storyBeat;
             if (o.requiredItemId) g.requiredItemId = o.requiredItemId;
+            if (Array.isArray(o.onUnlockEffects) && o.onUnlockEffects.length > 0) g.onUnlockEffects = o.onUnlockEffects;
             return g;
           }),
           containers: studioObjects.filter(o => o.unlocksId && o.unlocksId.startsWith("cont-")).map(o => {
@@ -797,9 +820,21 @@ import { CraftBuilder } from './builder.js';
       const curRoomObjs = studioObjects.filter(o => o.roomIdx === currentRoomIdx);
       const curRoomSolved = curRoomObjs.filter(o => o.solved).length;
       document.getElementById('insp-room-prog').textContent = `${curRoomSolved} / ${curRoomObjs.length} 완료`;
-      const qStart = currentRoomIdx * 5 + 1;
-      const qEnd = currentRoomIdx * 5 + 5;
-      document.getElementById('left-room-q-range').textContent = `Q${String(qStart).padStart(2, '0')}~Q${String(qEnd).padStart(2, '0')}`;
+      const qNums = curRoomObjs.map(o => o.qNum).filter(n => typeof n === 'number' && !Number.isNaN(n));
+      const qRangeEl = document.getElementById('left-room-q-range');
+      if (qRangeEl) {
+        if (qNums.length > 0) {
+          const qStart = Math.min(...qNums);
+          const qEnd = Math.max(...qNums);
+          qRangeEl.textContent = qStart === qEnd
+            ? `Q${String(qStart).padStart(2, '0')}`
+            : `Q${String(qStart).padStart(2, '0')}~Q${String(qEnd).padStart(2, '0')}`;
+        } else {
+          qRangeEl.textContent = '-';
+        }
+      }
+      const solveRoomBtn = document.getElementById('btn-solve-room-all');
+      if (solveRoomBtn) solveRoomBtn.textContent = `현재 방 ${curRoomObjs.length}문제 해금`;
 
       const puzzleListEl = document.getElementById('room-puzzle-list');
       puzzleListEl.innerHTML = '';
@@ -861,6 +896,21 @@ import { CraftBuilder } from './builder.js';
       return s.length > maxLen ? s.slice(0, maxLen - 1) + '…' : s;
     }
 
+    function hasCausalLink(fromObj, toObj, roomConfig) {
+      if (!fromObj || !toObj || fromObj.id === toObj.id) return false;
+      if (toObj.requiresSolvedId && toObj.requiresSolvedId === fromObj.id) return true;
+      if (Array.isArray(fromObj.onUnlockEffects) && fromObj.onUnlockEffects.length > 0) {
+        const lights = (roomConfig && Array.isArray(roomConfig.lights)) ? roomConfig.lights : [];
+        return fromObj.onUnlockEffects.some(ef => {
+          if (!ef || !ef.targetId) return false;
+          if (ef.targetId === toObj.id) return true;
+          const lt = lights.find(l => l && l.id === ef.targetId);
+          return !!(lt && lt.targetPropId === toObj.id);
+        });
+      }
+      return false;
+    }
+
     function render30DagBoard() {
       const board = document.getElementById('dag-30-board');
       const filterBar = document.getElementById('ontology-room-filter');
@@ -873,7 +923,7 @@ import { CraftBuilder } from './builder.js';
             ontologyGraphFilter === -1
               ? 'bg-zinc-100 text-zinc-950 border-zinc-100'
               : 'bg-zinc-900 text-zinc-400 border-white/10 hover:text-zinc-200'
-          }">전체 6방 공간 흐름</button>
+          }">전체 ${ROOM_CONFIGS.length}방 공간 흐름</button>
         `;
         ROOM_CONFIGS.forEach(rc => {
           const rObjs = studioObjects.filter(o => o.roomIdx === rc.idx);
@@ -922,13 +972,13 @@ import { CraftBuilder } from './builder.js';
           </defs>
         `;
 
-        // 1) Draw 6 Space Nodes FIRST
+        // 1) Draw Space Nodes FIRST
         ROOM_CONFIGS.forEach((rc, i) => {
-          const p = coords[i];
+          const p = coords[i] || { x: 20 + (i % 3) * 370, y: 45 + Math.floor(i / 3) * 200 };
           const rObjs = studioObjects.filter(o => o.roomIdx === rc.idx);
           const solved = rObjs.filter(o => o.solved).length;
           const propsCount = PROP_ONTOLOGY.filter(pr => pr.roomIdx === rc.idx).length;
-          const isAllSolved = solved === rObjs.length;
+          const isAllSolved = rObjs.length > 0 && solved === rObjs.length;
           const borderCol = isAllSolved ? '#10b981' : (rc.idx === currentRoomIdx ? '#e4e4e7' : '#3f3f46');
 
           svgContent += `
@@ -945,10 +995,20 @@ import { CraftBuilder } from './builder.js';
         });
 
         // 2) Draw Passage Edges & Labels ON TOP (Never clipped or hidden behind space boxes)
-        edges.forEach(e => {
-          const a = coords[e.from], b = coords[e.to];
+        const activeEdges = activeThemeId === 'asylum-404'
+          ? edges
+          : studioPassages.map(p => ({
+              from: ROOM_CONFIGS.findIndex(r => r.id === p.fromSpaceId),
+              to: ROOM_CONFIGS.findIndex(r => r.id === p.toSpaceId),
+              label: `${p.directionality || 'TwoWay'} (${p.traverseCost || 'Walk'})`
+            })).filter(e => e.from >= 0 && e.to >= 0);
+
+        activeEdges.forEach(e => {
+          if (e.from >= ROOM_CONFIGS.length || e.to >= ROOM_CONFIGS.length) return;
+          const a = coords[e.from] || { x: 20 + (e.from % 3) * 370, y: 45 + Math.floor(e.from / 3) * 200 };
+          const b = coords[e.to] || { x: 20 + (e.to % 3) * 370, y: 45 + Math.floor(e.to / 3) * 200 };
           const doorObj = studioObjects.find(o => o.roomIdx === e.from && o.isBossDoor);
-          const isOpen = doorObj && doorObj.solved;
+          const isOpen = doorObj ? !!doorObj.solved : true;
           const stroke = isOpen ? '#10b981' : '#52525b';
           const marker = isOpen ? 'url(#dag-arrow-open)' : 'url(#dag-arrow)';
           let d = '', lx = 0, ly = 0;
@@ -968,8 +1028,8 @@ import { CraftBuilder } from './builder.js';
 
         board.innerHTML = `
           <div class="flex items-center justify-between mb-2 px-1">
-            <span class="text-xs font-medium text-zinc-300">전체 6방 건축·통로 온톨로지 그래프 (Space → Passage)</span>
-            <span class="text-[11px] font-mono text-zinc-500">방을 클릭하면 5문항 상세 DAG로 드릴다운</span>
+            <span class="text-xs font-medium text-zinc-300">전체 ${ROOM_CONFIGS.length}방 건축·통로 온톨로지 그래프 (Space → Passage)</span>
+            <span class="text-[11px] font-mono text-zinc-500">방을 클릭하면 상세 DAG로 드릴다운</span>
           </div>
           <svg viewBox="0 0 ${svgW} ${svgH}" class="w-full h-auto min-w-[760px] bg-[#09090b] rounded-md border border-white/10">
             ${svgContent}
@@ -1028,28 +1088,37 @@ import { CraftBuilder } from './builder.js';
           svg += `<line x1="${x1}" y1="${midY}" x2="${x2}" y2="${midY}" stroke="${edgeStroke}" stroke-width="1.5" marker-end="${edgeMarker}" />`;
         }
 
-        // Causal Chain Edge to Next Puzzle (Row i Unlocks -> Row i+1 Clue)
-        if (idx < roomObjs.length - 1) {
+        // Causal Chain Edge to Next Puzzle (only when actual requiresSolvedId or onUnlockEffects link exists)
+        if (idx < roomObjs.length - 1 && hasCausalLink(obj, roomObjs[idx + 1], rc)) {
           const nextY = startY + (idx + 1) * rowStep;
           const sx = colX[3] + nodeW / 2;
           const sy = y + nodeH;
           const ex = colX[0] + nodeW / 2;
           const ey = nextY - 4;
           const midBridgeY = sy + 13;
-          svg += `<path d="M ${sx} ${sy} L ${sx} ${midBridgeY} L ${ex} ${midBridgeY} L ${ex} ${ey}" fill="none" stroke="${solved ? '#10b981' : '#f59e0b'}" stroke-width="1.25" stroke-dasharray="4 3" opacity="0.7" marker-end="${solved ? 'url(#arrow-open)' : 'url(#arrow-chain)'}" />`;
+          svg += `<path class="dag-causal-chain" d="M ${sx} ${sy} L ${sx} ${midBridgeY} L ${ex} ${midBridgeY} L ${ex} ${ey}" fill="none" stroke="${solved ? '#10b981' : '#f59e0b'}" stroke-width="1.25" stroke-dasharray="4 3" opacity="0.7" marker-end="${solved ? 'url(#arrow-open)' : 'url(#arrow-chain)'}" />`;
         }
 
-        const clickAction = `switchRoom(${rc.idx}); selectObject('${obj.id}'); setViewLayout('split'); openLockModalForObject('${obj.id}');`;
+        const clickAction = `selectObjectFromOntologyGraph(${rc.idx}, '${obj.id}');`;
+        const dblClickAction = `switchRoom(${rc.idx}); selectObject('${obj.id}'); setViewLayout('split'); openLockModalForObject('${obj.id}');`;
         const isBoss = !!obj.isBossDoor;
+        const isSelNode = (obj.id === selectedObjectId);
+        const prereqObj = obj.requiresSolvedId ? studioObjects.find(o => o.id === obj.requiresSolvedId) : null;
+        const prereqBadge = prereqObj ? `선행: Q${String(prereqObj.qNum).padStart(2, '0')}` : '';
+        const lightEf = Array.isArray(obj.onUnlockEffects) ? obj.onUnlockEffects.find(ef => ef && ef.kind === 'lightOn') : null;
+        const lightBadge = lightEf ? `💡 점등: ${lightEf.targetId}` : '';
 
         // Node 1: Prop / Clue (foreignObject auto-wrap, zero text clipping)
         svg += `
           <foreignObject x="${colX[0]}" y="${y}" width="${nodeW}" height="${nodeH}">
-            <div xmlns="http://www.w3.org/1999/xhtml" onclick="${clickAction}" title="${escapeXml(obj.name + (linkedProp ? ' — ' + linkedProp.name : ''))}"
-                 class="w-full h-full rounded-md bg-[#16161a] border ${linkedProp ? 'border-sky-500/50' : 'border-white/10'} hover:border-white/30 p-2 flex flex-col justify-between cursor-pointer box-border overflow-hidden">
-              <div class="text-[9.5px] font-mono text-sky-400 leading-none">${escapeXml(qCode)} · ${escapeXml(obj.carrierType || 'Clue')}</div>
+            <div xmlns="http://www.w3.org/1999/xhtml" onclick="${clickAction}" ondblclick="${dblClickAction}" title="${escapeXml(obj.name + (linkedProp ? ' — ' + linkedProp.name : ''))}"
+                 class="w-full h-full rounded-md bg-[#16161a] border ${isSelNode ? 'border-sky-400 ring-1 ring-sky-400/50' : (linkedProp ? 'border-sky-500/50' : 'border-white/10')} hover:border-white/30 p-2 flex flex-col justify-between cursor-pointer box-border overflow-hidden">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[9.5px] font-mono text-sky-400 leading-none truncate">${escapeXml(qCode)} · ${escapeXml(obj.carrierType || 'Clue')}</span>
+                ${prereqBadge ? `<span class="text-[8.5px] font-mono px-1 py-0.5 rounded bg-indigo-950/80 border border-indigo-400/40 text-indigo-200 leading-none shrink-0">${escapeXml(prereqBadge)}</span>` : ''}
+              </div>
               <div class="text-[11.5px] font-semibold text-zinc-100 leading-tight break-keep">${escapeXml(obj.name)}</div>
-              <div class="text-[9.5px] font-mono leading-tight break-keep ${linkedProp ? 'text-amber-400' : 'text-zinc-500'}">
+              <div class="text-[9.5px] font-mono leading-tight break-keep truncate ${linkedProp ? 'text-amber-400' : 'text-zinc-500'}">
                 ${escapeXml(linkedProp ? '소품: ' + linkedProp.name : obj.clueId)}
               </div>
             </div>
@@ -1059,11 +1128,11 @@ import { CraftBuilder } from './builder.js';
         // Node 2: Problem (Full rule visible with 3-line wrap)
         svg += `
           <foreignObject x="${colX[1]}" y="${y}" width="${nodeW}" height="${nodeH}">
-            <div xmlns="http://www.w3.org/1999/xhtml" onclick="${clickAction}" title="${escapeXml(obj.probRule || '')}"
-                 class="w-full h-full rounded-md bg-[#16161a] border border-white/10 hover:border-white/30 p-2 flex flex-col justify-between cursor-pointer box-border overflow-hidden">
+            <div xmlns="http://www.w3.org/1999/xhtml" onclick="${clickAction}" ondblclick="${dblClickAction}" title="${escapeXml(obj.probRule || '')}"
+                 class="w-full h-full rounded-md bg-[#16161a] border ${isSelNode ? 'border-sky-400' : 'border-white/10'} hover:border-white/30 p-2 flex flex-col justify-between cursor-pointer box-border overflow-hidden">
               <div class="text-[9.5px] font-mono text-indigo-400 leading-none">${escapeXml(obj.probId || 'prob')}</div>
               <div class="text-[10.5px] text-zinc-200 leading-snug break-keep line-clamp-3">${escapeXml(obj.probRule || '')}</div>
-              <div class="text-[9px] font-mono text-zinc-500 leading-none">클릭하여 단서 조사</div>
+              <div class="text-[9px] font-mono text-zinc-500 leading-none">클릭: 우측 인스펙터 편집</div>
             </div>
           </foreignObject>
         `;
@@ -1071,11 +1140,11 @@ import { CraftBuilder } from './builder.js';
         // Node 3: Gate
         svg += `
           <foreignObject x="${colX[2]}" y="${y}" width="${nodeW}" height="${nodeH}">
-            <div xmlns="http://www.w3.org/1999/xhtml" onclick="${clickAction}"
-                 class="w-full h-full rounded-md ${solved ? 'bg-emerald-950/50 border-emerald-500/50' : 'bg-[#16161a] border-amber-500/40'} border hover:border-white/40 p-2 flex flex-col justify-between cursor-pointer box-border overflow-hidden">
+            <div xmlns="http://www.w3.org/1999/xhtml" onclick="${clickAction}" ondblclick="${dblClickAction}"
+                 class="w-full h-full rounded-md ${solved ? 'bg-emerald-950/50 border-emerald-500/50' : 'bg-[#16161a] border-amber-500/40'} border ${isSelNode ? 'ring-1 ring-sky-400/50' : ''} hover:border-white/40 p-2 flex flex-col justify-between cursor-pointer box-border overflow-hidden">
               <div class="text-[9.5px] font-mono ${solved ? 'text-emerald-400' : 'text-amber-400'} leading-none">${escapeXml(obj.gateId || 'gate')} · ${solved ? 'UNLOCKED' : 'LOCKED'}</div>
               <div class="text-[11.5px] font-semibold text-zinc-100 leading-tight break-all">${escapeXml(obj.interfaceType || 'Lock')}</div>
-              <div class="text-[9.5px] font-mono text-zinc-400 leading-tight">${solved ? '해금 완료 (' + escapeXml(obj.passcode) + ')' : '잠금 (클릭하여 해제)'}</div>
+              <div class="text-[9.5px] font-mono text-zinc-400 leading-tight">${solved ? '해금 완료 (' + escapeXml(obj.passcode) + ')' : '잠금 (더블클릭: 해제)'}</div>
             </div>
           </foreignObject>
         `;
@@ -1083,11 +1152,14 @@ import { CraftBuilder } from './builder.js';
         // Node 4: Container / Boss Door
         svg += `
           <foreignObject x="${colX[3]}" y="${y}" width="${nodeW}" height="${nodeH}">
-            <div xmlns="http://www.w3.org/1999/xhtml" onclick="${clickAction}" title="${escapeXml(obj.unlocksName || obj.unlocksId || '')}"
-                 class="w-full h-full rounded-md bg-[#16161a] border ${isBoss ? 'border-rose-500/50' : (solved ? 'border-emerald-500/50' : 'border-white/10')} hover:border-white/30 p-2 flex flex-col justify-between cursor-pointer box-border overflow-hidden">
+            <div xmlns="http://www.w3.org/1999/xhtml" onclick="${clickAction}" ondblclick="${dblClickAction}" title="${escapeXml(obj.unlocksName || obj.unlocksId || '')}"
+                 class="w-full h-full rounded-md bg-[#16161a] border ${isSelNode ? 'border-sky-400' : (isBoss ? 'border-rose-500/50' : (solved ? 'border-emerald-500/50' : 'border-white/10'))} hover:border-white/30 p-2 flex flex-col justify-between cursor-pointer box-border overflow-hidden">
               <div class="text-[9.5px] font-mono ${isBoss ? 'text-rose-400' : 'text-emerald-400'} leading-none">${isBoss ? 'BOSS DOOR · 공간 전이' : 'CONTAINER · 다음 단서'}</div>
               <div class="text-[11px] font-semibold text-zinc-100 leading-snug break-keep line-clamp-2">${escapeXml(obj.unlocksName || obj.unlocksId)}</div>
-              <div class="text-[9px] font-mono text-zinc-500 leading-none truncate">ID: ${escapeXml(obj.unlocksId || '')}</div>
+              ${lightBadge
+                ? `<div class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-950/70 border border-amber-400/40 text-amber-300 leading-none truncate">${escapeXml(lightBadge)}</div>`
+                : `<div class="text-[9px] font-mono text-zinc-500 leading-none truncate">ID: ${escapeXml(obj.unlocksId || '')}</div>`
+              }
             </div>
           </foreignObject>
         `;
@@ -1110,7 +1182,9 @@ import { CraftBuilder } from './builder.js';
     // -------------------------------------------------------------
     // 4. VIEW LAYOUT SWITCHER
     // -------------------------------------------------------------
+    let currentViewLayout = 'split';
     function setViewLayout(mode) {
+      currentViewLayout = mode;
       const pane2D = document.getElementById('pane-2d');
       const pane3D = document.getElementById('pane-3d');
       const paneLogic = document.getElementById('pane-logic');
@@ -1152,9 +1226,12 @@ import { CraftBuilder } from './builder.js';
     }
 
     function updateCodeView() {
-      const snap = buildRacJsonSnapshot();
-      const el = document.getElementById('rac-code-display');
-      if (el) el.textContent = JSON.stringify(snap, null, 2);
+      const paneLogic = document.getElementById('pane-logic');
+      if (paneLogic && !paneLogic.classList.contains('hidden')) {
+        const snap = buildRacJsonSnapshot();
+        const el = document.getElementById('rac-code-display');
+        if (el) el.textContent = JSON.stringify(snap, null, 2);
+      }
       if (typeof scheduleStudioAutosave === 'function') scheduleStudioAutosave();
     }
 
@@ -1331,63 +1408,65 @@ import { CraftBuilder } from './builder.js';
       title.textContent = `🏢 ${floor.name} 건축 통합 평면도 (총 폭 ${floor.totalW}m × ${floor.totalH}m)`;
       g.appendChild(title);
 
-      // Render Corridor
+      // Render Corridor (only when this floor actually defines a corridor)
       const c = floor.corridor;
-      const cX = m + c.x * scale;
-      const cY = m + c.z * scale;
-      const cW = c.w * scale;
-      const cH = c.h * scale;
+      if (c) {
+        const cX = m + c.x * scale;
+        const cY = m + c.z * scale;
+        const cW = c.w * scale;
+        const cH = c.h * scale;
 
-      const corridorRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      corridorRect.setAttribute('x', cX);
-      corridorRect.setAttribute('y', cY);
-      corridorRect.setAttribute('width', cW);
-      corridorRect.setAttribute('height', cH);
-      corridorRect.setAttribute('fill', '#0f172a');
-      corridorRect.setAttribute('stroke', '#38bdf8');
-      corridorRect.setAttribute('stroke-width', '2');
-      corridorRect.setAttribute('stroke-dasharray', '4 3');
-      g.appendChild(corridorRect);
+        const corridorRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        corridorRect.setAttribute('x', cX);
+        corridorRect.setAttribute('y', cY);
+        corridorRect.setAttribute('width', cW);
+        corridorRect.setAttribute('height', cH);
+        corridorRect.setAttribute('fill', '#0f172a');
+        corridorRect.setAttribute('stroke', '#38bdf8');
+        corridorRect.setAttribute('stroke-width', '2');
+        corridorRect.setAttribute('stroke-dasharray', '4 3');
+        g.appendChild(corridorRect);
 
-      const cText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      cText.setAttribute('x', cX + cW / 2);
-      cText.setAttribute('y', cY + 22);
-      cText.setAttribute('fill', '#38bdf8');
-      cText.setAttribute('font-size', '10');
-      cText.setAttribute('font-weight', 'bold');
-      cText.setAttribute('text-anchor', 'middle');
-      cText.textContent = `🚪 ${floor.corridorName}`;
-      g.appendChild(cText);
+        const cText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        cText.setAttribute('x', cX + cW / 2);
+        cText.setAttribute('y', cY + 22);
+        cText.setAttribute('fill', '#38bdf8');
+        cText.setAttribute('font-size', '10');
+        cText.setAttribute('font-weight', 'bold');
+        cText.setAttribute('text-anchor', 'middle');
+        cText.textContent = `🚪 ${floor.corridorName}`;
+        g.appendChild(cText);
 
-      // Corridor Props Symbols
-      c.props.forEach(p => {
-        const pX = m + (c.x + (p.x - c.x)) * scale;
-        const pY = m + (c.z + (p.z - c.z)) * scale;
-        const pGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        pGroup.setAttribute('transform', `translate(${pX}, ${pY})`);
+        // Corridor Props Symbols
+        (c.props || []).forEach(p => {
+          const pX = m + (c.x + (p.x - c.x)) * scale;
+          const pY = m + (c.z + (p.z - c.z)) * scale;
+          const pGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          pGroup.setAttribute('transform', `translate(${pX}, ${pY})`);
 
-        const pRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        pRect.setAttribute('x', -14);
-        pRect.setAttribute('y', -10);
-        pRect.setAttribute('width', 28);
-        pRect.setAttribute('height', 20);
-        pRect.setAttribute('rx', 4);
-        pRect.setAttribute('fill', '#1e293b');
-        pRect.setAttribute('stroke', p.color || '#64748b');
-        pRect.setAttribute('stroke-width', '1.5');
+          const pRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          pRect.setAttribute('x', -14);
+          pRect.setAttribute('y', -10);
+          pRect.setAttribute('width', 28);
+          pRect.setAttribute('height', 20);
+          pRect.setAttribute('rx', 4);
+          pRect.setAttribute('fill', '#1e293b');
+          pRect.setAttribute('stroke', p.color || '#64748b');
+          pRect.setAttribute('stroke-width', '1.5');
 
-        const pTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        pTxt.setAttribute('x', 0);
-        pTxt.setAttribute('y', 4);
-        pTxt.setAttribute('fill', p.color || '#cbd5e1');
-        pTxt.setAttribute('font-size', '8');
-        pTxt.setAttribute('text-anchor', 'middle');
-        pTxt.textContent = p.type === 'wheelchair' ? '♿ 휠체어' : (p.type === 'exit-sign' ? '🟩 유도등' : '소품');
+          const pTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          pTxt.setAttribute('x', 0);
+          pTxt.setAttribute('y', 4);
+          pTxt.setAttribute('fill', p.color || '#cbd5e1');
+          pTxt.setAttribute('font-size', '8');
+          pTxt.setAttribute('text-anchor', 'middle');
+          pTxt.textContent = p.type === 'wheelchair' ? '♿ 휠체어' : (p.type === 'exit-sign' ? '🟩 유도등' : '소품');
 
-        pGroup.appendChild(pRect);
-        pGroup.appendChild(pTxt);
-        g.appendChild(pGroup);
-      });
+          pGroup.appendChild(pRect);
+          pGroup.appendChild(pTxt);
+          g.appendChild(pGroup);
+        });
+      }
 
       // Render Each Room in this Floor (Dynamic filter so newly added rooms & 1F 3-rooms all appear & can be dragged)
       const floorRooms = ROOM_CONFIGS.filter(r => r.floorId === floor.id);
@@ -1532,21 +1611,23 @@ import { CraftBuilder } from './builder.js';
         });
 
         // Connecting Door Marker between Room and Corridor
-        const doorMarker = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        const doorX = (r.worldX === 0) ? (rX + rW) : rX;
-        const doorY = rY + rH / 2;
-        const dSolved = rObjs.some(o => o.isBossDoor && o.solved);
+        if (floor.corridor) {
+          const doorMarker = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          const doorX = (r.worldX === 0) ? (rX + rW) : rX;
+          const doorY = rY + rH / 2;
+          const dSolved = rObjs.some(o => o.isBossDoor && o.solved);
 
-        const dRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        dRect.setAttribute('x', doorX - 4);
-        dRect.setAttribute('y', doorY - 14);
-        dRect.setAttribute('width', 8);
-        dRect.setAttribute('height', 28);
-        dRect.setAttribute('rx', 2);
-        dRect.setAttribute('fill', dSolved ? '#10b981' : '#ef4444');
-        doorMarker.appendChild(dRect);
+          const dRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          dRect.setAttribute('x', doorX - 4);
+          dRect.setAttribute('y', doorY - 14);
+          dRect.setAttribute('width', 8);
+          dRect.setAttribute('height', 28);
+          dRect.setAttribute('rx', 2);
+          dRect.setAttribute('fill', dSolved ? '#10b981' : '#ef4444');
+          doorMarker.appendChild(dRect);
 
-        rGroup.appendChild(doorMarker);
+          rGroup.appendChild(doorMarker);
+        }
         g.appendChild(rGroup);
       });
     }
@@ -1597,21 +1678,25 @@ import { CraftBuilder } from './builder.js';
         g.appendChild(partLabel);
       });
 
-      // Draw subtle causal flow dashed lines between Q(n) -> Q(n+1)
+      // Draw subtle causal flow dashed lines only for real requiresSolvedId / onUnlockEffects links
+      const curRc = ROOM_CONFIGS[currentRoomIdx];
       if (linesG && roomObjs.length > 1) {
-        for (let i = 0; i < roomObjs.length - 1; i++) {
-          const p1 = meterToSvg(roomObjs[i].x, roomObjs[i].z);
-          const p2 = meterToSvg(roomObjs[i + 1].x, roomObjs[i + 1].z);
-          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-          line.setAttribute('x1', p1.x);
-          line.setAttribute('y1', p1.y);
-          line.setAttribute('x2', p2.x);
-          line.setAttribute('y2', p2.y);
-          line.setAttribute('stroke', roomObjs[i].solved ? '#10b981' : '#334155');
-          line.setAttribute('stroke-width', '1.5');
-          line.setAttribute('stroke-dasharray', '4 4');
-          linesG.appendChild(line);
-        }
+        roomObjs.forEach(fromObj => {
+          roomObjs.forEach(toObj => {
+            if (!hasCausalLink(fromObj, toObj, curRc)) return;
+            const p1 = meterToSvg(fromObj.x, fromObj.z);
+            const p2 = meterToSvg(toObj.x, toObj.z);
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute('x1', p1.x);
+            line.setAttribute('y1', p1.y);
+            line.setAttribute('x2', p2.x);
+            line.setAttribute('y2', p2.y);
+            line.setAttribute('stroke', fromObj.solved ? '#10b981' : '#334155');
+            line.setAttribute('stroke-width', '1.5');
+            line.setAttribute('stroke-dasharray', '4 4');
+            linesG.appendChild(line);
+          });
+        });
       }
 
       roomObjs.forEach(obj => {
@@ -1623,6 +1708,7 @@ import { CraftBuilder } from './builder.js';
         group.setAttribute('id', 'cad-el-' + obj.id);
         group.setAttribute('class', `cad-obj ${obj.id === selectedObjectId ? 'selected' : ''}`);
         const rotDeg = Math.round(((obj.rotY !== undefined ? obj.rotY : getNaturalObjectRotation(obj, roomW, roomH)) * 180 / Math.PI)) || 0;
+        const normRot = ((rotDeg % 360) + 540) % 360 - 180;
         group.setAttribute('transform', `translate(${pos.x}, ${pos.y}) rotate(${rotDeg}) translate(${-wPx/2}, ${-hPx/2})`);
 
         // Main Box
@@ -1636,7 +1722,13 @@ import { CraftBuilder } from './builder.js';
         rect.setAttribute('stroke-width', obj.id === selectedObjectId ? 3 : 1.5);
         rect.setAttribute('fill-opacity', 0.92);
 
-        // Question Badge Top-Left (Q01 ~ Q30)
+        // Question Badge & Object Name (counter-rotate 180° for south-facing props so text stays upright)
+        const labelGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        labelGroup.setAttribute('class', 'cad-label-group');
+        if (Math.abs(normRot) > 90) {
+          labelGroup.setAttribute('transform', `rotate(180 ${wPx / 2} ${hPx / 2})`);
+        }
+
         const qCode = obj.qNum ? `Q${String(obj.qNum).padStart(2, '0')}` : 'NEW';
         const badgeTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
         badgeTxt.setAttribute('x', wPx / 2);
@@ -1648,7 +1740,6 @@ import { CraftBuilder } from './builder.js';
         badgeTxt.setAttribute('text-anchor', 'middle');
         badgeTxt.textContent = `${obj.solved ? '✅' : '🔒'} [${qCode}] ${obj.passcode || ''}`;
 
-        // Object Name
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute('x', wPx / 2);
         text.setAttribute('y', hPx / 2 + 10);
@@ -1658,9 +1749,11 @@ import { CraftBuilder } from './builder.js';
         text.setAttribute('text-anchor', 'middle');
         text.textContent = obj.name;
 
+        labelGroup.appendChild(badgeTxt);
+        labelGroup.appendChild(text);
+
         group.appendChild(rect);
-        group.appendChild(badgeTxt);
-        group.appendChild(text);
+        group.appendChild(labelGroup);
 
         group.addEventListener('mousedown', (e) => startDragCadObject(e, obj.id));
         group.addEventListener('dblclick', (e) => {
@@ -1885,6 +1978,24 @@ import { CraftBuilder } from './builder.js';
       const mechSel = document.getElementById('prop-mechanism');
       if (mechSel) mechSel.value = obj.mechanism ? obj.mechanism.kind : '';
 
+      const unlockLightSel = document.getElementById('prop-unlock-light');
+      if (unlockLightSel) {
+        const curLightEf = Array.isArray(obj.onUnlockEffects)
+          ? obj.onUnlockEffects.find(ef => ef && ef.kind === 'lightOn')
+          : null;
+        const selectedLightId = curLightEf ? curLightEf.targetId : '';
+        const lightOpts = ['<option value="">없음</option>'];
+        ROOM_CONFIGS.forEach(rc => {
+          const rLights = Array.isArray(rc.lights) ? rc.lights : [];
+          rLights.forEach(lt => {
+            const selAttr = lt.id === selectedLightId ? 'selected' : '';
+            const initTag = lt.initiallyOn === false ? ' [초기OFF]' : '';
+            lightOpts.push(`<option value="${escapeXml(lt.id)}" ${selAttr}>${escapeXml(rc.shortName)} · ${escapeXml(lt.id)}${initTag}</option>`);
+          });
+        });
+        unlockLightSel.innerHTML = lightOpts.join('');
+      }
+
       const visSel = document.getElementById('prop-visual-tpl');
       if (visSel) visSel.value = (obj.visualSpec && obj.visualSpec.template) ? obj.visualSpec.template : '';
 
@@ -1913,6 +2024,22 @@ import { CraftBuilder } from './builder.js';
       }
     }
 
+    function selectObjectFromOntologyGraph(roomIdx, objId) {
+      if (typeof roomIdx === 'number' && roomIdx >= 0 && roomIdx < ROOM_CONFIGS.length && currentRoomIdx !== roomIdx) {
+        currentRoomIdx = roomIdx;
+      }
+      selectObject(objId);
+      const sbRight = document.getElementById('sidebar-right');
+      if (sbRight) {
+        if (sbRight.classList.contains('hidden')) sbRight.classList.remove('hidden');
+        if (sbRight.style.width === '0px' && typeof toggleRightSidebar === 'function') {
+          toggleRightSidebar();
+        }
+      }
+      const authorDetails = document.getElementById('insp-obj-form')?.closest('details');
+      if (authorDetails) authorDetails.open = true;
+    }
+
     function updateSelectedObjectProps() {
       if (!selectedObjectId) return;
       const obj = studioObjects.find(o => o.id === selectedObjectId);
@@ -1924,6 +2051,8 @@ import { CraftBuilder } from './builder.js';
       obj.passcode = document.getElementById('prop-passcode').value.trim().toUpperCase();
 
       const clueEditEl = document.getElementById('prop-clue-edit');
+      const prevCluePayload = obj.cluePayload || '';
+      const clueEdited = !!(clueEditEl && clueEditEl.value !== prevCluePayload);
       if (clueEditEl) obj.cluePayload = clueEditEl.value;
       const reqSel = document.getElementById('prop-requires');
       if (reqSel) obj.requiresSolvedId = reqSel.value || null;
@@ -1932,10 +2061,38 @@ import { CraftBuilder } from './builder.js';
         const mk = mechSel.value;
         obj.mechanism = mk ? { kind: mk, targetState: obj.passcode } : null;
       }
+      const unlockLightSel = document.getElementById('prop-unlock-light');
+      if (unlockLightSel) {
+        const lightId = unlockLightSel.value;
+        if (lightId) {
+          obj.onUnlockEffects = [{ kind: 'lightOn', targetId: lightId, sfx: 'spark' }];
+          for (const rc of ROOM_CONFIGS) {
+            const targetLt = Array.isArray(rc.lights) ? rc.lights.find(l => l.id === lightId) : null;
+            if (targetLt) {
+              targetLt.initiallyOn = false;
+              break;
+            }
+          }
+        } else {
+          delete obj.onUnlockEffects;
+        }
+      }
+      const clueLines = (obj.cluePayload || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const safeLines = clueLines.length > 0 ? clueLines : ['단서 내용을 입력하세요.'];
       const visSel = document.getElementById('prop-visual-tpl');
       if (visSel) {
         const tpl = visSel.value;
-        obj.visualSpec = tpl ? { template: tpl, title: obj.name, lines: [obj.cluePayload || '단서 내용을 입력하세요.'] } : null;
+        if (tpl) {
+          obj.visualSpec = { ...(obj.visualSpec || {}), template: tpl, title: obj.name, lines: safeLines };
+        } else if (clueEdited) {
+          obj.visualSpec = { template: 'document', title: obj.name, lines: safeLines };
+        } else {
+          obj.visualSpec = null;
+        }
+      } else if (obj.visualSpec) {
+        obj.visualSpec = { ...obj.visualSpec, title: obj.name, lines: safeLines };
+      } else if (clueEdited) {
+        obj.visualSpec = { template: 'document', title: obj.name, lines: safeLines };
       }
       const storyEl = document.getElementById('prop-story-beat');
       if (storyEl) obj.storyBeat = storyEl.value.trim();
@@ -1955,6 +2112,7 @@ import { CraftBuilder } from './builder.js';
       renderRoomSidebarAndProgress();
       render2DCadObjects();
       rebuild3DRoom();
+      resetAllLightsForMode(studioMode === 'playtest');
       updateInspectorValues(obj);
       updateCodeView();
     }
@@ -1994,6 +2152,7 @@ import { CraftBuilder } from './builder.js';
       const lColor = document.getElementById('space-light-color')?.value || '#c8dcff';
       const lInt = parseFloat(document.getElementById('space-light-intensity')?.value || '1.2');
       const lFlick = document.getElementById('space-light-flicker')?.checked ?? true;
+      const lInitOn = document.getElementById('space-light-init-on')?.checked ?? true;
 
       if (!Array.isArray(rc.lights) || rc.lights.length === 0) {
         rc.lights = [{
@@ -2003,13 +2162,15 @@ import { CraftBuilder } from './builder.js';
           color: lColor,
           intensity: !isNaN(lInt) ? lInt : 1.2,
           distance: 6.5,
-          flicker: lFlick
+          flicker: lFlick,
+          initiallyOn: lInitOn
         }];
       } else {
         rc.lights[0].kind = lKind;
         rc.lights[0].color = lColor;
         rc.lights[0].intensity = !isNaN(lInt) ? lInt : 1.2;
         rc.lights[0].flicker = lFlick;
+        rc.lights[0].initiallyOn = lInitOn;
         rc.lights[0].pos = [rc.w / 2, (rc.wallHeight || 2.6) - 0.2, rc.h / 2];
       }
 
@@ -2020,6 +2181,7 @@ import { CraftBuilder } from './builder.js';
       if (cadViewMode === 'floor') updateCadViewBox();
       renderRoomSidebarAndProgress();
       rebuild3DRoom();
+      resetAllLightsForMode(studioMode === 'playtest');
       updateCodeView();
     }
 
@@ -2039,11 +2201,12 @@ import { CraftBuilder } from './builder.js';
       const de = document.getElementById('space-door-east'); if (de) de.checked = rc.hasEastDoor !== false;
 
       // Sync Room Lighting Controls
-      const curLight = (rc.lights && rc.lights[0]) || { kind: 'fluorescent', color: '#c8dcff', intensity: 1.2, flicker: true };
+      const curLight = (rc.lights && rc.lights[0]) || { kind: 'fluorescent', color: '#c8dcff', intensity: 1.2, flicker: true, initiallyOn: true };
       const slKind = document.getElementById('space-light-kind'); if (slKind) slKind.value = curLight.kind || 'fluorescent';
       const slColor = document.getElementById('space-light-color'); if (slColor) slColor.value = curLight.color || '#c8dcff';
       const slInt = document.getElementById('space-light-intensity'); if (slInt) slInt.value = curLight.intensity !== undefined ? curLight.intensity : 1.2;
       const slFlick = document.getElementById('space-light-flicker'); if (slFlick) slFlick.checked = !!curLight.flicker;
+      const slInitOn = document.getElementById('space-light-init-on'); if (slInitOn) slInitOn.checked = (curLight.initiallyOn !== false);
 
       renderSpacePassagesEditor();
     }
@@ -2329,6 +2492,76 @@ import { CraftBuilder } from './builder.js';
       v.classList.add('blood-pulsing');
     }
 
+    let sceneDirty = true;
+    function markSceneDirty() {
+      sceneDirty = true;
+    }
+
+    function syncShadowMapAutoUpdate() {
+      if (!renderer) return;
+      const needsShadows = !!(flashlight && flashlight.intensity > 0 && flashlight.castShadow);
+      renderer.shadowMap.autoUpdate = needsShadows;
+      if (needsShadows) renderer.shadowMap.needsUpdate = true;
+    }
+
+    function updateRoomVisibilityCulling() {
+      if (!unifiedBuildingGroup) return;
+      const isFps = (cameraMode === 'fps');
+      const rcCurrent = ROOM_CONFIGS[currentRoomIdx] || ROOM_CONFIGS[0];
+
+      if (!isFps) {
+        for (let i = 0; i < ROOM_CONFIGS.length; i++) {
+          const rc = ROOM_CONFIGS[i];
+          const rg = unifiedBuildingGroup.getObjectByName(`roomGroup_${rc.idx}`);
+          if (rg) {
+            rg.visible = !(!showAllFloorsInOrbit && rcCurrent && rc.floorHeight > rcCurrent.floorHeight + 0.1);
+          }
+        }
+        const c1 = unifiedBuildingGroup.getObjectByName('corridorGroup_1f');
+        if (c1) c1.visible = true;
+        const c2 = unifiedBuildingGroup.getObjectByName('corridorGroup_2f');
+        if (c2) c2.visible = !(!showAllFloorsInOrbit && rcCurrent && rcCurrent.floorHeight < 2.0);
+        const st = unifiedBuildingGroup.getObjectByName('realStairwell_1f_2f');
+        if (st) st.visible = true;
+        markSceneDirty();
+        return;
+      }
+
+      // FPS Portal/Adjacency Culling: keep current room + directly connected passages + adjacent index (|idx - cur| <= 1)
+      const visibleSet = new Set([currentRoomIdx]);
+      if (currentRoomIdx - 1 >= 0) visibleSet.add(currentRoomIdx - 1);
+      if (currentRoomIdx + 1 < ROOM_CONFIGS.length) visibleSet.add(currentRoomIdx + 1);
+
+      const spaceIdToIdx = new Map();
+      for (let i = 0; i < ROOM_CONFIGS.length; i++) {
+        spaceIdToIdx.set(ROOM_CONFIGS[i].id, ROOM_CONFIGS[i].idx);
+      }
+      const curSpaceId = rcCurrent ? rcCurrent.id : null;
+      if (curSpaceId && Array.isArray(studioPassages)) {
+        for (let i = 0; i < studioPassages.length; i++) {
+          const p = studioPassages[i];
+          if (p.fromSpaceId === curSpaceId && spaceIdToIdx.has(p.toSpaceId)) {
+            visibleSet.add(spaceIdToIdx.get(p.toSpaceId));
+          } else if (p.toSpaceId === curSpaceId && spaceIdToIdx.has(p.fromSpaceId)) {
+            visibleSet.add(spaceIdToIdx.get(p.fromSpaceId));
+          }
+        }
+      }
+
+      for (let i = 0; i < ROOM_CONFIGS.length; i++) {
+        const rc = ROOM_CONFIGS[i];
+        const rg = unifiedBuildingGroup.getObjectByName(`roomGroup_${rc.idx}`);
+        if (rg) rg.visible = visibleSet.has(rc.idx);
+      }
+      const c1 = unifiedBuildingGroup.getObjectByName('corridorGroup_1f');
+      if (c1) c1.visible = visibleSet.has(0) || visibleSet.has(1);
+      const c2 = unifiedBuildingGroup.getObjectByName('corridorGroup_2f');
+      if (c2) c2.visible = visibleSet.has(3) || visibleSet.has(4);
+      const st = unifiedBuildingGroup.getObjectByName('realStairwell_1f_2f');
+      if (st) st.visible = visibleSet.has(2) || visibleSet.has(3);
+      markSceneDirty();
+    }
+
     function initThree() {
       const container = document.getElementById('three-container');
       const w = container.clientWidth || 400;
@@ -2337,12 +2570,12 @@ import { CraftBuilder } from './builder.js';
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x090d16);
 
-      camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 100);
+      camera = new THREE.PerspectiveCamera(50, w / h, 0.15, 100);
       camera.position.set(roomW / 2, 6.2, 7.2);
 
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
       renderer.setSize(w, h);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -2365,6 +2598,7 @@ import { CraftBuilder } from './builder.js';
       orbitControls.enableZoom = true;    // 휠 줌 허용
       orbitControls.maxPolarAngle = Math.PI / 2 + 0.05;
       orbitControls.target.set(roomW / 2, 1.2, roomH / 2);
+      orbitControls.addEventListener('change', markSceneDirty);
 
       // Minimized global ambient wash (True horror atmosphere; fixtures illuminate rooms)
       ambientLight = new THREE.AmbientLight(0xdbeafe, 0.14);
@@ -2377,9 +2611,12 @@ import { CraftBuilder } from './builder.js';
       // Flat global spotLight removed in favor of real physical fixtures!
       spotLight = null;
 
+      // Fixed Light Pool (4 Point + 4 Spot permanently mounted -> 0 shader recompiles)
+      initLightPool(scene);
+
       // Flashlight aims straight ahead of camera (Real-time horror shadows ONLY on FPS flashlight)
-      flashlight = new THREE.SpotLight(0xfff1dc, 6.2, 22, Math.PI / 6.2, 0.45, 1.1);
-      flashlight.castShadow = true;
+      flashlight = new THREE.SpotLight(0xfff4e0, 22, 22, Math.PI / 5.8, 0.48, 1.4);
+      flashlight.castShadow = false;
       flashlight.shadow.mapSize.set(1024, 1024);
       flashlight.shadow.bias = -0.0005;
       flashlight.shadow.normalBias = 0.02;
@@ -2392,6 +2629,7 @@ import { CraftBuilder } from './builder.js';
       flashlight.position.set(0, 0, 0);
       flashlight.target = flashlightTarget;
       scene.add(camera);
+      syncShadowMapAutoUpdate();
 
       // Horror Jump Scare Shadow Silhouette
       scareSilhouetteGroup = buildScareSilhouetteMesh();
@@ -2414,6 +2652,7 @@ import { CraftBuilder } from './builder.js';
 
       renderer.domElement.addEventListener('mousedown', (e) => {
         if (isAnyModalOpen()) return;
+        markSceneDirty();
         isMouseDown = true;
         mouseDownPos = { x: e.clientX, y: e.clientY };
         lastMouseX = e.clientX;
@@ -2448,6 +2687,13 @@ import { CraftBuilder } from './builder.js';
         getStudioMode: () => studioMode,
         meshMap,
         getHitObjectId,
+        getPropOntology: () => PROP_ONTOLOGY,
+        carriedIds,
+        deletePropById,
+        isWallDoorObj,
+        getWallDoorInfo,
+        releaseNaturalOpening,
+        getObjectRotation: (o) => { const r = ROOM_CONFIGS[o.roomIdx] || ROOM_CONFIGS[0]; return getNaturalObjectRotation(o, r.w, r.h); },
         selectObject,
         get selectedObjectId() { return selectedObjectId; },
         deleteSelectedObject,
@@ -2477,11 +2723,22 @@ import { CraftBuilder } from './builder.js';
       });
 
       renderer.domElement.addEventListener('wheel', (e) => {
+        markSceneDirty();
         if (studioMode === 'author' && craftBuilder && craftBuilder.isActive()) {
           craftBuilder.rotateGhost(e.deltaY > 0 ? 1 : -1);
           e.preventDefault();
         }
       }, { passive: false });
+
+      // Craft Builder: short click = place, long press (hold) = pick up aimed object
+      renderer.domElement.addEventListener('mousedown', (e) => {
+        if (e.button !== 0 || isAnyModalOpen()) return;
+        if (studioMode === 'author' && craftBuilder && craftBuilder.isActive()) craftBuilder.onPointerDown();
+      });
+      window.addEventListener('mouseup', (e) => {
+        if (e.button !== 0) return;
+        if (craftBuilder && craftBuilder.isActive()) craftBuilder.onPointerUp();
+      });
 
       // PointerLock & Raycast Click Binding (With Drag Detection to Prevent Accidental Clicks)
       renderer.domElement.addEventListener('click', (e) => {
@@ -2489,10 +2746,7 @@ import { CraftBuilder } from './builder.js';
         if (isAnyModalOpen()) return;
 
         // If Craft Builder mode is active, forward click to craft builder!
-        if (studioMode === 'author' && craftBuilder && craftBuilder.isActive()) {
-          craftBuilder.onLeftClick();
-          return;
-        }
+        if (studioMode === 'author' && craftBuilder && craftBuilder.isActive()) return; // handled by mousedown/mouseup (click vs long-press)
 
         // If mouse moved significantly between mousedown and click, consider it an intentional camera rotation drag
         const moveDist = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
@@ -2530,6 +2784,9 @@ import { CraftBuilder } from './builder.js';
 
       // Pointer Lock Change Status (Syncs cursor visibility and crosshair to prevent cursor misalignment)
       document.addEventListener('pointerlockchange', () => {
+        if (!document.pointerLockElement && craftBuilder && craftBuilder.isActive() && craftBuilder.isCarrying() && !craftBuilder.isCatalogOpen()) {
+          craftBuilder.cancelPickup(); // ESC while carrying returns the item to its original position
+        }
         const hud = document.getElementById('pointerlock-hud');
         const crosshair = document.getElementById('fps-crosshair');
 
@@ -2604,7 +2861,28 @@ import { CraftBuilder } from './builder.js';
             importModal.classList.add('hidden');
             handled = true;
           }
+          if (craftBuilder && craftBuilder.isCatalogOpen()) {
+            craftBuilder.closeCatalog();
+            handled = true;
+          } else if (craftBuilder && craftBuilder.isActive() && craftBuilder.isCarrying()) {
+            craftBuilder.cancelPickup();
+            handled = true;
+          }
           if (handled) {
+            e.preventDefault();
+            return;
+          }
+        }
+
+        // Tab: Craft Catalog modal (Creator / Craft mode)
+        if ((e.code === 'Tab' || e.key === 'Tab') && studioMode === 'author' && craftBuilder) {
+          const tn = e.target && e.target.tagName;
+          const typing = tn === 'INPUT' || tn === 'SELECT' || tn === 'TEXTAREA';
+          const ae = document.activeElement;
+          const free = !ae || ae === document.body || ae === renderer.domElement;
+          const otherModal = isAnyModalOpen() && !craftBuilder.isCatalogOpen();
+          if (!typing && !otherModal && (craftBuilder.isActive() || craftBuilder.isCatalogOpen() || free)) {
+            craftBuilder.toggleCatalog();
             e.preventDefault();
             return;
           }
@@ -2632,7 +2910,6 @@ import { CraftBuilder } from './builder.js';
             if (code === 'Digit3' || key === '3') { craftBuilder.selectSlot(3); e.preventDefault(); return; }
             if (code === 'Digit4' || key === '4') { craftBuilder.selectSlot(4); e.preventDefault(); return; }
             if (code === 'Digit5' || key === '5') { craftBuilder.selectSlot(5); e.preventDefault(); return; }
-            if (code === 'Digit6' || key === '6') { craftBuilder.selectSlot(6); e.preventDefault(); return; }
             if (code === 'KeyR' || key === 'r' || key === 'ㄱ') { craftBuilder.rotateGhost(1); e.preventDefault(); return; }
             if (code === 'KeyX' || key === 'x' || key === 'ㅌ') { craftBuilder.onRightClick(); e.preventDefault(); return; }
             if (code === 'Delete' || key === 'delete') { craftBuilder.onDelete(); e.preventDefault(); return; }
@@ -2689,27 +2966,46 @@ import { CraftBuilder } from './builder.js';
           camera.position.add(delta);
           orbitControls.target.add(delta);
           updateCurrentRoomFromWorldPos(orbitControls.target.x, orbitControls.target.z, orbitControls.target.y);
+          markSceneDirty();
         }
       }
 
       let lastTime = performance.now();
+      let renderCallCount = 0;
+      window.__getRenderCallCount = () => renderCallCount;
       function animate() {
         requestAnimationFrame(animate);
         const now = performance.now();
+        const pane3D = document.getElementById('pane-3d');
+        if (document.hidden || currentViewLayout === '2d-only' || currentViewLayout === 'logic' || (pane3D && pane3D.classList.contains('hidden'))) {
+          lastTime = now;
+          return;
+        }
         const dt = (now - lastTime) / 1000;
         lastTime = now;
+
+        const builderActive = !!(craftBuilder && craftBuilder.isActive());
 
         if (cameraMode === 'orbit') {
           updateOrbitPanMovement(dt);
           orbitControls.update();
+          if (builderActive) craftBuilder.update(dt);
+          const hasLightAnim = hasActiveLightingAnimation(now);
+          if (!sceneDirty && !isCinematicTransitioning && !hasLightAnim && !builderActive) {
+            return;
+          }
+          updateLightFixtures(now / 1000, orbitControls.target, currentRoomIdx, false);
+          sceneDirty = false;
+          renderCallCount++;
+          renderer.render(scene, camera);
         } else {
           updateFpsMovement(dt);
+          if (builderActive) craftBuilder.update(dt);
+          updateLightFixtures(now / 1000, camera.position, currentRoomIdx, true);
+          sceneDirty = false;
+          renderCallCount++;
+          renderer.render(scene, camera);
         }
-        if (craftBuilder && craftBuilder.isActive()) {
-          craftBuilder.update(dt);
-        }
-        updateLightFixtures(now / 1000);
-        renderer.render(scene, camera);
       }
       animate();
     }
@@ -2723,6 +3019,7 @@ import { CraftBuilder } from './builder.js';
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      markSceneDirty();
     }
 
     window.addEventListener('resize', () => {
@@ -2747,66 +3044,73 @@ import { CraftBuilder } from './builder.js';
       const chromeM = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, map: steelPbr.map, metalness: 0.85, roughness: 0.25 });
 
       if (p.type === 'wheelchair') {
-        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 0.5), frameM);
+        const seat = new THREE.Mesh(getBoxGeo(0.55, 0.08, 0.5), frameM);
         seat.position.y = 0.45;
-        const back = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.06), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 }));
+        const back = new THREE.Mesh(getBoxGeo(0.55, 0.45, 0.06), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 }));
         back.position.set(0, 0.7, -0.22);
-        const wGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.04, 20);
-        wGeo.rotateZ(Math.PI / 2);
-        const wL = new THREE.Mesh(wGeo, chromeM); wL.position.set(-0.3, 0.3, 0);
-        const wR = new THREE.Mesh(wGeo, chromeM); wR.position.set(0.3, 0.3, 0);
+        const wGeo = getCylGeo(0.28, 0.28, 0.04, 20);
+        const wL = new THREE.Mesh(wGeo, chromeM); wL.rotation.z = Math.PI / 2; wL.position.set(-0.3, 0.3, 0);
+        const wR = new THREE.Mesh(wGeo, chromeM); wR.rotation.z = Math.PI / 2; wR.position.set(0.3, 0.3, 0);
         pGroup.add(seat, back, wL, wR);
       } else if (p.type === 'exit-sign') {
-        const casing = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.26, 0.08), frameM);
+        const casing = new THREE.Mesh(getBoxGeo(0.54, 0.26, 0.08), frameM);
         casing.position.y = 2.3;
         const signMesh = new THREE.Mesh(
-          new THREE.BoxGeometry(0.48, 0.20, 0.09),
+          getBoxGeo(0.48, 0.20, 0.09),
           new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, emissiveIntensity: 1.0 })
         );
         signMesh.position.y = 2.3;
         pGroup.add(casing, signMesh);
       } else if (p.type === 'iv-stand') {
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.04, 12), chromeM);
+        const base = new THREE.Mesh(getCylGeo(0.22, 0.24, 0.04, 12), chromeM);
         base.position.y = 0.02;
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.7, 10), chromeM);
+        const pole = new THREE.Mesh(getCylGeo(0.018, 0.018, 1.7, 10), chromeM);
         pole.position.y = 0.85;
-        const pack = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.08), new THREE.MeshStandardMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.75, roughness: 0.2 }));
+        const pack = new THREE.Mesh(getBoxGeo(0.14, 0.22, 0.08), new THREE.MeshStandardMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.75, roughness: 0.2 }));
         pack.position.set(0.12, 1.5, 0);
         pGroup.add(base, pole, pack);
       } else if (p.type === 'sample-shelf') {
         // Realistic Steel Lab Specimen Rack (Replaces purple block!)
         [[-0.24, -0.36], [0.24, -0.36], [-0.24, 0.36], [0.24, 0.36]].forEach(([px, pz]) => {
-          const post = new THREE.Mesh(new THREE.BoxGeometry(0.035, 1.45, 0.035), frameM);
+          const post = new THREE.Mesh(getBoxGeo(0.035, 1.45, 0.035), frameM);
           post.position.set(px, 0.725, pz);
           pGroup.add(post);
         });
         [0.15, 0.60, 1.05, 1.42].forEach(sy => {
-          const tray = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.03, 0.74), frameM);
+          const tray = new THREE.Mesh(getBoxGeo(0.50, 0.03, 0.74), frameM);
           tray.position.y = sy;
           pGroup.add(tray);
         });
+        const jarMat = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x047857, emissiveIntensity: 0.4, transparent: true, opacity: 0.78, roughness: 0.15 });
         [-0.20, 0, 0.20].forEach(jz => {
-          const jar = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.06, 0.06, 0.24, 14),
-            new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x047857, emissiveIntensity: 0.4, transparent: true, opacity: 0.78, roughness: 0.15 })
-          );
+          const jar = new THREE.Mesh(getCylGeo(0.06, 0.06, 0.24, 14), jarMat);
           jar.position.set(0, 1.19, jz);
           pGroup.add(jar);
         });
       } else {
         // Grounded Red Fire Extinguisher (Replaces floating orange cylinder!)
         const tank = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.085, 0.085, 0.52, 18),
+          getCylGeo(0.085, 0.085, 0.52, 18),
           new THREE.MeshStandardMaterial({ color: 0x991b1b, map: rustPbr.map, metalness: 0.45, roughness: 0.38 })
         );
         tank.position.y = 0.26;
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.08, 12), chromeM);
+        const neck = new THREE.Mesh(getCylGeo(0.025, 0.04, 0.08, 12), chromeM);
         neck.position.y = 0.56;
-        const nozzle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.025), new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.7 }));
+        const nozzle = new THREE.Mesh(getBoxGeo(0.12, 0.025, 0.025), new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.7 }));
         nozzle.position.set(0.05, 0.58, 0);
         pGroup.add(tank, neck, nozzle);
       }
-      pGroup.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+      const _tmpSz = new THREE.Vector3();
+      pGroup.traverse(c => {
+        if (c.isMesh) {
+          c.receiveShadow = true;
+          if (c.geometry) {
+            if (!c.geometry.boundingBox) c.geometry.computeBoundingBox();
+            c.geometry.boundingBox.getSize(_tmpSz);
+            c.castShadow = Math.max(_tmpSz.x, _tmpSz.y, _tmpSz.z) >= 0.28;
+          }
+        }
+      });
       return pGroup;
     }
 
@@ -2823,15 +3127,66 @@ import { CraftBuilder } from './builder.js';
       rebuild3DRoom();
     }
 
+    function markSharedResource(res) {
+      res.userData = res.userData || {};
+      res.userData.shared = true;
+      return res;
+    }
+
+    let _sharedArchMats = null;
+    function getSharedArchMats() {
+      if (_sharedArchMats) return _sharedArchMats;
+      _sharedArchMats = {
+        ceilMat: markSharedResource(new THREE.MeshStandardMaterial({
+          color: 0x0f172a, roughness: 0.95, metalness: 0.1, side: THREE.DoubleSide
+        })),
+        baseboardMat: markSharedResource(new THREE.MeshStandardMaterial({
+          color: 0x0f172a, roughness: 0.8,
+          polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
+        })),
+        corniceMat: markSharedResource(new THREE.MeshStandardMaterial({
+          color: 0x1e293b, roughness: 0.9,
+          polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
+        })),
+        frameMat: markSharedResource(new THREE.MeshStandardMaterial({
+          color: 0x0f172a, roughness: 0.85, metalness: 0.4,
+          polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
+        }))
+      };
+      return _sharedArchMats;
+    }
+
+    const LINTEL_WALL_ROT = { N: 0, S: Math.PI, W: Math.PI / 2, E: -Math.PI / 2 };
+
     function rebuild3DRoom() {
       if (!scene) return;
-      if (unifiedBuildingGroup) scene.remove(unifiedBuildingGroup);
+      // Preserve live relay ON/OFF state across mid-play rebuilds (e.g. boss door open)
+      const prevLightStates = new Map();
+      for (let i = 0; i < activeFixtures.length; i++) {
+        prevLightStates.set(activeFixtures[i].id, activeFixtures[i].isOn);
+      }
+      // Dispose detached meshMap entries first, then remove & dispose unifiedBuildingGroup
       for (const m of meshMap.values()) {
-        if (m.parent) m.parent.remove(m);
-        else scene.remove(m);
+        let inUnified = false;
+        let p = m.parent;
+        while (p) { if (p === unifiedBuildingGroup) { inUnified = true; break; } p = p.parent; }
+        if (!inUnified) {
+          if (m.parent) m.parent.remove(m);
+          else scene.remove(m);
+          disposeObject3D(m);
+        }
       }
       meshMap.clear();
+      if (unifiedBuildingGroup) {
+        scene.remove(unifiedBuildingGroup);
+        disposeObject3D(unifiedBuildingGroup);
+      }
       clearActiveFixtures();
+
+      const { ceilMat, baseboardMat, corniceMat, frameMat } = getSharedArchMats();
+
+      // Inward wall inset (0.02m per room -> 0.04m physical gap between adjacent rooms, zero coplanar Z-fighting)
+      const WALL_INSET = 0.02;
 
       unifiedBuildingGroup = new THREE.Group();
       unifiedBuildingGroup.name = "unifiedBuildingGroup";
@@ -2856,9 +3211,7 @@ import { CraftBuilder } from './builder.js';
         const isDoorOpen = doorObj ? doorObj.solved : false;
 
         // 1-1. Room Floor (Space.materials.floor PBR Ontology)
-        const fGeo = new THREE.PlaneGeometry(rw, rh);
-        fGeo.rotateX(-Math.PI / 2);
-        fGeo.translate(rw / 2, 0.002, rh / 2);
+        const fGeo = getPlaneGeo(rw, rh);
         const concretePbr = getPbrTexturePack('concrete');
         const floorPreset = (rc.materials && rc.materials.floor) || 'tile';
         const floorPbr = floorPreset === 'tile'
@@ -2869,59 +3222,59 @@ import { CraftBuilder } from './builder.js';
           roughnessMap: floorPbr.roughnessMap, aoMap: floorPbr.aoMap, aoMapIntensity: 0.65,
           roughness: floorPreset === 'rustedMetal' ? 0.65 : 0.85, metalness: floorPreset === 'rustedMetal' ? 0.45 : 0.12
         }));
+        fMesh.rotation.x = -Math.PI / 2;
+        fMesh.position.set(rw / 2, 0.002, rh / 2);
         fMesh.receiveShadow = true;
         rGroup.add(fMesh);
 
         // 1-1-2. Room Ceiling (Offset slightly below floor above; active in FPS mode only to eliminate Z-fighting)
-        const ceilGeo = new THREE.PlaneGeometry(rw, rh);
-        ceilGeo.rotateX(Math.PI / 2);
-        ceilGeo.translate(rw / 2, wh - 0.04, rh / 2);
-        const ceilMat = new THREE.MeshStandardMaterial({
-          color: 0x0f172a,
-          roughness: 0.95,
-          metalness: 0.1,
-          side: THREE.DoubleSide
-        });
-        const ceilMesh = new THREE.Mesh(ceilGeo, ceilMat);
+        const ceilMesh = new THREE.Mesh(fGeo, ceilMat);
+        ceilMesh.rotation.x = Math.PI / 2;
+        ceilMesh.position.set(rw / 2, wh - 0.04, rh / 2);
         ceilMesh.name = `ceiling_${rc.idx}`;
         ceilMesh.visible = isFps; // Active in 1st-person FPS mode, hidden in top-down orbit to prevent slab collision
         rGroup.add(ceilMesh);
 
-        // 1-2. Moldings (Baseboards & Crown Cornices)
-        const baseboardMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
-        const corniceMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+        // 1-2. Moldings (Baseboards & Crown Cornices) with physical normal offset + polygonOffset (zero Z-fighting)
         function addTrim(x1, z1, x2, z2) {
           const len = Math.hypot(x2 - x1, z2 - z1);
-          const b = new THREE.Mesh(new THREE.BoxGeometry(len, 0.10, 0.04), baseboardMat);
-          b.position.set((x1 + x2) / 2, 0.05, (z1 + z2) / 2);
+          if (len <= 0.04) return;
+          const b = new THREE.Mesh(getBoxGeo(len, 0.10, 0.03), baseboardMat);
+          b.position.set((x1 + x2) / 2, 0.055, (z1 + z2) / 2);
           b.rotation.y = -Math.atan2(z2 - z1, x2 - x1);
-          const c = new THREE.Mesh(new THREE.BoxGeometry(len, 0.08, 0.06), corniceMat);
-          c.position.set((x1 + x2) / 2, wh - 0.04, (z1 + z2) / 2);
+          const c = new THREE.Mesh(getBoxGeo(len, 0.07, 0.045), corniceMat);
+          c.position.set((x1 + x2) / 2, wh - 0.085, (z1 + z2) / 2);
           c.rotation.y = -Math.atan2(z2 - z1, x2 - x1);
           rGroup.add(b, c);
         }
         const doorZStart = Math.max(1.0, (rh - 1.2) / 2);
-        const doorZEnd = doorZStart + 1.2;
-        const doorZMid = (doorZStart + doorZEnd) / 2;
-        const hasWestEntrance = !!rc.hasWestDoor;
-        const hasEastEntrance = rc.hasEastDoor !== false;
-
-        addTrim(0, 0.02, rw, 0.02); // North
-        if (hasWestEntrance) {
-          if (doorZStart > 0.05) addTrim(0.02, doorZStart, 0.02, 0);
-          if (rh > doorZEnd + 0.05) addTrim(0.02, rh, 0.02, doorZEnd);
-        } else {
-          addTrim(0.02, rh, 0.02, 0); // West (solid)
+        const doorZMid = doorZStart + 0.6;
+        // Wall openings are 100% driven by door objects (+ natural passages not managed by a door object)
+        const openings = collectWallOpenings(rc);
+        const wallLen = { N: rw, S: rw, W: rh, E: rh };
+        function wallSegments(wall) {
+          const segs = [];
+          let cur = 0;
+          openings[wall].slice().sort((p, q) => p.c - q.c).forEach(op => {
+            const st = op.c - 0.6;
+            if (st > cur + 0.01) segs.push([cur, st]);
+            cur = Math.max(cur, op.c + 0.6);
+          });
+          if (wallLen[wall] > cur + 0.01) segs.push([cur, wallLen[wall]]);
+          return segs;
         }
-        addTrim(rw, rh - 0.02, 0, rh - 0.02); // South
-        if (hasEastEntrance) {
-          if (doorZStart > 0.05) addTrim(rw - 0.02, 0, rw - 0.02, doorZStart);
-          if (rh > doorZEnd + 0.05) addTrim(rw - 0.02, doorZEnd, rw - 0.02, rh);
-        } else {
-          addTrim(rw - 0.02, 0, rw - 0.02, rh); // East (solid)
-        }
+        const TRIM_OFF = WALL_INSET + 0.028; // >= 0.013m clearance from inset wall surface
+        const TRIM_CORNER = WALL_INSET + 0.03;
+        const clampSeg = (p, q, maxL, pad) => [Math.max(pad, p), Math.min(maxL - pad, q)];
+        const segTrim = {
+          N: (p, q) => { const [a, b] = clampSeg(p, q, rw, TRIM_CORNER); addTrim(a, TRIM_OFF, b, TRIM_OFF); },
+          S: (p, q) => { const [a, b] = clampSeg(p, q, rw, TRIM_CORNER); addTrim(b, rh - TRIM_OFF, a, rh - TRIM_OFF); },
+          W: (p, q) => { const [a, b] = clampSeg(p, q, rh, TRIM_CORNER); addTrim(TRIM_OFF, b, TRIM_OFF, a); },
+          E: (p, q) => { const [a, b] = clampSeg(p, q, rh, TRIM_CORNER); addTrim(rw - TRIM_OFF, a, rw - TRIM_OFF, b); }
+        };
+        ['N', 'S', 'W', 'E'].forEach(w => wallSegments(w).forEach(([p, q]) => segTrim[w](p, q)));
 
-        // 1-3. Walls (Space.materials.wall PBR Ontology)
+        // 1-3. Walls (Space.materials.wall PBR Ontology) — inset inward by WALL_INSET to eliminate adjacent-room Z-fighting
         const wallPreset = (rc.materials && rc.materials.wall) || 'plaster';
         const wallPbrPack = (wallPreset === 'wood' || wallPreset === 'surgicalSteel' || wallPreset === 'concrete')
           ? getPbrTexturePack(wallPreset)
@@ -2936,102 +3289,109 @@ import { CraftBuilder } from './builder.js';
           roughnessMap: wallPbrPack.roughnessMap, aoMap: wallPbrPack.aoMap, aoMapIntensity: 0.55,
           side: THREE.DoubleSide, roughness: wallPreset === 'surgicalSteel' ? 0.55 : 0.92,
           metalness: wallPreset === 'surgicalSteel' ? 0.35 : 0.05,
-          transparent: !isFps, opacity: wallAlpha, depthWrite: true
+          transparent: !isFps, opacity: wallAlpha, depthWrite: isFps
         });
-        const frameMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85, metalness: 0.4 });
 
-        createWallMesh(rGroup, 0, 0, rw, 0, wh, 0, wMat); // North
-        if (hasWestEntrance) {
-          createWallMesh(rGroup, 0, doorZStart, 0, 0, wh, 0, wMat);
-          if (rh > doorZEnd) createWallMesh(rGroup, 0, rh, 0, doorZEnd, wh, 0, wMat);
-          const wLintel = new THREE.Mesh(new THREE.PlaneGeometry(1.2, wh - 2.1), wMat);
-          wLintel.position.set(0, 2.1 + (wh - 2.1) / 2, doorZMid);
-          wLintel.rotation.y = Math.PI / 2;
-          const wPostL = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.14, 0.10), frameMat);
-          wPostL.position.set(0, 1.07, doorZStart);
-          const wPostR = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.14, 0.10), frameMat);
-          wPostR.position.set(0, 1.07, doorZEnd);
-          const wHeader = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.10, 1.32), frameMat);
-          wHeader.position.set(0, 2.15, doorZMid);
-          rGroup.add(wLintel, wPostL, wPostR, wHeader);
-        } else {
-          createWallMesh(rGroup, 0, rh, 0, 0, wh, 0, wMat); // West (solid)
-        }
-        createWallMesh(rGroup, rw, rh, 0, rh, wh, 0, wMat); // South
+        const segWall = {
+          N: (p, q) => { const [a, b] = clampSeg(p, q, rw, WALL_INSET); if (b > a + 0.01) createWallMesh(rGroup, a, WALL_INSET, b, WALL_INSET, wh, 0, wMat); },
+          S: (p, q) => { const [a, b] = clampSeg(p, q, rw, WALL_INSET); if (b > a + 0.01) createWallMesh(rGroup, b, rh - WALL_INSET, a, rh - WALL_INSET, wh, 0, wMat); },
+          W: (p, q) => { const [a, b] = clampSeg(p, q, rh, WALL_INSET); if (b > a + 0.01) createWallMesh(rGroup, WALL_INSET, b, WALL_INSET, a, wh, 0, wMat); },
+          E: (p, q) => { const [a, b] = clampSeg(p, q, rh, WALL_INSET); if (b > a + 0.01) createWallMesh(rGroup, rw - WALL_INSET, a, rw - WALL_INSET, b, wh, 0, wMat); }
+        };
+        ['N', 'S', 'W', 'E'].forEach(w => wallSegments(w).forEach(([p, q]) => segWall[w](p, q)));
 
-        if (hasEastEntrance) {
-          createWallMesh(rGroup, rw, 0, rw, doorZStart, wh, 0, wMat);
-          if (rh > doorZEnd) createWallMesh(rGroup, rw, doorZEnd, rw, rh, wh, 0, wMat);
-          const lintelMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2, wh - 2.1), wMat);
-          lintelMesh.position.set(rw, 2.1 + (wh - 2.1) / 2, doorZMid);
-          lintelMesh.rotation.y = -Math.PI / 2;
-          const leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.14, 0.10), frameMat);
-          leftPost.position.set(rw, 1.07, doorZStart);
-          const rightPost = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.14, 0.10), frameMat);
-          rightPost.position.set(rw, 1.07, doorZEnd);
-          const topHeader = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.10, 1.32), frameMat);
-          topHeader.position.set(rw, 2.15, doorZMid);
-          rGroup.add(lintelMesh, leftPost, rightPost, topHeader);
-
-          const lampMat = new THREE.MeshStandardMaterial({
-            color: isDoorOpen ? 0x10b981 : 0xef4444,
-            emissive: isDoorOpen ? 0x10b981 : 0xef4444,
-            emissiveIntensity: 0.8
-          });
-          const doorLamp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.30), lampMat);
-          doorLamp.name = `doorLamp_${rc.idx}`;
-          doorLamp.position.set(rw - 0.08, 2.26, doorZMid);
-          rGroup.add(doorLamp);
-
-          // Room 2 (1F 격리병동): Physical locked iron security gate across East doorway (x = 22.5, z = 2.5) into stairwell
-          if (rc.idx === 2) {
-            const q15 = studioObjects.find(o => o.qNum === 15 || o.id === 'prop-r3-15');
-            const isQ15Solved = !!(q15 && q15.solved);
-            const gateGroup = new THREE.Group();
-            gateGroup.name = "security_gate_r2_stairwell";
-
-            const gateFrameMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.35 });
-            const ironBarMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.3 });
-
-            // Vertical iron bars
-            for (let b = -0.52; b <= 0.52; b += 0.13) {
-              const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.05, 8), ironBarMat);
-              bar.position.set(0, 1.05, b);
-              gateGroup.add(bar);
-            }
-            // Horizontal steel reinforcing cross-bars
-            const hBarLevels = [0.2, 1.05, 1.9];
-            for (const hy of hBarLevels) {
-              const hb = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 1.18), gateFrameMat);
-              hb.position.set(0, hy, 0);
-              gateGroup.add(hb);
-            }
-            // Electronic magnetic security lock housing + status LED
-            const lockBox = new THREE.Mesh(
-              new THREE.BoxGeometry(0.12, 0.28, 0.18),
-              new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.4 })
-            );
-            lockBox.position.set(0, 1.05, 0.25);
-            const ledMat = new THREE.MeshStandardMaterial({
-              color: isQ15Solved ? 0x10b981 : 0xef4444,
-              emissive: isQ15Solved ? 0x10b981 : 0xef4444,
-              emissiveIntensity: 1.5
-            });
-            const led = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.04, 0.06), ledMat);
-            led.position.set(0, 1.12, 0.25);
-            gateGroup.add(lockBox, led);
-
-            // Gate opens / slides aside when Q15 solved, blocks doorway when locked
-            if (isQ15Solved) {
-              gateGroup.position.set(rw, 0, doorZMid + 1.15);
-            } else {
-              gateGroup.position.set(rw, 0, doorZMid);
-            }
-            rGroup.add(gateGroup);
+        // Doorway lintel + dark steel architrave for every opening; inset inside room to prevent cross-room coplanar overlap
+        let lampPlaced = false;
+        ['N', 'S', 'W', 'E'].forEach(w => openings[w].forEach(op => {
+          const alongX = (w === 'N' || w === 'S');
+          const px = alongX ? op.c : (w === 'W' ? WALL_INSET : rw - WALL_INSET);
+          const pz = alongX ? (w === 'N' ? WALL_INSET : rh - WALL_INSET) : op.c;
+          const fx = alongX ? op.c : (w === 'W' ? WALL_INSET + 0.024 : rw - WALL_INSET - 0.024);
+          const fz = alongX ? (w === 'N' ? WALL_INSET + 0.024 : rh - WALL_INSET - 0.024) : op.c;
+          const lo = op.c - 0.6, hi = op.c + 0.6;
+          const parts = [];
+          if (wh > 2.12) {
+            const lintel = new THREE.Mesh(getPlaneGeo(1.2, wh - 2.1), wMat);
+            lintel.position.set(px, 2.1 + (wh - 2.1) / 2, pz);
+            lintel.rotation.y = LINTEL_WALL_ROT[w];
+            lintel.userData.isWallSurface = true;
+            lintel.userData.isLintel = true;
+            lintel.userData.wallSide = w;
+            parts.push(lintel);
           }
-        } else {
-          createWallMesh(rGroup, rw, 0, rw, rh, wh, 0, wMat); // East (solid, no floating door!)
+          const postGeo = alongX ? getBoxGeo(0.10, 2.14, 0.036) : getBoxGeo(0.036, 2.14, 0.10);
+          const postA = new THREE.Mesh(postGeo, frameMat);
+          const postB = new THREE.Mesh(postGeo, frameMat);
+          const header = new THREE.Mesh(alongX ? getBoxGeo(1.32, 0.10, 0.036) : getBoxGeo(0.036, 0.10, 1.32), frameMat);
+          postA.userData.isDoorFrame = true; postA.userData.wallSide = w;
+          postB.userData.isDoorFrame = true; postB.userData.wallSide = w;
+          header.userData.isDoorFrame = true; header.userData.wallSide = w;
+          if (alongX) { postA.position.set(lo, 1.07, fz); postB.position.set(hi, 1.07, fz); }
+          else { postA.position.set(fx, 1.07, lo); postB.position.set(fx, 1.07, hi); }
+          header.position.set(fx, 2.15, fz);
+          parts.push(postA, postB, header);
+          if (w === 'E') {
+            const lampMat = new THREE.MeshStandardMaterial({
+              color: isDoorOpen ? 0x10b981 : 0xef4444,
+              emissive: isDoorOpen ? 0x10b981 : 0xef4444,
+              emissiveIntensity: 0.8
+            });
+            const doorLamp = new THREE.Mesh(getBoxGeo(0.08, 0.08, 0.30), lampMat);
+            if (!lampPlaced) { doorLamp.name = `doorLamp_${rc.idx}`; lampPlaced = true; }
+            doorLamp.position.set(rw - 0.08, 2.26, op.c);
+            parts.push(doorLamp);
+          }
+          rGroup.add(...parts);
+        }));
+
+        if (activeThemeId === 'asylum-404' && rc.idx === 2 && openings.E.some(op => Math.abs(op.c - doorZMid) < 0.05)) {
+          const q15 = studioObjects.find(o => o.qNum === 15 || o.id === 'prop-r3-15');
+          const isQ15Solved = !!(q15 && q15.solved);
+          const gateGroup = new THREE.Group();
+          gateGroup.name = "security_gate_r2_stairwell";
+
+          const gateFrameMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.35 });
+          const ironBarMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.3 });
+
+          // Vertical iron bars
+          const gateBarGeo = getCylGeo(0.015, 0.015, 2.05, 8);
+          for (let b = -0.52; b <= 0.52; b += 0.13) {
+            const bar = new THREE.Mesh(gateBarGeo, ironBarMat);
+            bar.position.set(0, 1.05, b);
+            gateGroup.add(bar);
+          }
+          // Horizontal steel reinforcing cross-bars
+          const hBarLevels = [0.2, 1.05, 1.9];
+          const hBarGeo = getBoxGeo(0.05, 0.05, 1.18);
+          for (const hy of hBarLevels) {
+            const hb = new THREE.Mesh(hBarGeo, gateFrameMat);
+            hb.position.set(0, hy, 0);
+            gateGroup.add(hb);
+          }
+          // Electronic magnetic security lock housing + status LED
+          const lockBox = new THREE.Mesh(
+            getBoxGeo(0.12, 0.28, 0.18),
+            new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.4 })
+          );
+          lockBox.position.set(0, 1.05, 0.25);
+          const ledMat = new THREE.MeshStandardMaterial({
+            color: isQ15Solved ? 0x10b981 : 0xef4444,
+            emissive: isQ15Solved ? 0x10b981 : 0xef4444,
+            emissiveIntensity: 1.5
+          });
+          const led = new THREE.Mesh(getBoxGeo(0.13, 0.04, 0.06), ledMat);
+          led.position.set(0, 1.12, 0.25);
+          gateGroup.add(lockBox, led);
+
+          // Gate opens / slides aside when Q15 solved, blocks doorway when locked
+          if (isQ15Solved) {
+            gateGroup.position.set(rw, 0, doorZMid + 1.15);
+          } else {
+            gateGroup.position.set(rw, 0, doorZMid);
+          }
+          rGroup.add(gateGroup);
         }
+
 
         // Door leaf is rendered exclusively by create3DMeshForObject(doorObj) to prevent double-door overlap & perpendicular clipping
 
@@ -3052,37 +3412,40 @@ import { CraftBuilder } from './builder.js';
             const baseH = 0.90;
             const glassH = part.h - baseH;
             const counterBase = new THREE.Mesh(
-              new THREE.BoxGeometry(pLen, baseH, 0.16),
+              getBoxGeo(pLen, baseH, 0.16),
               new THREE.MeshStandardMaterial({ color: 0x6b4428, map: partWood.map, bumpMap: partWood.bumpMap, bumpScale: 0.015, roughness: 0.72 })
             );
             counterBase.position.y = baseH / 2;
             const glass = new THREE.Mesh(
-              new THREE.BoxGeometry(pLen, glassH, 0.03),
+              getBoxGeo(pLen, glassH, 0.03),
               new THREE.MeshStandardMaterial({ color: 0x475569, transparent: true, opacity: 0.22, roughness: 0.12, metalness: 0.45 })
             );
             glass.position.y = baseH + glassH / 2;
-            const postL = new THREE.Mesh(new THREE.BoxGeometry(0.06, part.h, 0.18), frameMat); postL.position.set(-pLen/2, part.h/2, 0);
-            const postR = new THREE.Mesh(new THREE.BoxGeometry(0.06, part.h, 0.18), frameMat); postR.position.set(pLen/2, part.h/2, 0);
-            const topBar = new THREE.Mesh(new THREE.BoxGeometry(pLen, 0.08, 0.18), frameMat); topBar.position.set(0, part.h - 0.04, 0);
+            const postL = new THREE.Mesh(getBoxGeo(0.06, part.h, 0.18), frameMat); postL.position.set(-pLen/2, part.h/2, 0);
+            const postR = new THREE.Mesh(getBoxGeo(0.06, part.h, 0.18), frameMat); postR.position.set(pLen/2, part.h/2, 0);
+            const topBar = new THREE.Mesh(getBoxGeo(pLen, 0.08, 0.18), frameMat); topBar.position.set(0, part.h - 0.04, 0);
             pGroup.add(counterBase, glass, postL, postR, topBar);
           } else if (part.type === "curtain") {
             // Privacy curtain track
-            const rail = new THREE.Mesh(new THREE.BoxGeometry(pLen, 0.04, 0.04), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 }));
+            const rail = new THREE.Mesh(getBoxGeo(pLen, 0.04, 0.04), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 }));
             rail.position.y = part.h;
             const fabric = new THREE.Mesh(
-              new THREE.BoxGeometry(pLen, part.h - 0.1, 0.06),
+              getBoxGeo(pLen, part.h - 0.1, 0.06),
               new THREE.MeshStandardMaterial({ color: 0x9ca3af, map: concretePbr.map, roughness: 0.95, side: THREE.DoubleSide })
             );
             fabric.position.y = (part.h - 0.1) / 2;
             pGroup.add(rail, fabric);
           } else if (part.type === "iron-grate") {
             // High security iron bars
-            const topRail = new THREE.Mesh(new THREE.BoxGeometry(pLen, 0.08, 0.08), frameMat); topRail.position.y = part.h;
-            const btmRail = new THREE.Mesh(new THREE.BoxGeometry(pLen, 0.08, 0.08), frameMat); btmRail.position.y = 0.04;
+            const railGeo = getBoxGeo(pLen, 0.08, 0.08);
+            const topRail = new THREE.Mesh(railGeo, frameMat); topRail.position.y = part.h;
+            const btmRail = new THREE.Mesh(railGeo, frameMat); btmRail.position.y = 0.04;
             pGroup.add(topRail, btmRail);
             const barCount = Math.floor(pLen / 0.25);
+            const grateBarGeo = getCylGeo(0.02, 0.02, part.h, 8);
+            const grateBarMat = new THREE.MeshStandardMaterial({ color: 0x475569, map: partRust.map, metalness: 0.7, roughness: 0.45 });
             for (let b = 0; b <= barCount; b++) {
-              const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, part.h, 8), new THREE.MeshStandardMaterial({ color: 0x475569, map: partRust.map, metalness: 0.7, roughness: 0.45 }));
+              const bar = new THREE.Mesh(grateBarGeo, grateBarMat);
               bar.position.set(-pLen / 2 + b * (pLen / barCount), part.h / 2, 0);
               pGroup.add(bar);
             }
@@ -3090,7 +3453,7 @@ import { CraftBuilder } from './builder.js';
             // Morgue ceramic tile divider (Dark weathered hospital tile, no bright mint!)
             const tileWallTex = getProceduralTileTexture(0x2d3a3e, true);
             const tileWall = new THREE.Mesh(
-              new THREE.BoxGeometry(pLen, part.h, 0.20),
+              getBoxGeo(pLen, part.h, 0.20),
               new THREE.MeshStandardMaterial({ color: 0x3b4a4f, map: tileWallTex, bumpMap: concretePbr.bumpMap, bumpScale: 0.008, roughness: 0.45, metalness: 0.15 })
             );
             tileWall.position.y = part.h / 2;
@@ -3098,7 +3461,7 @@ import { CraftBuilder } from './builder.js';
           } else if (part.type === "bookshelf-wall") {
             // Archival double-sided wood bookshelf divider (No purple block!)
             const bookWall = new THREE.Mesh(
-              new THREE.BoxGeometry(pLen, part.h, 0.45),
+              getBoxGeo(pLen, part.h, 0.45),
               new THREE.MeshStandardMaterial({ color: 0x5c3a21, map: partWood.map, bumpMap: partWood.bumpMap, bumpScale: 0.015, roughness: 0.78 })
             );
             bookWall.position.y = part.h / 2;
@@ -3106,7 +3469,7 @@ import { CraftBuilder } from './builder.js';
           } else {
             // Protective dark steel wire mesh partition (No bright orange slab!)
             const meshFrame = new THREE.Mesh(
-              new THREE.BoxGeometry(pLen, part.h, 0.08),
+              getBoxGeo(pLen, part.h, 0.08),
               new THREE.MeshStandardMaterial({ color: 0x3f4650, map: partRust.map, metalness: 0.7, roughness: 0.55 })
             );
             meshFrame.position.y = part.h / 2;
@@ -3122,92 +3485,103 @@ import { CraftBuilder } from './builder.js';
         const propWoodPbr = getPbrTexturePack('wood');
         const roomProps = PROP_ONTOLOGY.filter(p => p.roomIdx === rc.idx);
         roomProps.forEach(prop => {
-          if (prop.skipOwnMesh) return; // 괘종시계 본체 등 studioObjects에 이미 전용 3D 메쉬가 있는 경우 중복 생성 방지
+          if (prop.skipOwnMesh) return;
+          if (carriedIds.has(prop.id) || (prop.targetParentId && carriedIds.has(prop.targetParentId))) return; // 집은 기물/그 위의 소품은 숨김 // 괘종시계 본체 등 studioObjects에 이미 전용 3D 메쉬가 있는 경우 중복 생성 방지
           const propMeshGroup = new THREE.Group();
           if (prop.type === "clock") {
             const cFrame = new THREE.Mesh(
-              new THREE.CylinderGeometry(0.34, 0.34, 0.05, 32),
+              getCylGeo(0.34, 0.34, 0.05, 32),
               new THREE.MeshStandardMaterial({ color: 0x7c4a24, map: propWoodPbr.map, bumpMap: propWoodPbr.bumpMap, bumpScale: 0.02, roughness: 0.6 })
             );
             cFrame.rotation.x = Math.PI / 2;
             const clockFaceTex = getPropDetailTexture('clockFace');
             const cFace = new THREE.Mesh(
               new THREE.CircleGeometry(0.29, 32),
-              new THREE.MeshStandardMaterial({ map: clockFaceTex, roughness: 0.45 })
+              new THREE.MeshStandardMaterial({ map: clockFaceTex, roughness: 0.45, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })
             );
             cFace.position.z = 0.028;
             const hAngle = (prop.gimmick.data.hourAngle || 70) * Math.PI / 180;
-            const hourHand = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.14, 0.008), frameMat);
+            const hourHand = new THREE.Mesh(getBoxGeo(0.018, 0.14, 0.008), frameMat);
             hourHand.position.set(Math.sin(hAngle) * 0.07, Math.cos(hAngle) * 0.07, 0.036);
             hourHand.rotation.z = -hAngle;
             const mAngle = (prop.gimmick.data.minuteAngle || 120) * Math.PI / 180;
-            const minHand = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.20, 0.008), new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.4 }));
+            const minHand = new THREE.Mesh(getBoxGeo(0.012, 0.20, 0.008), new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.4 }));
             minHand.position.set(Math.sin(mAngle) * 0.10, Math.cos(mAngle) * 0.10, 0.042);
             minHand.rotation.z = -mAngle;
-            const centerPin = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.014, 12), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.2 }));
+            const centerPin = new THREE.Mesh(getCylGeo(0.016, 0.016, 0.014, 12), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.2 }));
             centerPin.rotation.x = Math.PI / 2;
             centerPin.position.z = 0.044;
             propMeshGroup.add(cFrame, cFace, hourHand, minHand, centerPin);
-            propMeshGroup.position.set(prop.x !== undefined ? prop.x : 1.5, prop.y || 1.85, prop.z || 0.05);
+            const clockZ = (prop.wallSide === 'N') ? Math.max(prop.z || 0.065, WALL_INSET + 0.045) : (prop.z || 0.065);
+            propMeshGroup.position.set(prop.x !== undefined ? prop.x : 1.5, prop.y || 1.85, clockZ);
+            propMeshGroup.rotation.y = WALL_SIDE_ROT[prop.wallSide] || 0;
           } else if (prop.type === "cup") {
             // Ceramic Coffee Mugs placed cleanly on right front edge of desk (Zero overlap with CRT monitor)
             const angles = prop.gimmick.data.angles || [0, Math.PI / 2, Math.PI, -Math.PI / 2];
             const ceramicMat = new THREE.MeshStandardMaterial({ color: 0xe7e5e4, roughness: 0.18, metalness: 0.05 });
             const handleMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.22, metalness: 0.08 });
             const coffeeMat = new THREE.MeshStandardMaterial({ color: 0x261207, roughness: 0.12 });
+            const mugGeo = getCylGeo(0.038, 0.034, 0.085, 20);
+            const coffeeGeo = new THREE.CircleGeometry(0.033, 16);
+            const handleGeo = new THREE.TorusGeometry(0.020, 0.006, 8, 16);
             angles.forEach((ang, i) => {
               const mugGroup = new THREE.Group();
-              const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.034, 0.085, 20), ceramicMat);
+              const mug = new THREE.Mesh(mugGeo, ceramicMat);
               mug.position.y = 0.0425;
-              const coffee = new THREE.Mesh(new THREE.CircleGeometry(0.033, 16), coffeeMat);
+              const coffee = new THREE.Mesh(coffeeGeo, coffeeMat);
               coffee.rotation.x = -Math.PI / 2;
               coffee.position.y = 0.086;
-              const handle = new THREE.Mesh(new THREE.TorusGeometry(0.020, 0.006, 8, 16), handleMat);
+              const handle = new THREE.Mesh(handleGeo, handleMat);
               handle.position.set(0.040, 0.044, 0);
               mugGroup.add(mug, coffee, handle);
               mugGroup.rotation.y = ang;
-              mugGroup.position.set(1.76 + (i % 2) * 0.14, 0.76, 0.74 + Math.floor(i / 2) * 0.16);
+              mugGroup.position.set((i % 2) * 0.14, 0, Math.floor(i / 2) * 0.16);
               propMeshGroup.add(mugGroup);
             });
+            placeTableProp(propMeshGroup, prop, 0.76);
           } else if (prop.type === "document") {
             // Realistic Medical Chart Clipboard placed cleanly at front center-right of desk
             const clip = new THREE.Mesh(
-              new THREE.BoxGeometry(0.24, 0.012, 0.32),
+              getBoxGeo(0.24, 0.012, 0.32),
               new THREE.MeshStandardMaterial({ color: 0x3b2414, map: propWoodPbr.map, roughness: 0.7 })
             );
             const metalClip = new THREE.Mesh(
-              new THREE.BoxGeometry(0.10, 0.018, 0.03),
+              getBoxGeo(0.10, 0.018, 0.03),
               new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 })
             );
             metalClip.position.set(0, 0.012, -0.13);
             const docTex = getPropDetailTexture('document');
             const paper = new THREE.Mesh(
-              new THREE.PlaneGeometry(0.20, 0.28),
-              new THREE.MeshStandardMaterial({ map: docTex, roughness: 0.85 })
+              getPlaneGeo(0.20, 0.28),
+              new THREE.MeshStandardMaterial({ map: docTex, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })
             );
             paper.rotation.x = -Math.PI / 2;
-            paper.position.y = 0.008;
+            paper.position.y = 0.012;
             propMeshGroup.add(clip, metalClip, paper);
-            propMeshGroup.position.set(1.52, 0.765, 1.00);
+            placeTableProp(propMeshGroup, prop, 0.765, 0.01);
           } else if (prop.type === "portrait") {
             const pFrame = new THREE.Mesh(
-              new THREE.BoxGeometry(1.0, 1.2, 0.06),
-              new THREE.MeshStandardMaterial({ color: 0x926829, map: propWoodPbr.map, metalness: 0.55, roughness: 0.45 })
+              getBoxGeo(1.0, 1.2, 0.06),
+              new THREE.MeshStandardMaterial({ color: 0x926829, map: propWoodPbr.map, metalness: 0.55, roughness: 0.45, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })
             );
             const portTex = getPropDetailTexture('portrait');
             const canvas = new THREE.Mesh(
-              new THREE.PlaneGeometry(0.86, 1.06),
-              new THREE.MeshStandardMaterial({ map: portTex, roughness: 0.75 })
+              getPlaneGeo(0.86, 1.06),
+              new THREE.MeshStandardMaterial({ map: portTex, roughness: 0.75, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })
             );
-            canvas.position.z = 0.032;
+            canvas.position.z = 0.034;
             propMeshGroup.add(pFrame, canvas);
-            propMeshGroup.position.set(prop.x || 4.8, prop.y || 1.7, prop.z || 0.05);
+            const portZ = (prop.wallSide === 'N') ? Math.max(prop.z || 0.07, WALL_INSET + 0.048) : (prop.z || 0.07);
+            propMeshGroup.position.set(prop.x || 4.8, prop.y || 1.7, portZ);
+            propMeshGroup.rotation.y = WALL_SIDE_ROT[prop.wallSide] || 0;
           }
           // 소품을 클릭/조사 시 결속된 퍼즐(targetObjId)로 즉시 연결
-          if (prop.targetObjId && propMeshGroup.children.length > 0) {
-            propMeshGroup.userData = { objId: prop.targetObjId, propId: prop.id, isOntologyProp: true };
+          if (propMeshGroup.children.length > 0) {
+            const ud = { propId: prop.id };
+            if (prop.targetObjId) ud.objId = prop.targetObjId;
+            propMeshGroup.userData = { ...ud, isOntologyProp: true };
             propMeshGroup.traverse(child => {
-              child.userData = { ...child.userData, objId: prop.targetObjId, propId: prop.id };
+              child.userData = { ...child.userData, ...ud };
             });
             meshMap.set(prop.id, propMeshGroup);
           }
@@ -3217,12 +3591,13 @@ import { CraftBuilder } from './builder.js';
         // 1-6. 5 Puzzle Objects for this room
         const roomObjs = studioObjects.filter(o => o.roomIdx === rc.idx);
         roomObjs.forEach(obj => {
+          if (carriedIds.has(obj.id)) return;
           create3DMeshForObject(obj, rGroup);
         });
 
         // 1-7. Floor Hole (Room 4: 2F 영안실)
         if (rc.hasHole) {
-          const holeGeo = new THREE.BoxGeometry(rc.holeSize[0], 0.08, rc.holeSize[1]);
+          const holeGeo = getBoxGeo(rc.holeSize[0], 0.08, rc.holeSize[1]);
           const holeMat = new THREE.MeshStandardMaterial({ color: 0x05070c, emissive: 0x7f1d1d, emissiveIntensity: 0.4 });
           const holeMesh = new THREE.Mesh(holeGeo, holeMat);
           holeMesh.position.set(rc.holePos[0], 0.02, rc.holePos[1]);
@@ -3239,34 +3614,35 @@ import { CraftBuilder } from './builder.js';
         unifiedBuildingGroup.add(rGroup);
       });
 
-      // 2. Build 1F Unified Corridor (Hospital Tile Floor + Weathered Plaster Wall PBR)
+      // 2~4. Asylum 404-specific Unified Corridors & 2-Story Stairwell
+      if (activeThemeId === 'asylum-404') {
       const c1f = FLOOR_CONFIGS["1f"].corridor;
       const corrPbr = getPbrTexturePack('concrete');
       const cGroup1f = new THREE.Group();
       cGroup1f.name = "corridorGroup_1f";
       cGroup1f.position.set(c1f.x, 0, c1f.z);
-      const c1FloorGeo = new THREE.PlaneGeometry(c1f.w, c1f.h);
-      c1FloorGeo.rotateX(-Math.PI / 2);
-      c1FloorGeo.translate(c1f.w / 2, 0.002, c1f.h / 2);
+      const c1PlaneGeo = getPlaneGeo(c1f.w, c1f.h);
       const c1FloorTex = getProceduralTileTexture(0x1f2630, true);
-      const c1FloorMesh = new THREE.Mesh(c1FloorGeo, new THREE.MeshStandardMaterial({
+      const c1FloorMesh = new THREE.Mesh(c1PlaneGeo, new THREE.MeshStandardMaterial({
         color: 0x262f3d, map: c1FloorTex, bumpMap: corrPbr.bumpMap, bumpScale: 0.008, roughness: 0.62, metalness: 0.1
       }));
+      c1FloorMesh.rotation.x = -Math.PI / 2;
+      c1FloorMesh.position.set(c1f.w / 2, 0.002, c1f.h / 2);
       c1FloorMesh.receiveShadow = true;
       cGroup1f.add(c1FloorMesh);
-      const c1CeilGeo = new THREE.PlaneGeometry(c1f.w, c1f.h);
-      c1CeilGeo.rotateX(Math.PI / 2);
-      c1CeilGeo.translate(c1f.w / 2, 2.6 - 0.04, c1f.h / 2);
-      const c1CeilMesh = new THREE.Mesh(c1CeilGeo, new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.95, side: THREE.DoubleSide }));
+      const c1CeilMesh = new THREE.Mesh(c1PlaneGeo, ceilMat);
+      c1CeilMesh.rotation.x = Math.PI / 2;
+      c1CeilMesh.position.set(c1f.w / 2, 2.6 - 0.04, c1f.h / 2);
       c1CeilMesh.visible = isFps;
       cGroup1f.add(c1CeilMesh);
       const c1WallTex = getProceduralWallTexture(0x3a4352);
       const cWMat = new THREE.MeshStandardMaterial({
         color: 0x475569, map: c1WallTex, bumpMap: corrPbr.bumpMap, bumpScale: 0.004,
-        side: THREE.DoubleSide, roughness: 0.85, transparent: !isFps, opacity: wallAlpha
+        side: THREE.DoubleSide, roughness: 0.85,
+        transparent: !isFps, opacity: wallAlpha, depthWrite: isFps
       });
-      createWallMesh(cGroup1f, 0, 0, c1f.w, 0, 2.6, 0, cWMat);
-      createWallMesh(cGroup1f, 0, c1f.h, c1f.w, c1f.h, 2.6, 0, cWMat);
+      createWallMesh(cGroup1f, WALL_INSET, WALL_INSET, c1f.w - WALL_INSET, WALL_INSET, 2.6, 0, cWMat);
+      createWallMesh(cGroup1f, c1f.w - WALL_INSET, c1f.h - WALL_INSET, WALL_INSET, c1f.h - WALL_INSET, 2.6, 0, cWMat);
       c1f.props.forEach(p => {
         const cp = createCorridorPropMesh(p);
         cp.position.set(p.x - c1f.x, 0, p.z - c1f.z);
@@ -3279,28 +3655,28 @@ import { CraftBuilder } from './builder.js';
       const cGroup2f = new THREE.Group();
       cGroup2f.name = "corridorGroup_2f";
       cGroup2f.position.set(c2f.x, 2.6, c2f.z);
-      const c2FloorGeo = new THREE.PlaneGeometry(c2f.w, c2f.h);
-      c2FloorGeo.rotateX(-Math.PI / 2);
-      c2FloorGeo.translate(c2f.w / 2, 0.002, c2f.h / 2);
+      const c2PlaneGeo = getPlaneGeo(c2f.w, c2f.h);
       const c2FloorTex = getProceduralTileTexture(0x1f2933, true);
-      const c2FloorMesh = new THREE.Mesh(c2FloorGeo, new THREE.MeshStandardMaterial({
+      const c2FloorMesh = new THREE.Mesh(c2PlaneGeo, new THREE.MeshStandardMaterial({
         color: 0x26313d, map: c2FloorTex, bumpMap: corrPbr.bumpMap, bumpScale: 0.008, roughness: 0.62, metalness: 0.1
       }));
+      c2FloorMesh.rotation.x = -Math.PI / 2;
+      c2FloorMesh.position.set(c2f.w / 2, 0.002, c2f.h / 2);
       c2FloorMesh.receiveShadow = true;
       cGroup2f.add(c2FloorMesh);
-      const c2CeilGeo = new THREE.PlaneGeometry(c2f.w, c2f.h);
-      c2CeilGeo.rotateX(Math.PI / 2);
-      c2CeilGeo.translate(c2f.w / 2, 2.6 - 0.04, c2f.h / 2);
-      const c2CeilMesh = new THREE.Mesh(c2CeilGeo, new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.95, side: THREE.DoubleSide }));
+      const c2CeilMesh = new THREE.Mesh(c2PlaneGeo, ceilMat);
+      c2CeilMesh.rotation.x = Math.PI / 2;
+      c2CeilMesh.position.set(c2f.w / 2, 2.6 - 0.04, c2f.h / 2);
       c2CeilMesh.visible = isFps;
       cGroup2f.add(c2CeilMesh);
       const c2WallTex = getProceduralWallTexture(0x3a4352);
       const c2WMat = new THREE.MeshStandardMaterial({
         color: 0x475569, map: c2WallTex, bumpMap: corrPbr.bumpMap, bumpScale: 0.004,
-        side: THREE.DoubleSide, roughness: 0.85, transparent: !isFps, opacity: wallAlpha
+        side: THREE.DoubleSide, roughness: 0.85,
+        transparent: !isFps, opacity: wallAlpha, depthWrite: isFps
       });
-      createWallMesh(cGroup2f, 0, 0, c2f.w, 0, 2.6, 0, c2WMat);
-      createWallMesh(cGroup2f, 0, c2f.h, c2f.w, c2f.h, 2.6, 0, c2WMat);
+      createWallMesh(cGroup2f, WALL_INSET, WALL_INSET, c2f.w - WALL_INSET, WALL_INSET, 2.6, 0, c2WMat);
+      createWallMesh(cGroup2f, c2f.w - WALL_INSET, c2f.h - WALL_INSET, WALL_INSET, c2f.h - WALL_INSET, 2.6, 0, c2WMat);
       c2f.props.forEach(p => {
         const cp = createCorridorPropMesh(p);
         cp.position.set(p.x - c2f.x, 0, p.z - c2f.z);
@@ -3319,33 +3695,35 @@ import { CraftBuilder } from './builder.js';
       const stFloorMat = new THREE.MeshStandardMaterial({ color: 0x262f3d, map: corrPbr.map, roughness: 0.72 });
       const stWallMat = new THREE.MeshStandardMaterial({
         color: 0x3b4454, map: c1WallTex, bumpMap: corrPbr.bumpMap, bumpScale: 0.004,
-        side: THREE.DoubleSide, roughness: 0.85, transparent: !isFps, opacity: wallAlpha
+        side: THREE.DoubleSide, roughness: 0.85,
+        transparent: !isFps, opacity: wallAlpha, depthWrite: isFps
       });
-      const stBase = new THREE.Mesh(new THREE.BoxGeometry(stW, 0.08, stD), stFloorMat);
+      const stBase = new THREE.Mesh(getBoxGeo(stW, 0.08, stD), stFloorMat);
       stBase.position.set(stW / 2, 0.04, stD / 2);
       stairGroup.add(stBase);
-      // Enclosed outer walls (North, South, East)
-      createWallMesh(stairGroup, 0, 0, stW, 0, stH, 0, stWallMat);
-      createWallMesh(stairGroup, stW, stD, 0, stD, stH, 0, stWallMat);
-      createWallMesh(stairGroup, stW, 0, stW, stD, stH, 0, stWallMat);
+      // Enclosed outer walls (North, South, East) inset inward by WALL_INSET
+      createWallMesh(stairGroup, WALL_INSET, WALL_INSET, stW - WALL_INSET, WALL_INSET, stH, 0, stWallMat);
+      createWallMesh(stairGroup, stW - WALL_INSET, stD - WALL_INSET, WALL_INSET, stD - WALL_INSET, stH, 0, stWallMat);
+      createWallMesh(stairGroup, stW - WALL_INSET, WALL_INSET, stW - WALL_INSET, stD - WALL_INSET, stH, 0, stWallMat);
       // 12 Concrete Steps rising from z=3.9 (y=0.0) to z=1.1 (y=2.6) + 2F Landing
       const stepMat = new THREE.MeshStandardMaterial({ color: 0x475569, map: corrPbr.map, roughness: 0.65 });
       const railMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.75, roughness: 0.35 });
       const numSteps = 12;
+      const stepGeo = getBoxGeo(1.5, 0.16, 0.24);
       for (let i = 0; i < numSteps; i++) {
         const sy = (i + 1) * (2.6 / numSteps);
         const sz = 3.85 - i * (2.6 / numSteps);
-        const step = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.16, 0.24), stepMat);
+        const step = new THREE.Mesh(stepGeo, stepMat);
         step.position.set(1.35, sy - 0.08, sz);
         stairGroup.add(step);
       }
       // 2F Landing platform connecting directly to 2F Room 3 East doorway
-      const landing2f = new THREE.Mesh(new THREE.BoxGeometry(stW, 0.12, 1.4), stFloorMat);
+      const landing2f = new THREE.Mesh(getBoxGeo(stW, 0.12, 1.4), stFloorMat);
       landing2f.position.set(stW / 2, 2.54, 0.7);
-      const landingBridge = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 2.4), stFloorMat);
+      const landingBridge = new THREE.Mesh(getBoxGeo(0.9, 0.12, 2.4), stFloorMat);
       landingBridge.position.set(0.45, 2.54, 2.5);
       // Handrail along stairs
-      const handrail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 3.6), railMat);
+      const handrail = new THREE.Mesh(getBoxGeo(0.05, 0.05, 3.6), railMat);
       handrail.position.set(0.65, 2.05, 2.55);
       handrail.rotation.x = Math.atan2(2.6, 2.6);
       stairGroup.add(landing2f, landingBridge, handrail);
@@ -3353,17 +3731,151 @@ import { CraftBuilder } from './builder.js';
 
       // Real Physical Light Fixtures in Corridors & Stairwell
       setupCorridorLightFixtures(cGroup1f, cGroup2f, stairGroup);
+      }
 
       scene.add(unifiedBuildingGroup);
+
+      // Restore live light ON/OFF states if rebuilding mid-play (e.g. boss door unlock)
+      if (prevLightStates.size > 0) {
+        for (let i = 0; i < activeFixtures.length; i++) {
+          const f = activeFixtures[i];
+          if (prevLightStates.has(f.id)) {
+            setLightFixtureOn(f.id, prevLightStates.get(f.id), false);
+          }
+        }
+      }
+
+      updateRoomVisibilityCulling();
+      syncLightPool(cameraMode === 'fps' ? (camera ? camera.position : null) : (orbitControls ? orbitControls.target : null), currentRoomIdx);
+      markSceneDirty();
+    }
+
+    const WALL_SIDE_ROT = { N: 0, S: Math.PI, W: Math.PI / 2, E: -Math.PI / 2 };
+    const TABLE_PROP_DEFAULT_REL = { cup: [0.26, -0.11], document: [0.02, 0.15] };
+    const TABLE_PROP_DEFAULT_ABS = { cup: [1.76, 0.74], document: [1.52, 1.0] };
+
+    // Wall-mounted door objects (not floor hatches / cargo lifts) carve doorways into walls
+    function isWallDoorObj(obj) {
+      if (!obj) return false;
+      const isDoor = obj.type === 'door' || (obj.modelPreset && obj.modelPreset.startsWith('door-'));
+      if (!isDoor) return false;
+      if (obj.modelPreset === 'door-hatch' || obj.modelPreset === 'door-lift') return false;
+      const nm = obj.name || '';
+      if (!obj.modelPreset && (nm.includes('해치') || nm.includes('승강기') || nm.includes('리프트'))) return false;
+      return true;
+    }
+
+    // Un-moved boss doors sit in the middle of their room's East wall (legacy layout)
+    function applyDefaultBossDoorSnap(obj) {
+      if (!obj.isBossDoor || obj.customPlaced || !isWallDoorObj(obj)) return;
+      const own = ROOM_CONFIGS[obj.roomIdx] || ROOM_CONFIGS[0];
+      obj.x = own.w;
+      obj.z = Math.max(1.0, (own.h - 1.2) / 2) + 0.6;
+      obj.rotY = 0;
+    }
+
+    // Which wall (N: z<=0.35, S: z>=h-0.35, W: x<=0.35, E: x>=w-0.35) a door object sits on, and where along it
+    function getWallDoorInfo(obj, rc) {
+      if (!isWallDoorObj(obj)) return null;
+      applyDefaultBossDoorSnap(obj);
+      const T = 0.35;
+      if (obj.z <= T) return { wall: 'N', c: obj.x };
+      if (obj.z >= rc.h - T) return { wall: 'S', c: obj.x };
+      if (obj.x <= T) return { wall: 'W', c: obj.z };
+      if (obj.x >= rc.w - T) return { wall: 'E', c: obj.z };
+      return null;
+    }
+
+    function collectWallOpenings(rc) {
+      const ops = { N: [], S: [], W: [], E: [] };
+      const zMid = Math.max(1.0, (rc.h - 1.2) / 2) + 0.6;
+      const lenOf = w => (w === 'N' || w === 'S') ? rc.w : rc.h;
+      let natW = !!rc.hasWestDoor;
+      let natE = rc.hasEastDoor !== false;
+      studioObjects.forEach(obj => {
+        if (obj.roomIdx !== rc.idx) return;
+        const info = getWallDoorInfo(obj, rc);
+        if (!info) return;
+        if (carriedIds.has(obj.id)) {
+          // a carried door takes its natural passage with it: the wall fills back in while carrying
+          if (info.wall === 'W' && Math.abs(info.c - zMid) < 0.05) natW = false;
+          if (info.wall === 'E' && Math.abs(info.c - zMid) < 0.05) natE = false;
+          return;
+        }
+        ops[info.wall].push({ c: Math.min(Math.max(info.c, 0.6), lenOf(info.wall) - 0.6), obj });
+      });
+      if (natW && !ops.W.some(o => Math.abs(o.c - zMid) < 1.2)) ops.W.push({ c: zMid, natural: true });
+      if (natE && !ops.E.some(o => Math.abs(o.c - zMid) < 1.2)) ops.E.push({ c: zMid, natural: true });
+      return ops;
+    }
+
+    // A door that leaves its natural passage position (moved/deleted) takes that passage with it
+    function releaseNaturalOpening(rc, info) {
+      const zMid = Math.max(1.0, (rc.h - 1.2) / 2) + 0.6;
+      if (Math.abs(info.c - zMid) >= 0.05) return;
+      if (info.wall === 'E') rc.hasEastDoor = false;
+      if (info.wall === 'W') rc.hasWestDoor = false;
+    }
+
+    // Table-top props follow their parent object's (x, z, rotY); detached ones sit on the floor
+    function placeTableProp(g, prop, surfaceY, lift = 0) {
+      const parent = prop.tableSnapped && prop.targetParentId ? studioObjects.find(o => o.id === prop.targetParentId) : null;
+      const defRel = TABLE_PROP_DEFAULT_REL[prop.type] || [0, 0];
+      const defAbs = TABLE_PROP_DEFAULT_ABS[prop.type] || [1, 1];
+      if (parent) {
+        const prc = ROOM_CONFIGS[parent.roomIdx] || ROOM_CONFIGS[0];
+        const rot = getNaturalObjectRotation(parent, prc.w, prc.h);
+        const rx = prop.relX !== undefined ? prop.relX : defRel[0];
+        const rz = prop.relZ !== undefined ? prop.relZ : defRel[1];
+        g.position.set(parent.x + rx * Math.cos(rot) + rz * Math.sin(rot), surfaceY, parent.z - rx * Math.sin(rot) + rz * Math.cos(rot));
+        g.rotation.y = rot;
+      } else if (prop.tableSnapped) {
+        g.position.set(prop.x !== undefined ? prop.x : defAbs[0], surfaceY, prop.z !== undefined ? prop.z : defAbs[1]);
+      } else {
+        g.position.set(prop.x !== undefined ? prop.x : defAbs[0], (prop.y || 0) + lift, prop.z !== undefined ? prop.z : defAbs[1]);
+        g.rotation.y = prop.rotY || 0;
+      }
+    }
+
+    // When a table is deleted its props drop to the floor where they were
+    function detachDependentProps(parent) {
+      const prc = ROOM_CONFIGS[parent.roomIdx] || ROOM_CONFIGS[0];
+      const rot = getNaturalObjectRotation(parent, prc.w, prc.h);
+      PROP_ONTOLOGY.forEach(p => {
+        if (!(p.tableSnapped && p.targetParentId === parent.id)) return;
+        const rel = TABLE_PROP_DEFAULT_REL[p.type] || [0, 0];
+        const rx = p.relX !== undefined ? p.relX : rel[0];
+        const rz = p.relZ !== undefined ? p.relZ : rel[1];
+        p.x = parent.x + rx * Math.cos(rot) + rz * Math.sin(rot);
+        p.z = parent.z - rx * Math.sin(rot) + rz * Math.cos(rot);
+        p.y = 0;
+        p.roomIdx = parent.roomIdx;
+        p.tableSnapped = false;
+        delete p.targetParentId; delete p.relX; delete p.relZ;
+      });
+    }
+
+    function deletePropById(id) {
+      const i = PROP_ONTOLOGY.findIndex(p => p.id === id);
+      if (i < 0) return;
+      const removed = PROP_ONTOLOGY.splice(i, 1)[0];
+      carriedIds.delete(id);
+      rebuild3DRoom();
+      render2DCadObjects();
+      updateCodeView();
+      scheduleStudioAutosave();
+      playSfx('click');
+      showDirectorWhisper(`[삭제 완료] '${removed.name}' 소품을 제거했습니다.`);
     }
 
     function createWallMesh(group, x1, z1, x2, z2, h, yOff, mat) {
       const len = Math.hypot(x2 - x1, z2 - z1);
-      const geo = new THREE.PlaneGeometry(len, h);
+      const geo = getPlaneGeo(len, h);
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set((x1 + x2) / 2, yOff + h / 2, (z1 + z2) / 2);
       mesh.rotation.y = -Math.atan2(z2 - z1, x2 - x1);
       mesh.receiveShadow = true;
+      mesh.userData.isWallSurface = true;
       group.add(mesh);
     }
 
@@ -3425,46 +3937,162 @@ import { CraftBuilder } from './builder.js';
 
 // (GLTF loader cached in src/pbr.js)
 
+    const _sharedPropMatPools = new Map();
+    let _sharedPropGeos = null;
+
+    function getSharedPropGeos() {
+      if (_sharedPropGeos) return _sharedPropGeos;
+      _sharedPropGeos = {
+        beacon: markSharedResource(new THREE.OctahedronGeometry(0.13, 0)),
+        rivet: markSharedResource(new THREE.SphereGeometry(0.018, 6, 6)),
+        deskLeg: markSharedResource(new THREE.CylinderGeometry(0.025, 0.025, 0.72, 8)),
+        monitorStand: markSharedResource(new THREE.CylinderGeometry(0.07, 0.09, 0.04, 14)),
+        monitorBody: markSharedResource(new THREE.BoxGeometry(0.32, 0.26, 0.24)),
+        crtScreen: markSharedResource(new THREE.PlaneGeometry(0.27, 0.21)),
+        kb: markSharedResource(new THREE.BoxGeometry(0.28, 0.016, 0.11)),
+        chessBoard: markSharedResource(new THREE.BoxGeometry(0.38, 0.02, 0.38)),
+        chessPiece: markSharedResource(new THREE.CylinderGeometry(0.015, 0.02, 0.06, 8)),
+        docBinder: markSharedResource(new THREE.BoxGeometry(0.24, 0.018, 0.32)),
+        lampBase: markSharedResource(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 12)),
+        lampArm: markSharedResource(new THREE.CylinderGeometry(0.01, 0.01, 0.24, 6)),
+        lampShade: markSharedResource(new THREE.ConeGeometry(0.07, 0.08, 14)),
+        cabPlate: markSharedResource(new THREE.BoxGeometry(0.12, 0.055, 0.012)),
+        branchPipe: markSharedResource(new THREE.CylinderGeometry(0.06, 0.06, 0.65, 12)),
+        valve: markSharedResource(new THREE.TorusGeometry(0.09, 0.02, 8, 16)),
+        gauge: markSharedResource(new THREE.CylinderGeometry(0.08, 0.08, 0.03, 16)),
+        lockerBadge: markSharedResource(new THREE.BoxGeometry(0.08, 0.04, 0.015)),
+        lockerLatch: markSharedResource(new THREE.BoxGeometry(0.03, 0.09, 0.03)),
+        phoneBase: markSharedResource(new THREE.BoxGeometry(0.28, 0.08, 0.28)),
+        dialWheel: markSharedResource(new THREE.CylinderGeometry(0.07, 0.07, 0.02, 16)),
+        handset: markSharedResource(new THREE.BoxGeometry(0.24, 0.045, 0.06)),
+        reel: markSharedResource(new THREE.CylinderGeometry(0.12, 0.12, 0.02, 24)),
+        vu: markSharedResource(new THREE.BoxGeometry(0.14, 0.07, 0.02)),
+        genPipe: markSharedResource(new THREE.CylinderGeometry(0.06, 0.06, 0.45, 12)),
+        scalePan: markSharedResource(new THREE.CylinderGeometry(0.12, 0.12, 0.02, 16)),
+        safeWheelHub: markSharedResource(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 16)),
+        safeSpoke: markSharedResource(new THREE.CylinderGeometry(0.015, 0.015, 0.26, 8)),
+        safeDial: markSharedResource(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 20)),
+        dRing: markSharedResource(new THREE.TorusGeometry(0.06, 0.015, 8, 16)),
+        liftPost: markSharedResource(new THREE.BoxGeometry(0.06, 2.2, 0.06)),
+        statusLamp: markSharedResource(new THREE.BoxGeometry(0.18, 0.08, 0.08)),
+        doorHandle: markSharedResource(new THREE.BoxGeometry(0.04, 0.025, 0.18)),
+        ladderPost: markSharedResource(new THREE.CylinderGeometry(0.035, 0.035, 2.6)),
+        ladderRung: markSharedResource(new THREE.CylinderGeometry(0.02, 0.02, 0.5)),
+        ladderHoop: markSharedResource(new THREE.TorusGeometry(0.38, 0.02, 8, 16, Math.PI)),
+        gfBody: markSharedResource(new THREE.BoxGeometry(0.45, 1.85, 0.35)),
+        gfFace: markSharedResource(new THREE.CircleGeometry(0.14, 24)),
+        gfMinHand: markSharedResource(new THREE.BoxGeometry(0.012, 0.10, 0.008)),
+        gfHourHand: markSharedResource(new THREE.BoxGeometry(0.075, 0.014, 0.008)),
+        gfWin: markSharedResource(new THREE.BoxGeometry(0.22, 0.65, 0.02)),
+        gfPendulum: markSharedResource(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 16)),
+        bedFrame: markSharedResource(new THREE.BoxGeometry(0.9, 0.45, 1.8)),
+        bedMattress: markSharedResource(new THREE.BoxGeometry(0.84, 0.14, 1.74)),
+        bedStrap: markSharedResource(new THREE.BoxGeometry(0.86, 0.02, 0.06)),
+        jar: markSharedResource(new THREE.CylinderGeometry(0.07, 0.07, 0.28, 12))
+      };
+      return _sharedPropGeos;
+    }
+
+    function getSharedPropMats(ovPreset) {
+      const key = ovPreset || '__default__';
+      if (_sharedPropMatPools.has(key)) return _sharedPropMatPools.get(key);
+      const pbrWood = getPbrTexturePack(ovPreset || 'wood');
+      const pbrRust = getPbrTexturePack(ovPreset || 'rustedMetal');
+      const pbrSteel = getPbrTexturePack(ovPreset || 'surgicalSteel');
+      const crtTex = getPropDetailTexture('crtScreen');
+      const docTex = getPropDetailTexture('document');
+      const clockTex = getPropDetailTexture('clockFace');
+      const portraitTex = getPropDetailTexture('portrait');
+      const aoTex = getPropDetailTexture('contactAo');
+      const concretePbr = getPbrTexturePack('concrete');
+
+      const pool = {
+        metalMat: markSharedResource(new THREE.MeshStandardMaterial({
+          color: 0x64748b, map: pbrRust.map, normalMap: pbrRust.normalMap, normalScale: new THREE.Vector2(0.85, 0.85),
+          roughnessMap: pbrRust.roughnessMap, aoMap: pbrRust.aoMap, aoMapIntensity: 0.65,
+          metalness: 0.78, roughness: 0.75
+        })),
+        chromeMat: markSharedResource(new THREE.MeshStandardMaterial({
+          color: 0xcbd5e1, map: pbrSteel.map, normalMap: pbrSteel.normalMap, normalScale: new THREE.Vector2(0.55, 0.55),
+          roughnessMap: pbrSteel.roughnessMap, aoMap: pbrSteel.aoMap, aoMapIntensity: 0.5,
+          metalness: 0.88, roughness: 0.45
+        })),
+        darkMat: markSharedResource(new THREE.MeshStandardMaterial({
+          color: 0x1e293b, map: pbrRust.map, normalMap: pbrRust.normalMap, normalScale: new THREE.Vector2(0.75, 0.75),
+          roughnessMap: pbrRust.roughnessMap, aoMap: pbrRust.aoMap, aoMapIntensity: 0.7,
+          metalness: 0.65, roughness: 0.85
+        })),
+        woodMat: markSharedResource(new THREE.MeshStandardMaterial({
+          color: 0x9a653a, map: pbrWood.map, normalMap: pbrWood.normalMap, normalScale: new THREE.Vector2(0.85, 0.85),
+          roughnessMap: pbrWood.roughnessMap, aoMap: pbrWood.aoMap, aoMapIntensity: 0.7,
+          roughness: 0.9, metalness: 0.05
+        })),
+        glowSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.65 })),
+        glowUnsolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.65 })),
+        beaconSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.8 })),
+        beaconUnsolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.8 })),
+        proxyMat: markSharedResource(new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.0, depthWrite: false })),
+        aoMat: markSharedResource(new THREE.MeshBasicMaterial({ map: aoTex, transparent: true, opacity: 0.55, depthWrite: false })),
+        deskTopSteel: markSharedResource(new THREE.MeshStandardMaterial({ color: 0xcbd5e1, map: pbrSteel.map, metalness: 0.85, roughness: 0.28 })),
+        deskTopWoodSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, map: pbrWood.map, roughness: 0.65 })),
+        deskTopWood: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x8a5a36, map: pbrWood.map, roughness: 0.65 })),
+        crtMat: markSharedResource(new THREE.MeshStandardMaterial({ map: crtTex, emissive: 0x0ea5e9, emissiveMap: crtTex, emissiveIntensity: 0.75, roughness: 0.2 })),
+        labCrtMat: markSharedResource(new THREE.MeshStandardMaterial({ map: crtTex, emissive: 0x0ea5e9, emissiveMap: crtTex, emissiveIntensity: 0.65, roughness: 0.2 })),
+        docBinderMat: markSharedResource(new THREE.MeshStandardMaterial({ map: docTex, roughness: 0.85 })),
+        lampShadeGreen: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x1f3a2e, map: pbrRust.map, metalness: 0.55, roughness: 0.38 })),
+        cabSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, map: pbrRust.map, metalness: 0.55, roughness: 0.52 })),
+        cabUnsolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x525d6b, map: pbrRust.map, metalness: 0.55, roughness: 0.52 })),
+        valveRed: markSharedResource(new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.8 })),
+        lockerSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, map: pbrRust.map, metalness: 0.70, roughness: 0.48 })),
+        lockerUnsolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x4b5563, map: pbrRust.map, metalness: 0.70, roughness: 0.48 })),
+        deckMat: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7 })),
+        vuMat: markSharedResource(new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.7 })),
+        xrayScreen: markSharedResource(new THREE.MeshStandardMaterial({ color: 0xe0f2fe, emissive: 0xbae6fd, emissiveIntensity: 0.85 })),
+        ribDecal: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 })),
+        genBody: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.75, roughness: 0.3 })),
+        glassCase: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.35, roughness: 0.1 })),
+        safeSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, map: pbrRust.map, metalness: 0.72, roughness: 0.42 })),
+        safeUnsolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x3b424d, map: pbrRust.map, metalness: 0.72, roughness: 0.42 })),
+        brassDial: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x9a7b3c, metalness: 0.85, roughness: 0.28 })),
+        hatchPlate: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.4 })),
+        liftFloor: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.4 })),
+        liftPost: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85 })),
+        statusSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.9 })),
+        statusUnsolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.9 })),
+        bookBlock: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 })),
+        doorSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x059669, emissiveIntensity: 0.35, metalness: 0.8, roughness: 0.3, depthWrite: true })),
+        doorUnsolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x1e293b, emissive: 0x450a0a, emissiveIntensity: 0.3, metalness: 0.8, roughness: 0.3, depthWrite: true })),
+        doorPanelSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.85, metalness: 0.8 })),
+        doorPanelUnsolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.85, metalness: 0.8 })),
+        clockFace: markSharedResource(new THREE.MeshStandardMaterial({ map: clockTex, roughness: 0.4 })),
+        handDark: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x0f172a })),
+        handRed: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x991b1b })),
+        clockWin: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x334155, transparent: true, opacity: 0.25, roughness: 0.15 })),
+        bedMattress: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x64748b, map: concretePbr.map, roughness: 0.92 })),
+        jarLiquid: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x047857, emissiveIntensity: 0.45, transparent: true, opacity: 0.75 })),
+        portraitMat: markSharedResource(new THREE.MeshStandardMaterial({ map: portraitTex, roughness: 0.75 })),
+        clueSolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x10b981, map: pbrRust.map, metalness: 0.55, roughness: 0.5 })),
+        clueUnsolved: markSharedResource(new THREE.MeshStandardMaterial({ color: 0x47525e, map: pbrRust.map, metalness: 0.55, roughness: 0.5 }))
+      };
+      _sharedPropMatPools.set(key, pool);
+      return pool;
+    }
+
     function create3DMeshForObject(obj, targetParent) {
       if (meshMap.has(obj.id)) {
         const oldGroup = meshMap.get(obj.id);
         if (oldGroup.parent) oldGroup.parent.remove(oldGroup);
         else scene.remove(oldGroup);
+        disposeObject3D(oldGroup);
         meshMap.delete(obj.id);
       }
 
       const group = new THREE.Group();
-      const baseColor = obj.solved ? 0x10b981 : parseInt((obj.color || '#3b82f6').replace('#', '0x'), 16);
       const ovPreset = obj.material && obj.material.preset ? obj.material.preset : null;
-      const pbrWood = getPbrTexturePack(ovPreset || 'wood');
-      const pbrRust = getPbrTexturePack(ovPreset || 'rustedMetal');
-      const pbrSteel = getPbrTexturePack(ovPreset || 'surgicalSteel');
-
-      const metalMat = new THREE.MeshStandardMaterial({
-        color: 0x64748b, map: pbrRust.map, normalMap: pbrRust.normalMap, normalScale: new THREE.Vector2(0.85, 0.85),
-        roughnessMap: pbrRust.roughnessMap, aoMap: pbrRust.aoMap, aoMapIntensity: 0.65,
-        metalness: 0.78, roughness: 0.75
-      });
-      const chromeMat = new THREE.MeshStandardMaterial({
-        color: 0xcbd5e1, map: pbrSteel.map, normalMap: pbrSteel.normalMap, normalScale: new THREE.Vector2(0.55, 0.55),
-        roughnessMap: pbrSteel.roughnessMap, aoMap: pbrSteel.aoMap, aoMapIntensity: 0.5,
-        metalness: 0.88, roughness: 0.45
-      });
-      const darkMat = new THREE.MeshStandardMaterial({
-        color: 0x1e293b, map: pbrRust.map, normalMap: pbrRust.normalMap, normalScale: new THREE.Vector2(0.75, 0.75),
-        roughnessMap: pbrRust.roughnessMap, aoMap: pbrRust.aoMap, aoMapIntensity: 0.7,
-        metalness: 0.65, roughness: 0.85
-      });
-      const woodMat = new THREE.MeshStandardMaterial({
-        color: 0x9a653a, map: pbrWood.map, normalMap: pbrWood.normalMap, normalScale: new THREE.Vector2(0.85, 0.85),
-        roughnessMap: pbrWood.roughnessMap, aoMap: pbrWood.aoMap, aoMapIntensity: 0.7,
-        roughness: 0.9, metalness: 0.05
-      });
-      const glowMat = new THREE.MeshStandardMaterial({
-        color: obj.solved ? 0x10b981 : 0x38bdf8,
-        emissive: obj.solved ? 0x10b981 : 0x0284c7,
-        emissiveIntensity: 0.65
-      });
+      const pm = getSharedPropMats(ovPreset);
+      const pg = getSharedPropGeos();
+      const { metalMat, chromeMat, darkMat, woodMat } = pm;
+      const glowMat = obj.solved ? pm.glowSolved : pm.glowUnsolved;
 
       const w = obj.w || 0.8;
       const d = obj.d || 0.6;
@@ -3476,14 +4104,13 @@ import { CraftBuilder } from './builder.js';
         // Medical / Office Desk with aged wood PBR surface, drawers, legs, monitor & clutter
         const topH = 0.72;
         const topMat = name.includes("부검")
-          ? new THREE.MeshStandardMaterial({ color: 0xcbd5e1, map: pbrSteel.map, bumpMap: pbrSteel.bumpMap, bumpScale: 0.02, metalness: 0.85, roughness: 0.28 })
-          : new THREE.MeshStandardMaterial({ color: obj.solved ? 0x10b981 : 0x8a5a36, map: pbrWood.map, bumpMap: pbrWood.bumpMap, bumpScale: 0.025, roughness: 0.65 });
-        const topMesh = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), topMat);
+          ? pm.deskTopSteel
+          : (obj.solved ? pm.deskTopWoodSolved : pm.deskTopWood);
+        const topMesh = new THREE.Mesh(getBoxGeo(w, 0.08, d), topMat);
         topMesh.position.y = topH;
         group.add(topMesh);
 
         // 4 Metal Legs
-        const legGeo = new THREE.CylinderGeometry(0.025, 0.025, topH, 8);
         const legOffsets = [
           [-w/2 + 0.08, -d/2 + 0.08],
           [w/2 - 0.08, -d/2 + 0.08],
@@ -3491,7 +4118,7 @@ import { CraftBuilder } from './builder.js';
           [w/2 - 0.08, d/2 - 0.08]
         ];
         legOffsets.forEach(([lx, lz]) => {
-          const leg = new THREE.Mesh(legGeo, metalMat);
+          const leg = new THREE.Mesh(pg.deskLeg, metalMat);
           leg.position.set(lx, topH / 2, lz);
           group.add(leg);
         });
@@ -3500,13 +4127,14 @@ import { CraftBuilder } from './builder.js';
         const drawerW = Math.min(w * 0.36, 0.45);
         const drawerH = topH - 0.08;
         const drawerD = d * 0.85;
-        const drawerBox = new THREE.Mesh(new THREE.BoxGeometry(drawerW, drawerH, drawerD), darkMat);
+        const drawerBox = new THREE.Mesh(getBoxGeo(drawerW, drawerH, drawerD), darkMat);
         drawerBox.position.set(w/2 - drawerW/2 - 0.04, drawerH / 2, 0);
         group.add(drawerBox);
 
         // Drawer Handles
+        const handleGeo = getBoxGeo(drawerW * 0.4, 0.02, 0.03);
         for (let i = 0; i < 3; i++) {
-          const handle = new THREE.Mesh(new THREE.BoxGeometry(drawerW * 0.4, 0.02, 0.03), chromeMat);
+          const handle = new THREE.Mesh(handleGeo, chromeMat);
           handle.position.set(w/2 - drawerW/2 - 0.04, 0.15 + i * 0.20, drawerD/2 + 0.015);
           group.add(handle);
         }
@@ -3515,48 +4143,37 @@ import { CraftBuilder } from './builder.js';
         if (name.includes("접수") || name.includes("터미널") || name.includes("모니터")) {
           // Retro CRT Terminal Monitor with Scanline Screen Texture (Positioned cleanly on Left side of desk)
           const mx = -w * 0.24, mz = -d * 0.14;
-          const monitorStand = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.04, 14), darkMat);
+          const monitorStand = new THREE.Mesh(pg.monitorStand, darkMat);
           monitorStand.position.set(mx, topH + 0.06, mz);
-          const monitorBody = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.26, 0.24), darkMat);
+          const monitorBody = new THREE.Mesh(pg.monitorBody, darkMat);
           monitorBody.position.set(mx, topH + 0.21, mz);
-          const crtTex = getPropDetailTexture('crtScreen');
-          const crtMat = new THREE.MeshStandardMaterial({
-            map: crtTex, emissive: 0x0ea5e9, emissiveMap: crtTex, emissiveIntensity: 0.75, roughness: 0.2
-          });
-          const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.21), crtMat);
+          const screen = new THREE.Mesh(pg.crtScreen, pm.crtMat);
           screen.position.set(mx, topH + 0.21, mz + 0.122);
           // Keyboard
-          const kb = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.016, 0.11), darkMat);
+          const kb = new THREE.Mesh(pg.kb, darkMat);
           kb.position.set(mx, topH + 0.048, mz + 0.22);
           group.add(monitorStand, monitorBody, screen, kb);
         } else if (name.includes("체스")) {
           // Chess Table (Inlaid board & pieces)
-          const board = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.02, 0.38), darkMat);
+          const board = new THREE.Mesh(pg.chessBoard, darkMat);
           board.position.set(0, topH + 0.05, 0);
           group.add(board);
           for (let p = -0.12; p <= 0.12; p += 0.08) {
-            const piece = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.06, 8), chromeMat);
+            const piece = new THREE.Mesh(pg.chessPiece, chromeMat);
             piece.position.set(p, topH + 0.08, 0);
             group.add(piece);
           }
         } else {
           // Medical Chart Document & Classic Brass Desk Lamp (No bright blue binder / neon green shade!)
-          const docTexDesk = getPropDetailTexture('document');
-          const binder = new THREE.Mesh(
-            new THREE.BoxGeometry(0.24, 0.018, 0.32),
-            new THREE.MeshStandardMaterial({ map: docTexDesk, roughness: 0.85 })
-          );
+          const binder = new THREE.Mesh(pg.docBinder, pm.docBinderMat);
           binder.position.set(-w * 0.15, topH + 0.05, 0);
           binder.rotation.y = 0.2;
-          const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 12), chromeMat);
+          const lampBase = new THREE.Mesh(pg.lampBase, chromeMat);
           lampBase.position.set(w * 0.25, topH + 0.05, -d * 0.2);
-          const lampArm = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.24, 6), chromeMat);
+          const lampArm = new THREE.Mesh(pg.lampArm, chromeMat);
           lampArm.position.set(w * 0.25, topH + 0.17, -d * 0.2);
           lampArm.rotation.z = -0.3;
-          const lampShade = new THREE.Mesh(
-            new THREE.ConeGeometry(0.07, 0.08, 14),
-            new THREE.MeshStandardMaterial({ color: 0x1f3a2e, map: pbrRust.map, metalness: 0.55, roughness: 0.38 })
-          );
+          const lampShade = new THREE.Mesh(pg.lampShade, pm.lampShadeGreen);
           lampShade.position.set(w * 0.20, topH + 0.28, -d * 0.2);
           group.add(binder, lampBase, lampArm, lampShade);
         }
@@ -3564,28 +4181,27 @@ import { CraftBuilder } from './builder.js';
       } else if (renderType === 'cabinet') {
         // Multi-Drawer Filing Cabinet / Drug Shelf (Precise drawer seam bounds, zero floating bar)
         const cabH = 1.65;
-        const body = new THREE.Mesh(new THREE.BoxGeometry(w, cabH, d), new THREE.MeshStandardMaterial({
-          color: obj.solved ? 0x10b981 : 0x525d6b, map: pbrRust.map, bumpMap: pbrRust.bumpMap, bumpScale: 0.005,
-          metalness: 0.55, roughness: 0.52
-        }));
+        const body = new THREE.Mesh(getBoxGeo(w, cabH, d), obj.solved ? pm.cabSolved : pm.cabUnsolved);
         body.position.y = cabH / 2;
         group.add(body);
 
         // 4 Drawer Divisions (strictly inside [0, cabH])
         const numDrawers = 4;
         const dH = cabH / numDrawers;
+        const grooveGeo = getBoxGeo(w * 0.94, 0.012, 0.01);
+        const cabHandleGeo = getBoxGeo(w * 0.34, 0.022, 0.025);
         for (let i = 0; i < numDrawers; i++) {
           const dy = (i + 0.5) * dH;
           if (i > 0) {
-            const groove = new THREE.Mesh(new THREE.BoxGeometry(w * 0.94, 0.012, 0.01), darkMat);
+            const groove = new THREE.Mesh(grooveGeo, darkMat);
             groove.position.set(0, i * dH, d / 2 + 0.004);
             group.add(groove);
           }
           // Label Plate
-          const plate = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.055, 0.012), chromeMat);
+          const plate = new THREE.Mesh(pg.cabPlate, chromeMat);
           plate.position.set(0, dy + 0.07, d / 2 + 0.006);
           // Handle
-          const handle = new THREE.Mesh(new THREE.BoxGeometry(w * 0.34, 0.022, 0.025), chromeMat);
+          const handle = new THREE.Mesh(cabHandleGeo, chromeMat);
           handle.position.set(0, dy - 0.03, d / 2 + 0.014);
           group.add(plate, handle);
         }
@@ -3594,53 +4210,52 @@ import { CraftBuilder } from './builder.js';
         // Hospital Steel Locker / Pipe Manifold
         if (name.includes("매니폴드") || name.includes("파이프")) {
           // Heavy Industrial Coolant Pipe Manifold
-          const mainPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, w, 16), metalMat);
+          const mainPipe = new THREE.Mesh(getCylGeo(0.12, 0.12, w, 16), metalMat);
           mainPipe.rotation.z = Math.PI / 2;
           mainPipe.position.set(0, 0.85, 0);
           group.add(mainPipe);
 
           // 3 Branch Pipes
           [-w * 0.28, 0, w * 0.28].forEach(bx => {
-            const bPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.65, 12), metalMat);
+            const bPipe = new THREE.Mesh(pg.branchPipe, metalMat);
             bPipe.position.set(bx, 0.85 + 0.32, 0);
             // Valve Wheel
-            const valve = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.02, 8, 16), new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.8 }));
+            const valve = new THREE.Mesh(pg.valve, pm.valveRed);
             valve.rotation.x = Math.PI / 2;
             valve.position.set(bx, 0.85 + 0.65, 0);
             group.add(bPipe, valve);
           });
 
           // Pressure Gauge
-          const gauge = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.03, 16), chromeMat);
+          const gauge = new THREE.Mesh(pg.gauge, chromeMat);
           gauge.rotation.x = Math.PI / 2;
           gauge.position.set(0, 0.85, d / 2 + 0.02);
           group.add(gauge);
         } else {
           // 3-Door Locker with Slits and Padlock
           const lockerH = 1.70;
-          const body = new THREE.Mesh(new THREE.BoxGeometry(w, lockerH, d), new THREE.MeshStandardMaterial({
-            color: obj.solved ? 0x10b981 : 0x4b5563, map: pbrRust.map, bumpMap: pbrRust.bumpMap, bumpScale: 0.032,
-            metalness: 0.70, roughness: 0.48
-          }));
+          const body = new THREE.Mesh(getBoxGeo(w, lockerH, d), obj.solved ? pm.lockerSolved : pm.lockerUnsolved);
           body.position.y = lockerH / 2;
           group.add(body);
 
           const colW = w / 3;
-          [-colW, 0, colW].forEach((cx, idx) => {
+          const doorBorderGeo = getBoxGeo(colW * 0.90, lockerH * 0.92, 0.01);
+          const ventGeo = getBoxGeo(colW * 0.55, 0.015, 0.015);
+          [-colW, 0, colW].forEach((cx) => {
             // Door outline border
-            const doorBorder = new THREE.Mesh(new THREE.BoxGeometry(colW * 0.90, lockerH * 0.92, 0.01), darkMat);
+            const doorBorder = new THREE.Mesh(doorBorderGeo, darkMat);
             doorBorder.position.set(cx, lockerH / 2, d / 2 + 0.005);
             // Vents (3 horizontal slits)
             for (let v = 0; v < 3; v++) {
-              const vent = new THREE.Mesh(new THREE.BoxGeometry(colW * 0.55, 0.015, 0.015), darkMat);
+              const vent = new THREE.Mesh(ventGeo, darkMat);
               vent.position.set(cx, lockerH * 0.85 - v * 0.04, d / 2 + 0.012);
               group.add(vent);
             }
             // Locker Number Badge
-            const badge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.015), chromeMat);
+            const badge = new THREE.Mesh(pg.lockerBadge, chromeMat);
             badge.position.set(cx, lockerH * 0.70, d / 2 + 0.012);
             // Handle / Padlock Latch
-            const latch = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.09, 0.03), chromeMat);
+            const latch = new THREE.Mesh(pg.lockerLatch, chromeMat);
             latch.position.set(cx + colW * 0.30, lockerH * 0.50, d / 2 + 0.02);
             group.add(doorBorder, badge, latch);
           });
@@ -3650,61 +4265,55 @@ import { CraftBuilder } from './builder.js';
         // High-Tech / Medical Electronic Console
         if (name.includes("전화") || name.includes("다이얼")) {
           // Retro Dial Telephone on Stand
-          const stand = new THREE.Mesh(new THREE.BoxGeometry(w, 0.85, d), darkMat);
+          const stand = new THREE.Mesh(getBoxGeo(w, 0.85, d), darkMat);
           stand.position.y = 0.425;
           // Phone Base (sloped)
-          const phoneBase = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.08, 0.28), metalMat);
+          const phoneBase = new THREE.Mesh(pg.phoneBase, metalMat);
           phoneBase.position.set(0, 0.89, 0);
           phoneBase.rotation.x = 0.15;
           // Dial Wheel
-          const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.02, 16), chromeMat);
+          const dial = new THREE.Mesh(pg.dialWheel, chromeMat);
           dial.position.set(0, 0.94, 0.04);
           dial.rotation.x = 0.15;
           // Handset
-          const handset = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.045, 0.06), darkMat);
+          const handset = new THREE.Mesh(pg.handset, darkMat);
           handset.position.set(0, 0.98, -0.06);
           group.add(stand, phoneBase, dial, handset);
         } else if (name.includes("릴") || name.includes("녹음기")) {
           // Reel-to-Reel Tape Recorder Console
-          const stand = new THREE.Mesh(new THREE.BoxGeometry(w, 0.90, d), darkMat);
+          const stand = new THREE.Mesh(getBoxGeo(w, 0.90, d), darkMat);
           stand.position.y = 0.45;
           // Top Deck
-          const deck = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, 0.35, d * 0.85), new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7 }));
+          const deck = new THREE.Mesh(getBoxGeo(w * 0.9, 0.35, d * 0.85), pm.deckMat);
           deck.position.set(0, 1.05, 0);
           // Two Tape Reels
           [-w * 0.22, w * 0.22].forEach(rx => {
-            const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.02, 24), chromeMat);
+            const reel = new THREE.Mesh(pg.reel, chromeMat);
             reel.rotation.x = Math.PI / 2;
             reel.position.set(rx, 1.15, d * 0.43);
             group.add(reel);
           });
           // VU Meter (Glowing Amber)
-          const vu = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.07, 0.02), new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.7 }));
+          const vu = new THREE.Mesh(pg.vu, pm.vuMat);
           vu.position.set(0, 0.96, d * 0.43);
           group.add(stand, deck, vu);
         } else if (name.includes("X-Ray") || name.includes("라이트박스")) {
           // Medical X-Ray Lightbox Panel
-          const boxFrame = new THREE.Mesh(new THREE.BoxGeometry(w, 0.85, 0.10), darkMat);
+          const boxFrame = new THREE.Mesh(getBoxGeo(w, 0.85, 0.10), darkMat);
           boxFrame.position.y = 1.35;
-          const lightScreen = new THREE.Mesh(new THREE.BoxGeometry(w * 0.88, 0.72, 0.02), new THREE.MeshStandardMaterial({
-            color: 0xe0f2fe, emissive: 0xbae6fd, emissiveIntensity: 0.85
-          }));
+          const lightScreen = new THREE.Mesh(getBoxGeo(w * 0.88, 0.72, 0.02), pm.xrayScreen);
           lightScreen.position.set(0, 1.35, 0.05);
           // Dark Rib Decal Box simulating X-Ray
-          const ribDecal = new THREE.Mesh(new THREE.BoxGeometry(w * 0.5, 0.45, 0.01), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 }));
+          const ribDecal = new THREE.Mesh(getBoxGeo(w * 0.5, 0.45, 0.01), pm.ribDecal);
           ribDecal.position.set(0, 1.35, 0.065);
           group.add(boxFrame, lightScreen, ribDecal);
         } else {
           // Standard Lab Console with CRT & Switch Panels
-          const stand = new THREE.Mesh(new THREE.BoxGeometry(w, 0.95, d), darkMat);
+          const stand = new THREE.Mesh(getBoxGeo(w, 0.95, d), darkMat);
           stand.position.y = 0.475;
-          const panel = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, 0.45, 0.25), metalMat);
+          const panel = new THREE.Mesh(getBoxGeo(w * 0.9, 0.45, 0.25), metalMat);
           panel.position.set(0, 1.15, 0);
-          const labCrtTex = getPropDetailTexture('crtScreen');
-          const screen = new THREE.Mesh(
-            new THREE.PlaneGeometry(w * 0.65, 0.30),
-            new THREE.MeshStandardMaterial({ map: labCrtTex, emissive: 0x0ea5e9, emissiveMap: labCrtTex, emissiveIntensity: 0.65, roughness: 0.2 })
-          );
+          const screen = new THREE.Mesh(getPlaneGeo(w * 0.65, 0.30), pm.labCrtMat);
           screen.position.set(0, 1.15, 0.132);
           group.add(stand, panel, screen);
         }
@@ -3713,50 +4322,45 @@ import { CraftBuilder } from './builder.js';
         // Heavy Armored Steel Safe / Precision Instrument / Generator
         if (name.includes("발전기")) {
           // Industrial Diesel Generator
-          const genBody = new THREE.Mesh(new THREE.BoxGeometry(w, 1.10, d), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.75, roughness: 0.3 }));
+          const genBody = new THREE.Mesh(getBoxGeo(w, 1.10, d), pm.genBody);
           genBody.position.y = 0.55;
           // Cooling Radiator Grill
-          const grill = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, 0.45, 0.03), darkMat);
+          const grill = new THREE.Mesh(getBoxGeo(w * 0.7, 0.45, 0.03), darkMat);
           grill.position.set(0, 0.60, d/2 + 0.015);
           // Top Exhaust Muffler Pipe
-          const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.45, 12), metalMat);
+          const pipe = new THREE.Mesh(pg.genPipe, metalMat);
           pipe.position.set(w * 0.25, 1.25, -d * 0.15);
           group.add(genBody, grill, pipe);
         } else if (name.includes("저울")) {
           // Precision Analytical Balance with Glass Case
-          const base = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, d), chromeMat);
+          const base = new THREE.Mesh(getBoxGeo(w, 0.12, d), chromeMat);
           base.position.y = 0.06;
-          const glassCase = new THREE.Mesh(new THREE.BoxGeometry(w * 0.85, 0.45, d * 0.85), new THREE.MeshStandardMaterial({
-            color: 0x93c5fd, transparent: true, opacity: 0.35, roughness: 0.1
-          }));
+          const glassCase = new THREE.Mesh(getBoxGeo(w * 0.85, 0.45, d * 0.85), pm.glassCase);
           glassCase.position.y = 0.34;
-          const pan = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.02, 16), chromeMat);
+          const pan = new THREE.Mesh(pg.scalePan, chromeMat);
           pan.position.y = 0.14;
           group.add(base, glassCase, pan);
         } else {
           // Armored Bank Vault Safe with 3-Spoke Wheel (PBR Steel, no flat toy color!)
           const safeH = 0.95;
-          const safeBox = new THREE.Mesh(new THREE.BoxGeometry(w, safeH, d), new THREE.MeshStandardMaterial({
-            color: obj.solved ? 0x10b981 : 0x3b424d, map: pbrRust.map, bumpMap: pbrRust.bumpMap, bumpScale: 0.006,
-            metalness: 0.72, roughness: 0.42
-          }));
+          const safeBox = new THREE.Mesh(getBoxGeo(w, safeH, d), obj.solved ? pm.safeSolved : pm.safeUnsolved);
           safeBox.position.y = safeH / 2;
           // Door Inset Frame
-          const doorInset = new THREE.Mesh(new THREE.BoxGeometry(w * 0.85, safeH * 0.85, 0.02), darkMat);
+          const doorInset = new THREE.Mesh(getBoxGeo(w * 0.85, safeH * 0.85, 0.02), darkMat);
           doorInset.position.set(0, safeH / 2, d / 2 + 0.005);
           // 3-Spoke Handwheel
-          const wheelHub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 16), chromeMat);
+          const wheelHub = new THREE.Mesh(pg.safeWheelHub, chromeMat);
           wheelHub.rotation.x = Math.PI / 2;
           wheelHub.position.set(0, safeH / 2, d / 2 + 0.04);
           group.add(safeBox, doorInset, wheelHub);
           for (let s = 0; s < 3; s++) {
-            const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.26, 8), chromeMat);
+            const spoke = new THREE.Mesh(pg.safeSpoke, chromeMat);
             spoke.rotation.z = s * (Math.PI / 3);
             spoke.position.set(0, safeH / 2, d / 2 + 0.04);
             group.add(spoke);
           }
           // Combination Number Dial (Brushed Brass, no neon yellow)
-          const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 20), new THREE.MeshStandardMaterial({ color: 0x9a7b3c, metalness: 0.85, roughness: 0.28 }));
+          const dial = new THREE.Mesh(pg.safeDial, pm.brassDial);
           dial.rotation.x = Math.PI / 2;
           dial.position.set(-w * 0.22, safeH / 2 + 0.15, d / 2 + 0.03);
           group.add(dial);
@@ -3771,122 +4375,101 @@ import { CraftBuilder } from './builder.js';
 
         if (name.includes("해치")) {
           // Floor Flush Hatch
-          const hatchPlate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, d), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.4 }));
+          const hatchPlate = new THREE.Mesh(getBoxGeo(w, 0.06, d), pm.hatchPlate);
           hatchPlate.position.y = 0.03;
-          const dRing = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.015, 8, 16), chromeMat);
+          const dRing = new THREE.Mesh(pg.dRing, chromeMat);
           dRing.rotation.x = Math.PI / 2;
           dRing.position.set(0, 0.065, 0);
           group.add(hatchPlate, dRing);
         } else if (name.includes("승강기") || name.includes("리프트")) {
           // Industrial Cargo Lift Cage (No perpendicular door sticking out)
-          const liftFloor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.4 }));
+          const liftFloor = new THREE.Mesh(getBoxGeo(w, 0.08, d), pm.liftFloor);
           liftFloor.position.y = 0.04;
-          const liftTop = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), darkMat);
+          const liftTop = new THREE.Mesh(getBoxGeo(w, 0.08, d), darkMat);
           liftTop.position.y = 2.2;
           group.add(liftFloor, liftTop);
           [[-w/2+0.04, -d/2+0.04], [w/2-0.04, -d/2+0.04], [-w/2+0.04, d/2-0.04], [w/2-0.04, d/2-0.04]].forEach(([px, pz]) => {
-            const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.2, 0.06), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85 }));
+            const post = new THREE.Mesh(pg.liftPost, pm.liftPost);
             post.position.set(px, 1.1, pz);
             group.add(post);
           });
-          const statusLamp = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.08), new THREE.MeshStandardMaterial({
-            color: obj.solved ? 0x10b981 : 0xef4444, emissive: obj.solved ? 0x10b981 : 0xef4444, emissiveIntensity: 0.9
-          }));
+          const statusLamp = new THREE.Mesh(pg.statusLamp, obj.solved ? pm.statusSolved : pm.statusUnsolved);
           statusLamp.position.set(0, 2.26, -d/2 + 0.05);
           group.add(statusLamp);
         } else if (name.includes("책장")) {
           // Secret Sliding Bookshelf Door
-          const shelfBody = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, doorD), woodMat);
+          const shelfBody = new THREE.Mesh(getBoxGeo(doorW, doorH, doorD), woodMat);
           shelfBody.position.set(0, doorH / 2, doorD / 2);
           doorPivot.add(shelfBody);
           // Books on shelves
+          const bookGeo = getBoxGeo(doorW * 0.75, 0.25, doorD * 0.8);
           for (let row = 0; row < 3; row++) {
             const rowY = 0.45 + row * 0.60;
-            const bookBlock = new THREE.Mesh(new THREE.BoxGeometry(doorW * 0.75, 0.25, doorD * 0.8), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 }));
+            const bookBlock = new THREE.Mesh(bookGeo, pm.bookBlock);
             bookBlock.position.set(0, rowY, doorD / 2);
             doorPivot.add(bookBlock);
           }
           if (obj.solved) doorPivot.rotation.y = -Math.PI * 0.48;
-          if (isBoss) doorPivot.position.set(0, 0, -doorD / 2);
+          doorPivot.position.set(0, 0, -doorD / 2);
           group.add(doorPivot);
         } else {
           // Heavy Security Blast Door Leaf Mesh with Rivets & Lever Handle
           const doorMesh = new THREE.Mesh(
-            new THREE.BoxGeometry(doorW, doorH, doorD),
-            new THREE.MeshStandardMaterial({
-              color: obj.solved ? 0x10b981 : 0x1e293b,
-              emissive: obj.solved ? 0x059669 : 0x450a0a,
-              emissiveIntensity: obj.solved ? 0.35 : 0.3,
-              metalness: 0.8,
-              roughness: 0.3,
-              depthWrite: true
-            })
+            getBoxGeo(doorW, doorH, doorD),
+            obj.solved ? pm.doorSolved : pm.doorUnsolved
           );
           doorMesh.position.set(0, doorH / 2, doorD / 2);
           doorPivot.add(doorMesh);
 
           // Rivet Studs along Door Perimeter
-          const rivetGeo = new THREE.SphereGeometry(0.018, 6, 6);
           [-doorD * 0.42, 0, doorD * 0.42].forEach(rz => {
             [0.2, 1.0, 1.9].forEach(ry => {
-              const rMesh = new THREE.Mesh(rivetGeo, chromeMat);
+              const rMesh = new THREE.Mesh(pg.rivet, chromeMat);
               rMesh.position.set(doorW/2 + 0.005, ry, doorD/2 + rz);
               doorPivot.add(rMesh);
             });
           });
 
           // Chrome Door Lever Handle
-          const handleBar = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.025, 0.18), chromeMat);
+          const handleBar = new THREE.Mesh(pg.doorHandle, chromeMat);
           handleBar.position.set(doorW/2 + 0.04, 1.02, doorD * 0.85);
           doorPivot.add(handleBar);
 
           // Security Lock Status Keypad / Indicator Panel on Door Leaf
           const panelMesh = new THREE.Mesh(
-            new THREE.BoxGeometry(doorW + 0.04, 0.32, 0.20),
-            new THREE.MeshStandardMaterial({
-              color: obj.solved ? 0x10b981 : 0xef4444,
-              emissive: obj.solved ? 0x10b981 : 0xef4444,
-              emissiveIntensity: 0.85,
-              metalness: 0.8
-            })
+            getBoxGeo(doorW + 0.04, 0.32, 0.20),
+            obj.solved ? pm.doorPanelSolved : pm.doorPanelUnsolved
           );
           panelMesh.position.set(0, 1.15, doorD * 0.65);
           doorPivot.add(panelMesh);
 
           // Hydraulic Door Closer Arm on top
-          const closerBody = new THREE.Mesh(new THREE.BoxGeometry(doorW + 0.02, 0.06, 0.25), darkMat);
+          const closerBody = new THREE.Mesh(getBoxGeo(doorW + 0.02, 0.06, 0.25), darkMat);
           closerBody.position.set(0, doorH - 0.05, doorD * 0.5);
           doorPivot.add(closerBody);
 
           if (obj.solved) doorPivot.rotation.y = -Math.PI * 0.48;
-          if (isBoss) doorPivot.position.set(0, 0, -doorD / 2);
+          doorPivot.position.set(0, 0, -doorD / 2);
           group.add(doorPivot);
         }
 
         // Only East-Wall Boss Doors (Q05, Q20, Q30) snap to their OWN room's East wall (never use global roomW/roomH!)
-        if (isBoss && !name.includes("해치") && !name.includes("승강기") && !name.includes("리프트")) {
-          const ownRoom = ROOM_CONFIGS[obj.roomIdx] || ROOM_CONFIGS[0];
-          const doorZStart = Math.max(1.0, (ownRoom.h - 1.2) / 2);
-          obj.x = ownRoom.w;
-          obj.z = doorZStart + 0.6;
-          obj.rotY = 0;
-        }
+        applyDefaultBossDoorSnap(obj); // customPlaced doors keep the position the creator chose
 
       } else if (renderType === 'ladder') {
         // Vertical Shaft Safety Ladder with Hoop Cage (Weathered Steel PBR)
-        const rungMat = metalMat;
-        const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.6), rungMat); p1.position.set(-0.25, 1.3, 0);
-        const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.6), rungMat); p2.position.set(0.25, 1.3, 0);
+        const p1 = new THREE.Mesh(pg.ladderPost, metalMat); p1.position.set(-0.25, 1.3, 0);
+        const p2 = new THREE.Mesh(pg.ladderPost, metalMat); p2.position.set(0.25, 1.3, 0);
         group.add(p1, p2);
         for (let y = 0.3; y <= 2.4; y += 0.35) {
-          const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5), rungMat);
+          const rung = new THREE.Mesh(pg.ladderRung, metalMat);
           rung.rotation.z = Math.PI / 2;
           rung.position.set(0, y, 0);
           group.add(rung);
         }
         // Safety Hoop Cage Rings on upper section
         for (let hy = 1.4; hy <= 2.4; hy += 0.5) {
-          const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.02, 8, 16, Math.PI), metalMat);
+          const hoop = new THREE.Mesh(pg.ladderHoop, metalMat);
           hoop.rotation.x = Math.PI / 2;
           hoop.position.set(0, hy, 0.32);
           group.add(hoop);
@@ -3896,67 +4479,59 @@ import { CraftBuilder } from './builder.js';
         // Clue Artifacts (Grandfather Clock / Hospital Bed / Specimen Jar / Restraint)
         if (name.includes("시계") || name.includes("괘종")) {
           // Antique Grandfather Clock with Pendulum & Exact 3:00 (90°) Hands
-          const clockBody = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.85, 0.35), woodMat);
+          const clockBody = new THREE.Mesh(pg.gfBody, woodMat);
           clockBody.position.y = 0.925;
           // Clock Face (Detailed Roman Numeral Texture)
-          const gfFaceTex = getPropDetailTexture('clockFace');
-          const face = new THREE.Mesh(new THREE.CircleGeometry(0.14, 24), new THREE.MeshStandardMaterial({ map: gfFaceTex, roughness: 0.4 }));
+          const face = new THREE.Mesh(pg.gfFace, pm.clockFace);
           face.position.set(0, 1.48, 0.188);
           // 3:00 Hands (Minute pointing 12, Hour pointing 3 -> 90° right angle)
-          const handDarkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
-          const handRedMat = new THREE.MeshStandardMaterial({ color: 0x991b1b });
-          const minHand = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.10, 0.008), handRedMat);
+          const minHand = new THREE.Mesh(pg.gfMinHand, pm.handRed);
           minHand.position.set(0, 1.53, 0.196);
-          const hourHand = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.014, 0.008), handDarkMat);
+          const hourHand = new THREE.Mesh(pg.gfHourHand, pm.handDark);
           hourHand.position.set(0.037, 1.48, 0.196);
           // Glass Pendulum Window
-          const win = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.65, 0.02), new THREE.MeshStandardMaterial({ color: 0x334155, transparent: true, opacity: 0.25, roughness: 0.15 }));
+          const win = new THREE.Mesh(pg.gfWin, pm.clockWin);
           win.position.set(0, 0.75, 0.18);
           // Brass Pendulum
-          const pendulum = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 16), chromeMat);
+          const pendulum = new THREE.Mesh(pg.gfPendulum, chromeMat);
           pendulum.rotation.x = Math.PI / 2;
           pendulum.position.set(0, 0.65, 0.15);
           group.add(clockBody, face, minHand, hourHand, win, pendulum);
         } else if (name.includes("침대") || name.includes("구속")) {
           // Medical Restraint Hospital Gurney Bed
-          const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 1.8), metalMat);
+          const bedFrame = new THREE.Mesh(pg.bedFrame, metalMat);
           bedFrame.position.y = 0.225;
-          const mattress = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.14, 1.74), new THREE.MeshStandardMaterial({ color: 0x64748b, map: getPbrTexturePack('concrete').map, roughness: 0.92 }));
+          const mattress = new THREE.Mesh(pg.bedMattress, pm.bedMattress);
           mattress.position.y = 0.52;
           // Leather Restraint Straps
           [-0.4, 0.1, 0.6].forEach(sz => {
-            const strap = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.02, 0.06), woodMat);
+            const strap = new THREE.Mesh(pg.bedStrap, woodMat);
             strap.position.set(0, 0.60, sz);
             group.add(strap);
           });
           group.add(bedFrame, mattress);
         } else if (name.includes("표본") || name.includes("진열")) {
           // Specimen Display Jars with Glowing Liquid
-          const shelf = new THREE.Mesh(new THREE.BoxGeometry(w, 1.40, d), darkMat);
+          const shelf = new THREE.Mesh(getBoxGeo(w, 1.40, d), darkMat);
           shelf.position.y = 0.70;
           group.add(shelf);
           [-w * 0.25, 0, w * 0.25].forEach(jx => {
-            const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.28, 12), new THREE.MeshStandardMaterial({
-              color: 0x10b981, emissive: 0x047857, emissiveIntensity: 0.45, transparent: true, opacity: 0.75
-            }));
+            const jar = new THREE.Mesh(pg.jar, pm.jarLiquid);
             jar.position.set(jx, 0.95, d * 0.2);
             group.add(jar);
           });
         } else if (name.includes("초상화")) {
           // UV Director Portrait on Wall (Replaces purple/pink box!)
-          const pFrame = new THREE.Mesh(new THREE.BoxGeometry(w, 1.2, 0.06), woodMat);
+          const pFrame = new THREE.Mesh(getBoxGeo(w, 1.2, 0.06), woodMat);
           pFrame.position.y = 1.65;
-          const pCanvas = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.86, 1.06), new THREE.MeshStandardMaterial({ map: getPropDetailTexture('portrait'), roughness: 0.75 }));
+          const pCanvas = new THREE.Mesh(getPlaneGeo(w * 0.86, 1.06), pm.portraitMat);
           pCanvas.position.set(0, 1.65, 0.034);
           group.add(pFrame, pCanvas);
         } else {
           // Weathered Steel Medical Evidence Case (Replaces pink/purple glowing toy box!)
           const clueMesh = new THREE.Mesh(
-            new THREE.BoxGeometry(w, 0.65, d),
-            new THREE.MeshStandardMaterial({
-              color: obj.solved ? 0x10b981 : 0x47525e, map: pbrRust.map, bumpMap: pbrRust.bumpMap, bumpScale: 0.005,
-              metalness: 0.55, roughness: 0.5
-            })
+            getBoxGeo(w, 0.65, d),
+            obj.solved ? pm.clueSolved : pm.clueUnsolved
           );
           clueMesh.position.y = 0.325;
           group.add(clueMesh);
@@ -3969,10 +4544,19 @@ import { CraftBuilder } from './builder.js';
       while (group.children.length > 0) {
         modelSlot.add(group.children[0]);
       }
+      // Shadow diet: only primary structural bodies (maxDim >= 0.28, non-flat) cast shadows; handles/rivets/decals skip castShadow
+      const _meshSize = new THREE.Vector3();
       modelSlot.traverse(c => {
         if (c.isMesh) {
-          c.castShadow = true;
           c.receiveShadow = true;
+          const g = c.geometry;
+          if (!g || g.type === 'PlaneGeometry' || g.type === 'CircleGeometry' || g.type === 'TorusGeometry') {
+            c.castShadow = false;
+          } else {
+            if (!g.boundingBox) g.computeBoundingBox();
+            g.boundingBox.getSize(_meshSize);
+            c.castShadow = Math.max(_meshSize.x, _meshSize.y, _meshSize.z) >= 0.28;
+          }
         }
       });
       group.add(modelSlot);
@@ -4003,22 +4587,20 @@ import { CraftBuilder } from './builder.js';
               c.receiveShadow = true;
             }
           });
-          while (modelSlot.children.length > 0) modelSlot.remove(modelSlot.children[0]);
+          while (modelSlot.children.length > 0) {
+            const oldChild = modelSlot.children[0];
+            modelSlot.remove(oldChild);
+            disposeObject3D(oldChild);
+          }
           modelSlot.add(model);
+          markSceneDirty();
         }).catch(err => {
           console.warn('[GLB modelUrl fallback to built-in preset]', glbUrl, err);
         });
       }
 
       // Status Floating Beacon Sphere above every puzzle object
-      const beacon = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.13, 0),
-        new THREE.MeshStandardMaterial({
-          color: obj.solved ? 0x10b981 : 0xf59e0b,
-          emissive: obj.solved ? 0x10b981 : 0xf59e0b,
-          emissiveIntensity: 0.8
-        })
-      );
+      const beacon = new THREE.Mesh(pg.beacon, obj.solved ? pm.beaconSolved : pm.beaconUnsolved);
       beacon.position.y = 2.25;
       if (obj.isBossDoor && obj.type === 'door') {
         beacon.position.z = 0.62;
@@ -4027,9 +4609,8 @@ import { CraftBuilder } from './builder.js';
 
       // Generous Invisible Interaction Proxy Collider (Ensures 100% click hit in both Orbit & FPS mode)
       const proxyH = Math.max(1.8, (obj.type === 'ladder' ? 2.6 : 1.7));
-      const proxyGeo = new THREE.BoxGeometry(w + 0.40, proxyH, d + 0.40);
-      const proxyMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.0, depthWrite: false });
-      const proxyMesh = new THREE.Mesh(proxyGeo, proxyMat);
+      const proxyGeo = getBoxGeo(w + 0.40, proxyH, d + 0.40);
+      const proxyMesh = new THREE.Mesh(proxyGeo, pm.proxyMat);
       proxyMesh.position.y = proxyH / 2;
       proxyMesh.userData = { objId: obj.id };
       group.add(proxyMesh);
@@ -4040,11 +4621,7 @@ import { CraftBuilder } from './builder.js';
       group.userData = { objId: obj.id };
       // Grounded Soft Contact AO Shadow under grounded furniture (No cross-floor shadow bleeding!)
       if (obj.type !== 'door' && !name.includes("초상화") && !name.includes("X-Ray") && !name.includes("해치")) {
-        const aoTex = getPropDetailTexture('contactAo');
-        const aoPlane = new THREE.Mesh(
-          new THREE.PlaneGeometry(w + 0.35, d + 0.35),
-          new THREE.MeshBasicMaterial({ map: aoTex, transparent: true, opacity: 0.55, depthWrite: false })
-        );
+        const aoPlane = new THREE.Mesh(getPlaneGeo(w + 0.35, d + 0.35), pm.aoMat);
         aoPlane.rotation.x = -Math.PI / 2;
         aoPlane.position.y = 0.006;
         group.add(aoPlane);
@@ -4084,6 +4661,7 @@ import { CraftBuilder } from './builder.js';
           }
         }
       }
+      markSceneDirty();
     }
 
     // -------------------------------------------------------------
@@ -4140,6 +4718,7 @@ import { CraftBuilder } from './builder.js';
       const firstUnsolved = roomObjs.find(o => !o.solved) || roomObjs[0];
       if (firstUnsolved) selectObject(firstUnsolved.id);
       updateCodeView();
+      updateRoomVisibilityCulling();
       playSfx('unlock');
     }
 
@@ -4185,6 +4764,8 @@ import { CraftBuilder } from './builder.js';
           fpsState.pos.copy(getSafeFpsSpawnPos(currentRoomIdx));
         }
       }
+      updateRoomVisibilityCulling();
+      markSceneDirty();
     }
 
     function glideCameraTransition(prevRc, targetRc) {
@@ -4345,6 +4926,18 @@ import { CraftBuilder } from './builder.js';
             const doorZEnd = doorZStart + 1.2;
             const inDoorZ = (wz >= doorZStart - 0.15 && wz <= doorZEnd + 0.15);
 
+            const objOps = collectWallOpenings(rc);
+            let doorPass = false;
+            for (const op of objOps.W.concat(objOps.E)) {
+              if (!op.obj || (op.obj.isBossDoor && !op.obj.solved)) continue;
+              const wallX = rc.worldX + (objOps.W.includes(op) ? 0 : rc.w);
+              if (Math.abs(wx - wallX) <= 0.6 && Math.abs(wz - (rc.worldZ + op.c)) <= 0.75) { doorPass = true; break; }
+            }
+            if (doorPass) {
+              inWalkableZone = true;
+              break;
+            }
+
             if (inDoorZ) {
               if (rc.hasWestDoor && wx >= rc.worldX - 0.6 && wx <= rc.worldX + 0.6) {
                 inWalkableZone = true;
@@ -4359,8 +4952,8 @@ import { CraftBuilder } from './builder.js';
                 const bossDoor = studioObjects.find(o => o.roomIdx === rc.idx && o.isBossDoor);
                 if (!bossDoor || bossDoor.solved) {
                   inWalkableZone = true;
-                  // If final exit door in room 5 is cleared and player walks through
-                  if (rc.idx === 5 && wx >= rc.worldX + rc.w - 0.1) {
+                  // If final exit door in last room is cleared and player walks through
+                  if (rc.idx === ROOM_CONFIGS.length - 1 && wx >= rc.worldX + rc.w - 0.1) {
                     showVictoryModal();
                   }
                   break;
@@ -4370,6 +4963,8 @@ import { CraftBuilder } from './builder.js';
           }
         }
 
+        // 2~5. Asylum 404-specific corridors, stairwell & vertical teleports
+        if (activeThemeId === 'asylum-404') {
         // 2. 1F Unified Corridor
         const c1f = FLOOR_CONFIGS["1f"]?.corridor;
         if (!inWalkableZone && c1f && Math.abs(wy - 1.5) < 1.0) {
@@ -4441,6 +5036,7 @@ import { CraftBuilder } from './builder.js';
             onSeamlessRoomChange(5);
             return false;
           }
+        }
         }
 
         if (!inWalkableZone) return true;
@@ -4516,6 +5112,12 @@ import { CraftBuilder } from './builder.js';
     }
 
     let nearestInteractable = null;
+    const _fpsRaycaster = new THREE.Raycaster();
+    const _fpsCenterNdc = new THREE.Vector2(0, 0);
+    const _fpsObjWorldPos = new THREE.Vector3();
+    const _fpsCamForward = new THREE.Vector3();
+    const _fpsToObj = new THREE.Vector3();
+
     function checkFpsProximity() {
       const promptEl = document.getElementById('fps-prompt');
       const promptTxt = document.getElementById('fps-prompt-txt');
@@ -4527,12 +5129,11 @@ import { CraftBuilder } from './builder.js';
       }
 
       // 1인칭 화면 정중앙(크로스헤어) 기준 정밀 레이캐스팅 (Aim-Line Grounding)
-      const centerRaycaster = new THREE.Raycaster();
-      centerRaycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-      centerRaycaster.far = 3.5; // 최대 인터랙션 사거리 3.5m
+      _fpsRaycaster.setFromCamera(_fpsCenterNdc, camera);
+      _fpsRaycaster.far = 3.5; // 최대 인터랙션 사거리 3.5m
 
       const hitables = Array.from(meshMap.values());
-      const hits = centerRaycaster.intersectObjects(hitables, true);
+      const hits = _fpsRaycaster.intersectObjects(hitables, true);
 
       if (hits.length > 0) {
         let matchedObjId = null;
@@ -4552,10 +5153,12 @@ import { CraftBuilder } from './builder.js';
           const obj = studioObjects.find(o => o.id === matchedObjId);
           if (obj) {
             const rc = ROOM_CONFIGS[obj.roomIdx];
-            const objWorldPos = rc
-              ? new THREE.Vector3(rc.worldX + obj.x, rc.floorHeight + (obj.y !== undefined ? obj.y : 1.2), rc.worldZ + obj.z)
-              : new THREE.Vector3(obj.x, 1.2, obj.z);
-            const dist = camera.position.distanceTo(objWorldPos);
+            if (rc) {
+              _fpsObjWorldPos.set(rc.worldX + obj.x, rc.floorHeight + (obj.y !== undefined ? obj.y : 1.2), rc.worldZ + obj.z);
+            } else {
+              _fpsObjWorldPos.set(obj.x, 1.2, obj.z);
+            }
+            const dist = camera.position.distanceTo(_fpsObjWorldPos);
             if (dist <= 3.8) {
               nearestInteractable = obj;
             }
@@ -4566,22 +5169,21 @@ import { CraftBuilder } from './builder.js';
       // Fallback: If direct crosshair ray did not hit mesh directly (e.g. small prop / slight aim offset),
       // check if player is close to and facing an interactable object within 2.6m
       if (!nearestInteractable) {
-        const camForward = new THREE.Vector3();
-        camera.getWorldDirection(camForward);
+        camera.getWorldDirection(_fpsCamForward);
         let closestDist = 2.6;
         for (const obj of studioObjects) {
           const rc = ROOM_CONFIGS[obj.roomIdx];
           if (!rc) continue;
-          const objWorldPos = new THREE.Vector3(
+          _fpsObjWorldPos.set(
             rc.worldX + obj.x,
             rc.floorHeight + (obj.y !== undefined ? obj.y : 1.2),
             rc.worldZ + obj.z
           );
-          const toObj = objWorldPos.clone().sub(camera.position);
-          const dist = toObj.length();
+          _fpsToObj.copy(_fpsObjWorldPos).sub(camera.position);
+          const dist = _fpsToObj.length();
           if (dist < closestDist) {
-            toObj.normalize();
-            const dot = camForward.dot(toObj);
+            _fpsToObj.normalize();
+            const dot = _fpsCamForward.dot(_fpsToObj);
             if (dot > 0.72) {
               closestDist = dist;
               nearestInteractable = obj;
@@ -4611,6 +5213,63 @@ import { CraftBuilder } from './builder.js';
       }
     }
 
+    function applyGenreAtmosphere(mode = cameraMode) {
+      const isFps = (mode === 'fps');
+      const genre = activeThemeGenre || 'Horror';
+
+      if (genre === 'Adventure') {
+        // Bright game-show studio (Quiz Room): high ambient/hemi, no fog, flashlight OFF
+        if (ambientLight) ambientLight.intensity = 0.55;
+        if (hemiLight) hemiLight.intensity = 0.65;
+        if (scene) {
+          scene.environmentIntensity = 0.45;
+          scene.fog = null;
+          scene.background = new THREE.Color(0x162033);
+        }
+        setFpsLightingMultiplier(1.0);
+        if (flashlight) {
+          flashlight.intensity = 0;
+          flashlight.castShadow = false;
+        }
+      } else if (genre === 'Mystery') {
+        // Noir detective mood (Crime Scene): subtle noir haze + inspection torch
+        if (ambientLight) ambientLight.intensity = isFps ? 0.14 : 0.22;
+        if (hemiLight) hemiLight.intensity = isFps ? 0.16 : 0.24;
+        if (scene) {
+          scene.environmentIntensity = isFps ? 0.18 : 0.24;
+          scene.fog = isFps ? new THREE.FogExp2(0x090b10, 0.045) : null;
+          scene.background = new THREE.Color(0x090b10);
+        }
+        setFpsLightingMultiplier(isFps ? 0.85 : 1.0);
+        if (flashlight) {
+          flashlight.intensity = 38;
+          flashlight.distance = 22;
+          flashlight.angle = Math.PI / 5.4;
+          flashlight.penumbra = 0.48;
+          flashlight.castShadow = isFps;
+        }
+      } else {
+        // Horror (Asylum 404): deep dark FPS + heavy FogExp2 + high-power 42 flashlight
+        if (ambientLight) ambientLight.intensity = isFps ? 0.04 : 0.14;
+        if (hemiLight) hemiLight.intensity = isFps ? 0.04 : 0.14;
+        if (scene) {
+          scene.environmentIntensity = isFps ? 0.06 : 0.18;
+          scene.fog = isFps ? new THREE.FogExp2(0x030508, 0.13) : null;
+          scene.background = new THREE.Color(isFps ? 0x030508 : 0x090d16);
+        }
+        setFpsLightingMultiplier(isFps ? 0.62 : 1.0);
+        if (flashlight) {
+          flashlight.intensity = 42;
+          flashlight.distance = 24;
+          flashlight.angle = Math.PI / 5.8;
+          flashlight.penumbra = 0.42;
+          flashlight.castShadow = isFps;
+        }
+      }
+      syncShadowMapAutoUpdate();
+      markSceneDirty();
+    }
+
     function setCameraMode(mode) {
       cameraMode = mode;
       const btnOrbit = document.getElementById('cam-mode-orbit');
@@ -4632,9 +5291,13 @@ import { CraftBuilder } from './builder.js';
         crosshair.classList.add('hidden');
         helpOrbit.classList.remove('hidden');
         helpFps.classList.add('hidden');
-        camera.position.set(roomW / 2, 7.8, roomH + 5.5);
+        const rc = ROOM_CONFIGS[currentRoomIdx] || ROOM_CONFIGS[0];
+        const wx = rc ? (rc.worldX || 0) : 0;
+        const wz = rc ? (rc.worldZ || 0) : 0;
+        const fh = rc ? (rc.floorHeight || 0) : 0;
+        camera.position.set(wx + roomW / 2, fh + 7.8, wz + roomH + 5.5);
         camera.rotation.set(0, 0, 0);
-        orbitControls.target.set(roomW / 2, 1.2, roomH / 2);
+        orbitControls.target.set(wx + roomW / 2, fh + 1.2, wz + roomH / 2);
         renderer.domElement.style.cursor = 'default';
 
         // Reset walking bobbing & tilt
@@ -4643,38 +5306,14 @@ import { CraftBuilder } from './builder.js';
         currentSwayX = 0;
         currentTiltZ = 0;
 
-        // Restore edit mode lighting brightness & clear horror fog
-        if (ambientLight) ambientLight.intensity = 0.14;
-        if (hemiLight) hemiLight.intensity = 0.14;
-        if (scene) {
-          scene.environmentIntensity = 0.18;
-          scene.fog = null;
-        }
-        setFpsLightingMultiplier(1.0);
-        if (flashlight) flashlight.castShadow = false;
+        applyGenreAtmosphere('orbit');
       } else {
         orbitControls.enabled = false;
         camera.fov = 75; camera.updateProjectionMatrix();
         btnFps.className = "px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-800 text-zinc-100";
         btnOrbit.className = "px-2 py-0.5 rounded text-[11px] font-medium text-zinc-400 hover:text-zinc-200";
 
-        // Deeper Horror Darkness Outside Flashlight Cone in FPS mode
-        if (ambientLight) ambientLight.intensity = 0.04;
-        if (hemiLight) hemiLight.intensity = 0.04;
-        if (scene) {
-          scene.environmentIntensity = 0.06;
-          scene.fog = new THREE.FogExp2(0x030508, 0.13);
-        }
-        setFpsLightingMultiplier(0.62);
-
-        // Keep flashlight bright & focused with dramatic contrast and real-time shadows
-        if (flashlight) {
-          flashlight.intensity = 3.8;
-          flashlight.distance = 14;
-          flashlight.angle = Math.PI / 5.2;
-          flashlight.penumbra = 0.55;
-          flashlight.castShadow = true;
-        }
+        applyGenreAtmosphere('fps');
 
         // Immediately engage pointer lock on user click gesture (Zero extra click required)
         try {
@@ -4720,7 +5359,9 @@ import { CraftBuilder } from './builder.js';
       const lockModal = document.getElementById('lock-modal');
       const vicModal = document.getElementById('victory-modal');
       const impModal = document.getElementById('import-modal');
-      return (lockModal && !lockModal.classList.contains('hidden')) ||
+      const catModal = document.getElementById('craft-catalog-modal');
+      return (catModal && !catModal.classList.contains('hidden')) ||
+             (lockModal && !lockModal.classList.contains('hidden')) ||
              (vicModal && !vicModal.classList.contains('hidden')) ||
              (impModal && !impModal.classList.contains('hidden'));
     }
@@ -4733,6 +5374,13 @@ import { CraftBuilder } from './builder.js';
     let modalHintStage = 0;
 
     function getStage1Hint(obj) {
+      if (obj && obj.customHint && obj.customHint.trim()) return obj.customHint.trim();
+      if (activeThemeId !== 'asylum-404') {
+        if (obj && obj.visualSpec && obj.visualSpec.highlight) {
+          return `핵심 포인트: ${obj.visualSpec.highlight}`;
+        }
+        return "단서 문구와 연결된 물리 소품의 숫자·방향·기호를 순서대로 조합해 보세요.";
+      }
       const q = obj.qNum;
       const customHints = {
         1: "월요일(14일)에서 목요일(17일)까지 3일이 지났습니다. 목요일에서 일요일까지 며칠이 더 지나야 할까요? 북쪽 벽시계의 오후 시각과 비교해 보세요.",
@@ -4836,7 +5484,10 @@ import { CraftBuilder } from './builder.js';
       playSfx('click');
       const obj = studioObjects.find(o => o.id === activeModalObjId);
       if (obj) renderRightDeviceControls(obj);
-      if (deviceState.q06Hour === 3 && deviceState.q06Min === 0) {
+      const tgt = (obj && obj.mechanism && obj.mechanism.targetState) || { hour: 3, minute: 0 };
+      const tgtH = ((Number(tgt.hour || 3) - 1) % 12) + 1;
+      const tgtM = Number(tgt.minute || 0);
+      if (deviceState.q06Hour === tgtH && deviceState.q06Min === tgtM) {
         completePhysicalDevice(obj.id);
       }
     }
@@ -4895,6 +5546,171 @@ import { CraftBuilder } from './builder.js';
     };
     const DEFAULT_ASYLUM_SNAPSHOT = JSON.parse(JSON.stringify(studioObjects));
 
+    /**
+     * 기물 성격·위치에 맞는 다양한 물리 조명(desk-lamp · wall-sconce · pin-spot · emergency · ceiling)을
+     * 자동 배치하고, 시작 문제(Q01)만 초기 점등 + 순차 해금 릴레이(onUnlockEffects)를 연결한다.
+     * - jamsil-quiz-room(밝은 100문제 카페)에는 불필요한 개별 핀스포트를 추가하지 않는다.
+     */
+    function ensureContextualRoomLights() {
+      if (activeThemeId === 'jamsil-quiz-room' || activeThemeGenre === 'Adventure') return;
+      if (!Array.isArray(ROOM_CONFIGS) || ROOM_CONFIGS.length === 0 || !Array.isArray(studioObjects) || studioObjects.length === 0) return;
+
+      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      const nearestWall = (x, z, rw, rh) => {
+        const cands = [
+          { side: 'N', dist: z },
+          { side: 'S', dist: rh - z },
+          { side: 'W', dist: x },
+          { side: 'E', dist: rw - x }
+        ];
+        cands.sort((a, b) => a.dist - b.dist);
+        return cands[0];
+      };
+
+      const baseAmbientByRoom = new Map();
+      ROOM_CONFIGS.forEach(rc => {
+        if (!Array.isArray(rc.lights)) rc.lights = [];
+        const base = rc.lights.find(lt => getLightTargetPropIds(lt).length === 0);
+        if (base) baseAmbientByRoom.set(rc.idx, base.id);
+      });
+
+      const ordered = studioObjects.slice().sort((a, b) => (a.qNum || 0) - (b.qNum || 0));
+      const lightByPropId = new Map();
+
+      ordered.forEach((obj, idx) => {
+        const rc = ROOM_CONFIGS[obj.roomIdx];
+        if (!rc) return;
+        const rw = rc.w || 6.0;
+        const rh = rc.h || 5.0;
+        const wh = rc.wallHeight || 2.6;
+        const nm = obj.name || '';
+        const nw = nearestWall(obj.x, obj.z, rw, rh);
+
+        let fixtureType = 'pin-spot';
+        if (obj.type === 'door' || obj.isBossDoor) {
+          fixtureType = 'emergency';
+        } else if (obj.type === 'desk' && !/침대|부검/.test(nm)) {
+          fixtureType = 'desk-lamp';
+        } else if (
+          obj.type === 'clue' ||
+          obj.type === 'artifact' ||
+          obj.wallSnapped ||
+          /시계|초상화|벽|X-Ray|라이트박스|게시판|월패드|전화|배전반/.test(nm)
+        ) {
+          fixtureType = 'wall-sconce';
+        }
+
+        let pos;
+        let targetPos = null;
+        let wallSide = null;
+        let color = '#ffe4b5';
+        let intensity = 2.0;
+        let distance = 5.5;
+        let flicker = false;
+
+        if (fixtureType === 'desk-lamp') {
+          const rot = obj.rotY || 0;
+          const localDx = -Math.min(0.36, (obj.w || 1.0) * 0.28);
+          const localDz = -Math.min(0.18, (obj.d || 0.7) * 0.22);
+          const lx = clamp(obj.x + localDx * Math.cos(rot) - localDz * Math.sin(rot), 0.28, rw - 0.28);
+          const lz = clamp(obj.z + localDx * Math.sin(rot) + localDz * Math.cos(rot), 0.28, rh - 0.28);
+          pos = [Number(lx.toFixed(2)), 0.78, Number(lz.toFixed(2))];
+          color = '#ffdfa0';
+          intensity = 2.1;
+          distance = 4.2;
+        } else if (fixtureType === 'wall-sconce') {
+          wallSide = nw.side;
+          const sy = Number(Math.min(wh - 0.45, 2.02).toFixed(2));
+          if (wallSide === 'N') pos = [Number(clamp(obj.x, 0.35, rw - 0.35).toFixed(2)), sy, 0.04];
+          else if (wallSide === 'S') pos = [Number(clamp(obj.x, 0.35, rw - 0.35).toFixed(2)), sy, Number((rh - 0.04).toFixed(2))];
+          else if (wallSide === 'W') pos = [0.04, sy, Number(clamp(obj.z, 0.35, rh - 0.35).toFixed(2))];
+          else pos = [Number((rw - 0.04).toFixed(2)), sy, Number(clamp(obj.z, 0.35, rh - 0.35).toFixed(2))];
+          color = '#ffe6bc';
+          intensity = 1.9;
+          distance = 5.2;
+        } else if (fixtureType === 'emergency') {
+          const ey = Number(Math.min(wh - 0.22, 2.34).toFixed(2));
+          if (nw.dist <= 0.9) {
+            wallSide = nw.side;
+            if (wallSide === 'N') pos = [Number(clamp(obj.x, 0.35, rw - 0.35).toFixed(2)), ey, 0.04];
+            else if (wallSide === 'S') pos = [Number(clamp(obj.x, 0.35, rw - 0.35).toFixed(2)), ey, Number((rh - 0.04).toFixed(2))];
+            else if (wallSide === 'W') pos = [0.04, ey, Number(clamp(obj.z, 0.35, rh - 0.35).toFixed(2))];
+            else pos = [Number((rw - 0.04).toFixed(2)), ey, Number(clamp(obj.z, 0.35, rh - 0.35).toFixed(2))];
+          } else {
+            pos = [Number(clamp(obj.x, 0.4, rw - 0.4).toFixed(2)), Number((wh - 0.16).toFixed(2)), Number(clamp(obj.z, 0.4, rh - 0.4).toFixed(2))];
+          }
+          color = '#ff4d2e';
+          intensity = 1.85;
+          distance = 5.2;
+          flicker = true;
+        } else {
+          // pin-spot: ceiling spotlight offset slightly toward room center, aimed obliquely at prop
+          const vx = (rw / 2) - obj.x;
+          const vz = (rh / 2) - obj.z;
+          const vlen = Math.hypot(vx, vz) || 1;
+          const off = Math.min(0.50, vlen * 0.35);
+          const px = clamp(obj.x + (vx / vlen) * off, 0.35, rw - 0.35);
+          const pz = clamp(obj.z + (vz / vlen) * off, 0.35, rh - 0.35);
+          pos = [Number(px.toFixed(2)), Number((wh - 0.16).toFixed(2)), Number(pz.toFixed(2))];
+          targetPos = [Number(obj.x.toFixed(2)), 0.9, Number(obj.z.toFixed(2))];
+          color = activeThemeGenre === 'Mystery' ? '#dceeff' : '#ffe8c2';
+          intensity = 2.15;
+          distance = 6.2;
+        }
+
+        let existing = rc.lights.find(lt => getLightTargetPropIds(lt).includes(obj.id));
+        if (existing) {
+          existing.kind = fixtureType;
+          existing.fixtureType = fixtureType;
+          existing.pos = pos;
+          if (targetPos) existing.targetPos = targetPos; else delete existing.targetPos;
+          if (wallSide) existing.wallSide = wallSide; else delete existing.wallSide;
+          existing.initiallyOn = (idx === 0);
+          lightByPropId.set(obj.id, existing.id);
+        } else {
+          const lightId = `light-q${String(obj.qNum || idx + 1).padStart(2, '0')}-${fixtureType}`;
+          const entry = {
+            id: lightId,
+            kind: fixtureType,
+            fixtureType,
+            pos,
+            color,
+            intensity,
+            distance,
+            flicker,
+            initiallyOn: (idx === 0),
+            targetPropId: obj.id
+          };
+          if (targetPos) entry.targetPos = targetPos;
+          if (wallSide) entry.wallSide = wallSide;
+          rc.lights.push(entry);
+          lightByPropId.set(obj.id, lightId);
+        }
+      });
+
+      // Wire sequential relay onUnlockEffects (Q(i) unlock -> Q(i+1) light ON; room transition -> next room ambient ON & prev ambient OFF)
+      for (let i = 0; i < ordered.length - 1; i++) {
+        const cur = ordered[i];
+        const nxt = ordered[i + 1];
+        const nextLightId = lightByPropId.get(nxt.id);
+        if (!nextLightId) continue;
+        if (!Array.isArray(cur.onUnlockEffects)) cur.onUnlockEffects = [];
+        if (!cur.onUnlockEffects.some(ef => ef && ef.kind === 'lightOn' && ef.targetId === nextLightId)) {
+          cur.onUnlockEffects.push({ kind: 'lightOn', targetId: nextLightId, sfx: 'spark' });
+        }
+        if (nxt.roomIdx !== cur.roomIdx) {
+          const nextAmb = baseAmbientByRoom.get(nxt.roomIdx);
+          if (nextAmb && !cur.onUnlockEffects.some(ef => ef && ef.kind === 'lightOn' && ef.targetId === nextAmb)) {
+            cur.onUnlockEffects.push({ kind: 'lightOn', targetId: nextAmb, sfx: 'spark' });
+          }
+          const prevAmb = baseAmbientByRoom.get(cur.roomIdx);
+          if (prevAmb && prevAmb !== nextAmb && !cur.onUnlockEffects.some(ef => ef && ef.kind === 'lightOff' && ef.targetId === prevAmb)) {
+            cur.onUnlockEffects.push({ kind: 'lightOff', targetId: prevAmb });
+          }
+        }
+      }
+    }
+
     function initProgressiveNarrativeDefaults() {
       // 방 내 순차 스토리 체인(requiresSolvedId), 기본 storyBeat 및 visualSpec 자동 결속
       for (let r = 0; r < ROOM_CONFIGS.length; r++) {
@@ -4921,6 +5737,7 @@ import { CraftBuilder } from './builder.js';
           }
         }
       }
+      ensureContextualRoomLights();
     }
     initProgressiveNarrativeDefaults();
 
@@ -4976,6 +5793,9 @@ import { CraftBuilder } from './builder.js';
         if (btnToggleR) btnToggleR.classList.add('hidden');
         if (craftHotbar) craftHotbar.classList.add('hidden');
         if (playtestHud) playtestHud.classList.remove('hidden');
+        setModalAuthorEditOpen(false);
+        const modalEditBtn = document.getElementById('btn-modal-author-edit');
+        if (modalEditBtn) modalEditBtn.classList.add('hidden');
 
         setViewLayout('3d-only');
         setCameraMode('fps');
@@ -5013,6 +5833,7 @@ import { CraftBuilder } from './builder.js';
       }
       renderInventoryHud();
       rebuild3DRoom();
+      resetAllLightsForMode(studioMode === 'playtest');
       rebuild3DObjectsForCurrentRoom();
       render2DCadObjects();
       renderRoomSidebarAndProgress();
@@ -5063,6 +5884,12 @@ import { CraftBuilder } from './builder.js';
       if (!id) return;
       const idx = studioObjects.findIndex(o => o.id === id);
       if (idx < 0) return;
+      const delObj = studioObjects[idx];
+      const delRc = ROOM_CONFIGS[delObj.roomIdx];
+      const delInfo = delRc && getWallDoorInfo(delObj, delRc);
+      if (delInfo) releaseNaturalOpening(delRc, delInfo); // deleted door: its wall opening seals shut
+      detachDependentProps(delObj);
+      carriedIds.delete(id);
       const removed = studioObjects.splice(idx, 1)[0];
       // 삭제된 오브젝트를 선행 조건으로 참조하던 항목 정리
       studioObjects.forEach(o => { if (o.requiresSolvedId === removed.id) o.requiresSolvedId = null; });
@@ -5099,6 +5926,7 @@ import { CraftBuilder } from './builder.js';
       studioObjects.push(starter);
       renderInventoryHud();
       rebuild3DRoom();
+      resetAllLightsForMode(studioMode === 'playtest');
       rebuild3DObjectsForCurrentRoom();
       render2DCadObjects();
       renderRoomSidebarAndProgress();
@@ -5109,8 +5937,18 @@ import { CraftBuilder } from './builder.js';
 
     function restoreAsylumPreset() {
       try { localStorage.removeItem(STUDIO_AUTOSAVE_KEY); } catch (_) {}
+      activeThemeId = 'asylum-404';
+      activeThemeTitle = '폐쇄병동 404호: 심연의 해부학 (6방 30문제 풀 스케일)';
+      activeThemeGenre = 'Horror';
+      timeLimitSeconds = 60 * 60;
+      timerElapsedSeconds = 0;
+      failureCount = 0;
       ROOM_CONFIGS.length = 0;
       JSON.parse(JSON.stringify(DEFAULT_ROOM_CONFIGS)).forEach(r => ROOM_CONFIGS.push(r));
+      Object.keys(FLOOR_CONFIGS).forEach(k => delete FLOOR_CONFIGS[k]);
+      Object.assign(FLOOR_CONFIGS, JSON.parse(JSON.stringify(DEFAULT_FLOOR_CONFIGS)));
+      ROOM_PARTITIONS.length = 0;
+      JSON.parse(JSON.stringify(DEFAULT_ROOM_PARTITIONS)).forEach(p => ROOM_PARTITIONS.push(p));
       studioPassages.length = 0;
       JSON.parse(JSON.stringify(DEFAULT_PASSAGES)).forEach(p => studioPassages.push(p));
       Object.keys(ITEM_CATALOG).forEach(k => delete ITEM_CATALOG[k]);
@@ -5118,16 +5956,19 @@ import { CraftBuilder } from './builder.js';
       ITEM_INTERACTIONS.length = 0;
       JSON.parse(JSON.stringify(DEFAULT_ITEM_INTERACTIONS)).forEach(ix => ITEM_INTERACTIONS.push(ix));
       directorPersona = { ...DEFAULT_DIRECTOR_PERSONA };
+      PROP_ONTOLOGY.length = 0;
+      JSON.parse(JSON.stringify(DEFAULT_PROP_ONTOLOGY)).forEach(p => PROP_ONTOLOGY.push(p));
       studioObjects.length = 0;
       JSON.parse(JSON.stringify(DEFAULT_ASYLUM_SNAPSHOT)).forEach(o => studioObjects.push(o));
       initProgressiveNarrativeDefaults();
       playerInventory.clear();
       currentRoomIdx = 0;
+      syncThemeHeaderUi();
+      applyGenreAtmosphere(cameraMode);
       renderInventoryHud();
       rebuild3DRoom();
-      rebuild3DObjectsForCurrentRoom();
-      render2DCadObjects();
-      renderRoomSidebarAndProgress();
+      resetAllLightsForMode(studioMode === 'playtest');
+      switchRoom(0, true);
       syncSpaceEditorUI();
       renderAuthorItemsAndDirectorUI();
       if (studioObjects[0]) selectObject(studioObjects[0].id);
@@ -5487,18 +6328,22 @@ import { CraftBuilder } from './builder.js';
           </div>
         `;
       } else if (mechKind === 'clock-hands') {
-        const h = obj.solved ? 3 : deviceState.q06Hour;
-        const m = obj.solved ? 0 : deviceState.q06Min;
-        const isAligned = (h === 3 && m === 0);
+        const tgt = (obj.mechanism && obj.mechanism.targetState) || { hour: 3, minute: 0 };
+        const tgtH = ((Number(tgt.hour || 3) - 1) % 12) + 1;
+        const tgtM = Number(tgt.minute || 0);
+        const h = obj.solved ? tgtH : deviceState.q06Hour;
+        const m = obj.solved ? tgtM : deviceState.q06Min;
+        const isAligned = (h === tgtH && m === tgtM);
+        const minStep = (tgtM % 15 === 0) ? 15 : 5;
         devBox.innerHTML = `
           <div class="p-3.5 bg-[#09090b] rounded-lg border border-white/10 text-center">
-            <div class="text-[11px] font-mono text-zinc-400 mb-2">물리 장치 · 괘종시계 시침/분침 기어 조작</div>
+            <div class="text-[11px] font-mono text-zinc-400 mb-2">물리 장치 · 시계 시침/분침 기어 조작</div>
             <div class="text-2xl font-mono font-semibold ${isAligned ? 'text-emerald-400' : 'text-zinc-100'} mb-3">
               ${String(h).padStart(2,'0')} : ${String(m).padStart(2,'0')}
             </div>
             <div class="flex justify-center gap-2">
               <button onclick="adjustClockDevice(1, 0)" class="px-3.5 py-2 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-mono text-zinc-200">시침 +1h</button>
-              <button onclick="adjustClockDevice(0, 15)" class="px-3.5 py-2 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-mono text-zinc-200">분침 +15m</button>
+              <button onclick="adjustClockDevice(0, ${minStep})" class="px-3.5 py-2 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-mono text-zinc-200">분침 +${minStep}m</button>
             </div>
           </div>
         `;
@@ -5606,45 +6451,50 @@ import { CraftBuilder } from './builder.js';
       if (obj.visualSpec && obj.visualSpec.template) {
         const vs = obj.visualSpec;
         const lines = Array.isArray(vs.lines) && vs.lines.length > 0 ? vs.lines : [obj.cluePayload || ''];
-        const title = vs.title || obj.name;
+        const title = escapeXml(vs.title || obj.name);
+        const badge = escapeXml(vs.badge || '');
+        const highlight = escapeXml(vs.highlight || '');
         if (vs.template === 'document') {
           stage.innerHTML = `
             <div class="w-80 bg-[#dfd5bc] text-stone-900 rounded-sm p-5 border border-stone-600/70 -rotate-1 font-serif shadow-2xl space-y-2.5">
-              <div class="flex justify-between items-center border-b border-stone-700/40 pb-1.5">
+              <div class="flex justify-between items-center border-b border-stone-700/40 pb-1.5 gap-2">
                 <span class="font-bold text-sm tracking-tight">${title}</span>
-                <span class="text-[10px] font-mono px-1.5 py-0.5 bg-stone-800/15 rounded">${vs.badge || 'EVIDENCE'}</span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 bg-stone-800/15 rounded shrink-0">${badge || 'EVIDENCE'}</span>
               </div>
-              <div class="text-xs leading-relaxed space-y-1.5">${lines.map(l => `<p>${l}</p>`).join('')}</div>
-              ${vs.highlight ? `<div class="mt-2 pt-2 border-t border-red-900/30 text-xs font-bold text-red-900">${vs.highlight}</div>` : ''}
+              <div class="text-xs leading-relaxed space-y-1.5">${lines.map(l => `<p>${escapeXml(l)}</p>`).join('')}</div>
+              ${highlight ? `<div class="mt-2 pt-2 border-t border-red-900/30 text-xs font-bold text-red-900">${highlight}</div>` : ''}
             </div>`;
           return;
         }
         if (vs.template === 'blueprint') {
           stage.innerHTML = `
             <div class="w-80 bg-[#0b1f3a] text-sky-100 rounded p-4 border-2 border-sky-400/40 font-mono shadow-2xl space-y-2" style="background-image: linear-gradient(rgba(56,189,248,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.08) 1px, transparent 1px); background-size: 16px 16px;">
-              <div class="flex justify-between text-[11px] text-sky-300 border-b border-sky-400/30 pb-1">
-                <span>BLUEPRINT // ${title}</span>
-                <span>${vs.badge || 'SPEC'}</span>
+              <div class="flex justify-between text-[11px] text-sky-300 border-b border-sky-400/30 pb-1 gap-2">
+                <span class="truncate">BLUEPRINT // ${title}</span>
+                <span class="shrink-0">${badge || 'SPEC'}</span>
               </div>
-              <div class="text-xs leading-relaxed text-sky-100/90 space-y-1">${lines.map(l => `<div>&gt; ${l}</div>`).join('')}</div>
+              <div class="text-xs leading-relaxed text-sky-100/90 space-y-1">${lines.map(l => `<div>&gt; ${escapeXml(l)}</div>`).join('')}</div>
+              ${highlight ? `<div class="mt-2 pt-1.5 border-t border-sky-400/30 text-[11px] font-semibold text-amber-300">${highlight}</div>` : ''}
             </div>`;
           return;
         }
         if (vs.template === 'crt') {
           stage.innerHTML = `
             <div class="w-80 bg-[#06120a] text-emerald-400 rounded-lg p-4 border-4 border-zinc-700 font-mono shadow-2xl space-y-2">
-              <div class="text-[10px] text-emerald-500/80 border-b border-emerald-500/20 pb-1 flex justify-between">
-                <span>CRT-TERMINAL :: ${title}</span><span>ONLINE</span>
+              <div class="text-[10px] text-emerald-500/80 border-b border-emerald-500/20 pb-1 flex justify-between gap-2">
+                <span class="truncate">CRT-TERMINAL :: ${title}</span><span class="shrink-0">${badge || 'ONLINE'}</span>
               </div>
-              <div class="text-xs leading-relaxed space-y-1">${lines.map(l => `<div>$ ${l}</div>`).join('')}</div>
+              <div class="text-xs leading-relaxed space-y-1">${lines.map(l => `<div>$ ${escapeXml(l)}</div>`).join('')}</div>
+              ${highlight ? `<div class="mt-2 pt-1.5 border-t border-emerald-500/25 text-[11px] font-semibold text-amber-300">[!] ${highlight}</div>` : ''}
             </div>`;
           return;
         }
         if (vs.template === 'photo') {
           stage.innerHTML = `
             <div class="w-72 bg-zinc-200 p-3 pb-5 rounded-sm shadow-2xl rotate-1 text-zinc-900">
-              <div class="h-40 bg-zinc-900 rounded-sm flex items-center justify-center p-4 text-center text-zinc-300 text-xs font-serif border border-zinc-700">
-                ${lines.join('<br/>')}
+              <div class="min-h-[160px] bg-zinc-900 rounded-sm flex flex-col items-center justify-center p-4 text-center text-zinc-300 text-xs font-serif border border-zinc-700 gap-2">
+                <div>${lines.map(l => escapeXml(l)).join('<br/>')}</div>
+                ${highlight ? `<div class="text-[11px] font-mono text-amber-300 border-t border-white/10 pt-1.5 w-full">${highlight}</div>` : ''}
               </div>
               <div class="mt-2.5 text-center font-serif text-xs font-semibold text-zinc-800">${title}</div>
             </div>`;
@@ -5982,7 +6832,7 @@ import { CraftBuilder } from './builder.js';
       activeModalObjId = obj.id;
 
       const rc = ROOM_CONFIGS[obj.roomIdx];
-      const qCode = `Q${String(obj.qNum).padStart(2, '0')} / 30`;
+      const qCode = `Q${String(obj.qNum).padStart(2, '0')} / ${studioObjects.length}`;
 
       document.getElementById('modal-q-badge').textContent = qCode;
       document.getElementById('modal-room-badge').textContent = rc.fullName;
@@ -6031,6 +6881,18 @@ import { CraftBuilder } from './builder.js';
       renderRightDeviceControls(obj);
       renderModalItemApplyBox(obj);
 
+      // Creator Mode Inline Editor Toggle Visibility (Strictly hidden in playtest)
+      setModalAuthorEditOpen(false);
+      const modalEditBtn = document.getElementById('btn-modal-author-edit');
+      if (modalEditBtn) {
+        if (studioMode === 'author') {
+          modalEditBtn.classList.remove('hidden');
+          syncModalAuthorEditor(obj);
+        } else {
+          modalEditBtn.classList.add('hidden');
+        }
+      }
+
       // Show Directional Pad if DirectionalLock
       const dirPad = document.getElementById('modal-dir-pad');
       if (obj.interfaceType === 'DirectionalLock') {
@@ -6066,12 +6928,164 @@ import { CraftBuilder } from './builder.js';
     }
 
     function closeLockModal() {
+      setModalAuthorEditOpen(false);
       document.getElementById('lock-modal').classList.add('hidden');
       prevClientX = null;
       prevClientY = null;
       // Seamlessly refocus Three.js container so WASD and mouse look resume without extra click
       const container = document.getElementById('three-container');
       if (container) container.focus();
+    }
+
+    // -------------------------------------------------------------
+    // WYSIWYG LIVE INLINE EDITOR INSIDE #lock-modal (Author Mode Only)
+    // -------------------------------------------------------------
+    let isModalAuthorEditOpen = false;
+
+    function setModalAuthorEditOpen(open) {
+      isModalAuthorEditOpen = !!(open && studioMode === 'author');
+      const editorEl = document.getElementById('modal-author-editor');
+      const playEl = document.getElementById('modal-play-controls');
+      const btn = document.getElementById('btn-modal-author-edit');
+      if (editorEl) editorEl.classList.toggle('hidden', !isModalAuthorEditOpen);
+      if (playEl) playEl.classList.toggle('hidden', isModalAuthorEditOpen);
+      if (btn) {
+        btn.textContent = isModalAuthorEditOpen ? '편집 닫기' : '✎ 바로 편집';
+        btn.className = isModalAuthorEditOpen
+          ? 'px-2.5 py-1 rounded-md bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/60 text-sky-200 text-xs font-semibold shrink-0 transition-colors cursor-pointer'
+          : 'px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-sky-500/40 text-sky-300 text-xs font-medium shrink-0 transition-colors cursor-pointer';
+        if (studioMode !== 'author') btn.classList.add('hidden');
+      }
+    }
+
+    function syncModalAuthorEditor(obj) {
+      if (!obj) return;
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+      setVal('me-name', obj.name || '');
+      setVal('me-tpl', (obj.visualSpec && obj.visualSpec.template) ? obj.visualSpec.template : 'document');
+      setVal('me-highlight', (obj.visualSpec && obj.visualSpec.highlight) ? obj.visualSpec.highlight : '');
+      setVal('me-clue', obj.cluePayload || '');
+      const hintEl = document.getElementById('me-hint1');
+      if (hintEl) {
+        hintEl.value = obj.customHint || '';
+        hintEl.placeholder = getStage1Hint({ ...obj, customHint: '' });
+      }
+      setVal('me-rule', obj.probRule || '');
+      setVal('me-passcode', obj.passcode || '');
+      setVal('me-mechanism', obj.mechanism ? obj.mechanism.kind : '');
+      setVal('me-story', obj.storyBeat || '');
+
+      const reqSel = document.getElementById('me-requires');
+      if (reqSel) {
+        const roomPeers = studioObjects.filter(o => o.roomIdx === obj.roomIdx && o.id !== obj.id);
+        reqSel.innerHTML = '<option value="">없음 (자유 진입)</option>' + roomPeers.map(p =>
+          `<option value="${escapeXml(p.id)}" ${obj.requiresSolvedId === p.id ? 'selected' : ''}>Q${String(p.qNum).padStart(2,'0')} ${escapeXml(p.name)}</option>`
+        ).join('');
+      }
+
+      const lightSel = document.getElementById('me-unlock-light');
+      if (lightSel) {
+        const curLightEf = Array.isArray(obj.onUnlockEffects)
+          ? obj.onUnlockEffects.find(ef => ef && ef.kind === 'lightOn')
+          : null;
+        const selectedLightId = curLightEf ? curLightEf.targetId : '';
+        const lightOpts = ['<option value="">없음</option>'];
+        ROOM_CONFIGS.forEach(rc => {
+          const rLights = Array.isArray(rc.lights) ? rc.lights : [];
+          rLights.forEach(lt => {
+            const selAttr = lt.id === selectedLightId ? 'selected' : '';
+            const initTag = lt.initiallyOn === false ? ' [초기OFF]' : '';
+            lightOpts.push(`<option value="${escapeXml(lt.id)}" ${selAttr}>${escapeXml(rc.shortName)} · ${escapeXml(lt.id)}${initTag}</option>`);
+          });
+        });
+        lightSel.innerHTML = lightOpts.join('');
+      }
+    }
+
+    function toggleModalAuthorEdit() {
+      if (studioMode !== 'author') return;
+      const obj = studioObjects.find(o => o.id === activeModalObjId);
+      if (!obj) return;
+      const nextOpen = !isModalAuthorEditOpen;
+      if (nextOpen) syncModalAuthorEditor(obj);
+      setModalAuthorEditOpen(nextOpen);
+      playSfx('click');
+    }
+
+    function applyModalAuthorEdit() {
+      if (studioMode !== 'author' || !activeModalObjId) return;
+      const obj = studioObjects.find(o => o.id === activeModalObjId);
+      if (!obj) return;
+
+      const nameVal = document.getElementById('me-name')?.value ?? obj.name;
+      const tplVal = document.getElementById('me-tpl')?.value || 'document';
+      const highlightVal = document.getElementById('me-highlight')?.value ?? '';
+      const clueVal = document.getElementById('me-clue')?.value ?? '';
+      const hint1Val = document.getElementById('me-hint1')?.value ?? '';
+      const ruleVal = document.getElementById('me-rule')?.value ?? '';
+      const passVal = (document.getElementById('me-passcode')?.value ?? '').trim().toUpperCase();
+      const mechVal = document.getElementById('me-mechanism')?.value ?? '';
+      const reqVal = document.getElementById('me-requires')?.value ?? '';
+      const lightVal = document.getElementById('me-unlock-light')?.value ?? '';
+      const storyVal = (document.getElementById('me-story')?.value ?? '').trim();
+
+      obj.name = nameVal;
+      obj.cluePayload = clueVal;
+      obj.customHint = hint1Val.trim();
+      obj.probRule = ruleVal;
+      obj.passcode = passVal;
+      obj.mechanism = mechVal ? { kind: mechVal, targetState: obj.passcode } : null;
+      obj.requiresSolvedId = reqVal || null;
+      obj.storyBeat = storyVal;
+
+      if (lightVal) {
+        obj.onUnlockEffects = [{ kind: 'lightOn', targetId: lightVal, sfx: 'spark' }];
+        for (const rc of ROOM_CONFIGS) {
+          const targetLt = Array.isArray(rc.lights) ? rc.lights.find(l => l.id === lightVal) : null;
+          if (targetLt) {
+            targetLt.initiallyOn = false;
+            break;
+          }
+        }
+      } else {
+        delete obj.onUnlockEffects;
+      }
+
+      const clueLines = clueVal.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const safeLines = clueLines.length > 0 ? clueLines : ['단서 내용을 입력하세요.'];
+      obj.visualSpec = {
+        ...(obj.visualSpec || {}),
+        template: tplVal,
+        title: obj.name,
+        lines: safeLines,
+        highlight: highlightVal.trim()
+      };
+
+      // Live-update Modal DOM (Title, Left Artwork, Right Mechanism Controls, Active Hints)
+      const titleEl = document.getElementById('modal-obj-title');
+      if (titleEl) titleEl.textContent = obj.name;
+      const clueEl = document.getElementById('modal-clue-payload');
+      if (clueEl) clueEl.textContent = obj.cluePayload;
+      if (modalHintStage >= 1) {
+        const s1 = document.getElementById('modal-hint-stage1');
+        if (s1) s1.textContent = `1차 힌트: ${getStage1Hint(obj)}`;
+      }
+      if (modalHintStage >= 2) {
+        const ruleEl = document.getElementById('modal-prob-rule');
+        if (ruleEl) ruleEl.textContent = `풀이: ${obj.probRule}  |  정답 코드: ${obj.passcode}`;
+      }
+
+      const prop = PROP_ONTOLOGY.find(p => p.targetObjId === obj.id || p.targetParentId === obj.id);
+      renderPropVisualArtwork(obj, prop);
+      renderRightDeviceControls(obj);
+
+      // Live-sync Studio Inspector, 2D CAD, 3D Room, Sidebar/DAG, RaC JSON & localStorage autosave
+      updateInspectorValues(obj);
+      renderRoomSidebarAndProgress();
+      render2DCadObjects();
+      rebuild3DRoom();
+      resetAllLightsForMode(studioMode === 'playtest');
+      updateCodeView();
     }
 
     function getCharsetForActiveObj() {
@@ -6117,9 +7131,23 @@ import { CraftBuilder } from './builder.js';
       playSfx('click');
     }
 
+    function isVictoryConditionMet(obj) {
+      const total = studioObjects.length;
+      if (total === 0) return false;
+      const solvedCount = studioObjects.filter(o => o.solved).length;
+      if (solvedCount >= total) return true;
+      const isSequentialTheme = studioObjects.some(o => !!o.requiresSolvedId);
+      if (isSequentialTheme && obj) {
+        if ((obj.qNum === total && !!obj.requiresSolvedId) || obj.unlocksId === 'door-final-exit') {
+          return true;
+        }
+      }
+      return false;
+    }
+
     function configureNextButton(obj, nextBtn) {
-      if (obj.qNum === 30) {
-        nextBtn.textContent = "🏆 최종 지상 비상문 탈출 완료! (결과 보기)";
+      if (isVictoryConditionMet(obj)) {
+        nextBtn.textContent = "🏆 최종 탈출 완료! (결과 보기)";
         nextBtn.classList.remove('hidden');
       } else if (obj.isBossDoor && obj.nextRoomIdx >= 0) {
         const nextRc = ROOM_CONFIGS[obj.nextRoomIdx];
@@ -6140,7 +7168,7 @@ import { CraftBuilder } from './builder.js';
       const obj = studioObjects.find(o => o.id === activeModalObjId);
       if (!obj) return;
 
-      if (obj.qNum === 30) {
+      if (isVictoryConditionMet(obj)) {
         closeLockModal();
         showVictoryModal();
         return;
@@ -6160,6 +7188,30 @@ import { CraftBuilder } from './builder.js';
       }
     }
 
+    function executeUnlockEffects(obj) {
+      if (!obj) return [];
+      // 문제 유도 의의에 충실: 이 퍼즐을 단독으로 가리키던 유도 조명은 해금 완료와 동시에 자동 소등
+      // (같은 조명을 공유하는 미해결 문제가 남아 있으면 유지)
+      const solvedIds = new Set(studioObjects.filter(o => o.solved).map(o => o.id));
+      solvedIds.add(obj.id);
+      extinguishGuidanceLightsForProp(obj.id, solvedIds);
+      if (!Array.isArray(obj.onUnlockEffects) || obj.onUnlockEffects.length === 0) return [];
+      const ignited = [];
+      obj.onUnlockEffects.forEach(ef => {
+        if (!ef || !ef.targetId) return;
+        if (ef.kind === 'lightOn') {
+          setLightFixtureOn(ef.targetId, true, true);
+          playSfx(ef.sfx || 'spark');
+          ignited.push(ef.targetId);
+        } else if (ef.kind === 'lightOff') {
+          setLightFixtureOn(ef.targetId, false, false);
+          if (ef.sfx) playSfx(ef.sfx);
+        }
+      });
+      markSceneDirty();
+      return ignited;
+    }
+
     function checkLockSolution() {
       const obj = studioObjects.find(o => o.id === activeModalObjId);
       if (!obj) return;
@@ -6174,12 +7226,15 @@ import { CraftBuilder } from './builder.js';
         playSfx('unlock');
         const rewardItem = grantRewardItemForPuzzle(obj);
         renderModalItemApplyBox(obj);
-        if (!rewardItem && obj.storyBeat) {
+        const ignitedLights = executeUnlockEffects(obj);
+        if (ignitedLights.length > 0) {
+          showDirectorWhisper(`찌지직— 다음 단서 구역의 조명(${ignitedLights.join(', ')})이 켜졌습니다.`);
+        } else if (!rewardItem && obj.storyBeat) {
           showDirectorWhisper(obj.storyBeat);
         }
 
         fb.className = "text-xs font-bold py-2 px-3 rounded text-emerald-300 bg-emerald-950 border border-emerald-500 shadow text-center";
-        fb.textContent = `철컥! [${code}] 정답 일치! ${obj.unlocksName} 성공!${rewardItem ? ` (+ ${rewardItem.name} 획득)` : ''}`;
+        fb.textContent = `철컥! [${code}] 정답 일치! ${obj.unlocksName} 성공!${rewardItem ? ` (+ ${rewardItem.name} 획득)` : ''}${ignitedLights.length > 0 ? ` (💡 점등: ${ignitedLights.join(', ')})` : ''}`;
 
         syncObjectTo3D(obj);
         if (obj.isBossDoor) {
@@ -6192,7 +7247,7 @@ import { CraftBuilder } from './builder.js';
 
         configureNextButton(obj, nextBtn);
 
-        if (obj.qNum === 30) {
+        if (isVictoryConditionMet(obj)) {
           setTimeout(() => {
             closeLockModal();
             showVictoryModal();
@@ -6201,9 +7256,28 @@ import { CraftBuilder } from './builder.js';
       } else {
         failureCount++;
         playSfx('click');
-        document.getElementById('insp-failures').textContent = `${failureCount}회 (2회 시 암전)`;
+        const failEl = document.getElementById('insp-failures');
+        if (failEl) {
+          const suffix = activeThemeGenre === 'Adventure' ? '부저 경고' : activeThemeGenre === 'Mystery' ? '수사 경고' : '2회 시 암전';
+          failEl.textContent = `${failureCount}회 (${suffix})`;
+        }
 
-        if (failureCount % 2 === 0) {
+        if (activeThemeGenre === 'Adventure') {
+          const mcName = directorPersona.name || 'MC 제이';
+          if (failureCount % 2 === 0) {
+            showDirectorWhisper(`삐빅—! ${mcName}: "아쉽지만 땡! 단서 카드의 강조된 한 줄을 다시 확인해 보세요!"`);
+          }
+          fb.className = "text-xs font-bold py-2 px-3 rounded text-amber-200 bg-amber-950 border border-amber-500 text-center";
+          fb.textContent = `삐빅! [${code}] 오답 부저! ${mcName}의 힌트 찬스나 단서 카드를 다시 확인해 보세요.`;
+        } else if (activeThemeGenre === 'Mystery') {
+          const detName = directorPersona.name || '강력계 한 반장';
+          if (failureCount % 2 === 0) {
+            triggerDirectorBlackout();
+            showDirectorWhisper(`[${detName}] 성급한 오판은 진범에게 도주 시간만 벌어줄 뿐이야. 침착하게 물증과 타임스탬프를 교차검증하게.`);
+          }
+          fb.className = "text-xs font-bold py-2 px-3 rounded text-amber-200 bg-zinc-900 border border-amber-500/60 text-center";
+          fb.textContent = `[${code}] 단서 불일치! 증거 기록과 용의자 타임라인을 다시 대조해 보십시오.`;
+        } else if (failureCount % 2 === 0) {
           triggerDirectorBlackout();
           showDirectorWhisper("틀리셨네요... 너무 서두르시면 불이 꺼져 버린답니다. 힌트가 필요하면 인터폰을 눌러 보세요.");
           fb.className = "text-xs font-bold py-2 px-3 rounded text-rose-200 bg-rose-950 border border-rose-500 animate-pulse text-center";
@@ -6252,19 +7326,62 @@ import { CraftBuilder } from './builder.js';
     function showVictoryModal() {
       const elapsedM = Math.floor(timerElapsedSeconds / 60);
       const elapsedS = timerElapsedSeconds % 60;
+      const total = studioObjects.length;
       const solvedCnt = studioObjects.filter(o => o.solved).length;
+      const pct = total > 0 ? Math.round((solvedCnt / total) * 100) : 100;
+      const roomCnt = ROOM_CONFIGS.length;
+      const firstRoom = ROOM_CONFIGS[0]?.shortName || '시작 구역';
+      const lastRoom = ROOM_CONFIGS[roomCnt - 1]?.shortName || '최종 구역';
+
+      const subEl = document.getElementById('vic-subtitle');
+      if (subEl) subEl.textContent = `${roomCnt} Rooms · ${total} Puzzles Conquered`;
+      const titleEl = document.getElementById('vic-title');
+      if (titleEl) titleEl.textContent = `${activeThemeTitle} 완전 클리어!`;
+      const descEl = document.getElementById('vic-desc');
+      if (descEl) {
+        descEl.innerHTML = `축하합니다! <b>${escapeXml(firstRoom)}</b>부터 <b>${escapeXml(lastRoom)}</b>까지 ${roomCnt}개 공간과 <b>${total}개의 닫힌 세계 인과율(FSM)</b>을 완벽히 격파하셨습니다!`;
+      }
+      const routeEl = document.getElementById('vic-route');
+      if (routeEl) routeEl.textContent = ROOM_CONFIGS.map(r => r.shortName).join(' ➔ ');
+      const tlTitleEl = document.getElementById('vic-timeline-title');
+      if (tlTitleEl) tlTitleEl.textContent = `${roomCnt}개 공간 클리어 타임라인`;
+      const mapBtn = document.getElementById('vic-map-btn');
+      if (mapBtn) mapBtn.textContent = `${total}문제 맵 보기`;
+
+      const roomGridEl = document.getElementById('vic-room-grid');
+      if (roomGridEl) {
+        const cols = Math.max(1, Math.min(roomCnt, 6));
+        roomGridEl.className = `grid gap-1 text-center font-mono text-[9px]`;
+        roomGridEl.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+        roomGridEl.innerHTML = ROOM_CONFIGS.map((rc, i) => {
+          const rObjs = studioObjects.filter(o => o.roomIdx === rc.idx);
+          const qNums = rObjs.map(o => o.qNum).filter(n => typeof n === 'number');
+          const rangeTxt = qNums.length > 0
+            ? `Q${String(Math.min(...qNums)).padStart(2, '0')}~${String(Math.max(...qNums)).padStart(2, '0')}`
+            : '-';
+          const rSolved = rObjs.filter(o => o.solved).length;
+          return `
+            <div class="bg-slate-900 border border-emerald-500/50 p-1 rounded">
+              <div class="text-emerald-400 font-bold truncate">${escapeXml(rc.shortName)}</div>
+              <div class="text-slate-400">${rangeTxt}</div>
+              <div class="text-white font-bold mt-0.5">${i === roomCnt - 1 ? '클리어!' : `${rSolved}/${rObjs.length}`}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
       document.getElementById('vic-elapsed-time').textContent = `${elapsedM}분 ${elapsedS}초`;
-      document.getElementById('vic-solved-count').textContent = `${solvedCnt} / ${studioObjects.length} 문항 (100%)`;
+      document.getElementById('vic-solved-count').textContent = `${solvedCnt} / ${total} 문항 (${pct}%)`;
 
       const failEl = document.getElementById('vic-failures-count');
-      if (failEl) failEl.textContent = `${failureCount}회 (암전 ${Math.floor(failureCount / 2)}회 극복)`;
+      if (failEl) failEl.textContent = `${failureCount}회`;
 
       const rankEl = document.getElementById('vic-director-rank');
       if (rankEl) {
-        if (failureCount === 0) rankEl.textContent = "S+ (심연의 지배자 - 노미스 완벽 탈출)";
-        else if (failureCount <= 2) rankEl.textContent = "S (냉철한 탈출자 - 암전 극복)";
+        if (failureCount === 0) rankEl.textContent = "S+ (노미스 완벽 클리어)";
+        else if (failureCount <= 2) rankEl.textContent = "S (냉철한 해결사)";
         else if (failureCount <= 5) rankEl.textContent = "A+ (신중한 생환자)";
-        else rankEl.textContent = "B (공포를 극복한 자)";
+        else rankEl.textContent = "B (끝까지 완주한 도전자)";
       }
 
       document.getElementById('victory-modal').classList.remove('hidden');
@@ -6274,24 +7391,46 @@ import { CraftBuilder } from './builder.js';
     function copyEscapeCertificate() {
       const elapsedM = Math.floor(timerElapsedSeconds / 60);
       const elapsedS = timerElapsedSeconds % 60;
+      const total = studioObjects.length;
+      const solvedCnt = studioObjects.filter(o => o.solved).length;
+      const routeStr = ROOM_CONFIGS.map(r => r.shortName).join(' ➔ ');
       const cert = `=========================================
-🏆 [폐쇄병동 404호: 심연의 해부학] 탈출 성공 인증서
+🏆 [${activeThemeTitle}] 클리어 인증서
 =========================================
-• 탈출 일시: 2026-11-20
+• 탈출 일시: ${new Date().toISOString().slice(0, 10)}
 • 탈출 소요 시간: ${elapsedM}분 ${elapsedS}초
-• 관통 건축 동선: 1F 접수처 ➔ 1F 중앙 복도 ➔ B1 수직 갱도 ➔ 2F 영안실(Hole) ➔ 2F 비밀연구통로 ➔ B2 지하소각로
-• 해금 퍼즐 볼륨: 30 / 30 문항 (100% All Clear)
+• 관통 건축 동선: ${routeStr}
+• 해금 퍼즐 볼륨: ${solvedCnt} / ${total} 문항 (${total > 0 ? Math.round((solvedCnt / total) * 100) : 100}% All Clear)
 • 누적 오답 횟수: ${failureCount}회
-• Director 최종 평가: ${failureCount === 0 ? 'S+ (심연의 지배자)' : 'S (냉철한 탈출자)'}
+• Director 최종 평가: ${failureCount === 0 ? 'S+ (노미스 완벽 클리어)' : 'S (냉철한 해결사)'}
 • 방 탈출 엔진: Room as Code (RaC) v1.0 Universal Spine
 =========================================`;
 
       navigator.clipboard.writeText(cert).then(() => {
-        alert("📋 《폐쇄병동 404호》 탈출 성공 인증서가 클립보드에 복사되었습니다!");
+        alert(`📋 《${activeThemeTitle}》 클리어 인증서가 클립보드에 복사되었습니다!`);
       });
     }
 
     function triggerDirectorBlackout() {
+      // Genre-aware director reaction: Adventure = playful MC buzzer (no blackout), Mystery = noir detective whisper (no jumpscare)
+      if (activeThemeGenre === 'Adventure') {
+        playSfx('click');
+        const mcName = directorPersona.name || 'MC 제이';
+        showDirectorWhisper(`삐빅—! [${mcName}] "스튜디오 퀴즈 부저 발동! 암전 대신 밝은 조명 아래서 차분히 다음 시그널을 풀어보세요!"`);
+        return;
+      }
+      if (activeThemeGenre === 'Mystery') {
+        playSfx('drone');
+        const detName = directorPersona.name || '강력계 한 반장';
+        showDirectorWhisper(`[${detName}] "현장 조명이 잠시 흔들렸군... 당황하지 말고 확보한 물증부터 다시 짚어보게."`);
+        setDirectorLightMultiplier(0.45);
+        setTimeout(() => {
+          setDirectorLightMultiplier(1.0);
+          applyGenreAtmosphere(cameraMode);
+        }, 1200);
+        return;
+      }
+
       // 1. 초기 고전압 스파크 사운드 및 폴터가이스트 조명 지글거림 시작
       playSfx('spark');
 
@@ -6564,7 +7703,57 @@ import { CraftBuilder } from './builder.js';
       return (m ? m[1] : String(cond)).trim().toUpperCase();
     }
 
-    function applySpacesAndPassagesFromRac(data) {
+    function syncThemeHeaderUi() {
+      const badge = document.getElementById('header-theme-badge');
+      const sel = document.getElementById('theme-preset-selector');
+      const sub = document.getElementById('header-theme-subtitle');
+      const blackoutBtn = document.getElementById('btn-director-blackout');
+      const timerEl = document.getElementById('director-timer-hud');
+
+      if (sel && Array.from(sel.options).some(o => o.value === activeThemeId)) {
+        sel.value = activeThemeId;
+      }
+      if (sub) {
+        sub.textContent = `${ROOM_CONFIGS.length} Spaces · ${studioObjects.length} Puzzles`;
+      }
+      if (badge) {
+        badge.textContent = `Q${studioObjects.length}`;
+        if (activeThemeGenre === 'Adventure') {
+          badge.className = 'min-w-[2.25rem] px-1.5 h-6 bg-sky-950 border border-sky-400/50 rounded flex items-center justify-center font-mono font-semibold text-sky-300 text-[11px]';
+        } else if (activeThemeGenre === 'Mystery') {
+          badge.className = 'min-w-[2.25rem] px-1.5 h-6 bg-amber-950 border border-amber-500/50 rounded flex items-center justify-center font-mono font-semibold text-amber-300 text-[11px]';
+        } else {
+          badge.className = 'min-w-[2.25rem] px-1.5 h-6 bg-zinc-900 border border-rose-500/40 rounded flex items-center justify-center font-mono font-semibold text-rose-400 text-[11px]';
+        }
+      }
+      const solveAllBtn = document.getElementById('btn-solve-all-puzzles');
+      if (solveAllBtn) solveAllBtn.textContent = `${studioObjects.length}문제 전수 해금`;
+      if (blackoutBtn) {
+        if (activeThemeGenre === 'Adventure') {
+          blackoutBtn.textContent = 'MC 부저';
+          blackoutBtn.className = 'px-2 py-0.5 bg-sky-950/80 hover:bg-sky-900 border border-sky-500/30 rounded text-sky-300 font-medium transition-colors';
+        } else if (activeThemeGenre === 'Mystery') {
+          blackoutBtn.textContent = '현장 무전';
+          blackoutBtn.className = 'px-2 py-0.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-500/30 rounded text-amber-300 font-medium transition-colors';
+        } else {
+          blackoutBtn.textContent = '공포 암전';
+          blackoutBtn.className = 'px-2 py-0.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 rounded text-rose-300 font-medium transition-colors';
+        }
+      }
+      if (timerEl) {
+        const remain = Math.max(0, timeLimitSeconds - timerElapsedSeconds);
+        const m = Math.floor(remain / 60);
+        const s = remain % 60;
+        timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+      document.title = `Room as Code Studio - ${activeThemeTitle}`;
+    }
+
+    function applySpacesAndPassagesFromRac(data, options = {}) {
+      const chainRooms = !!options.chainRooms;
+      const genre = (data.theme && data.theme.genre) || activeThemeGenre || 'Horror';
+      const rawPassages = Array.isArray(data.passages) ? data.passages : [];
+
       if (Array.isArray(data.spaces) && data.spaces.length > 0) {
         ROOM_CONFIGS.length = 0;
         let nextX = 0;
@@ -6576,14 +7765,26 @@ import { CraftBuilder } from './builder.js';
           const h = Math.max(3, Math.round((Math.max(...zs) - Math.min(...zs)) * 10) / 10 || 5.0);
           const fh = typeof sp.floorHeight === 'number' ? sp.floorHeight : 0.0;
           const floorId = fh >= 2 ? '2f' : '1f';
-          const tintStr = sp.materials && sp.materials.wallTint;
-          const wallColor = (tintStr && /^#[0-9a-fA-F]{6}$/.test(tintStr)) ? parseInt(tintStr.slice(1), 16) : 0x475569;
-          const base = DEFAULT_ROOM_CONFIGS[idx];
+          const wallTint = sp.materials && sp.materials.wallTint;
+          const floorTint = sp.materials && sp.materials.floorTint;
+          const wallColor = (wallTint && /^#[0-9a-fA-F]{6}$/.test(wallTint)) ? parseInt(wallTint.slice(1), 16) : (genre === 'Adventure' ? 0xdbeafe : 0x475569);
+          const floorColor = (floorTint && /^#[0-9a-fA-F]{6}$/.test(floorTint)) ? parseInt(floorTint.slice(1), 16) : (genre === 'Adventure' ? 0xcbd5e1 : 0x1e293b);
+          const base = chainRooms ? null : DEFAULT_ROOM_CONFIGS[idx];
+          const spId = sp.id || `space-r${idx + 1}`;
+          const outPass = rawPassages.find(p => p.fromSpaceId === spId);
+          const inPass = rawPassages.find(p => p.toSpaceId === spId);
+          const hasWestDoor = rawPassages.length > 0 ? !!inPass : (idx > 0);
+          const hasEastDoor = rawPassages.length > 0 ? !!outPass : (idx < data.spaces.length - 1);
+          const defaultAtmo = genre === 'Adventure' ? '밝은 게임쇼 스튜디오 조명' : genre === 'Mystery' ? '누아르 사건 현장 감식등' : '실내 조명';
+          const nextSpace = outPass ? data.spaces.find(s => s.id === outPass.toSpaceId) : null;
+          const passageInfo = outPass
+            ? `${outPass.directionality || 'TwoWay'} ➔ ${nextSpace ? nextSpace.name : '최종 탈출구'}`
+            : (base ? base.passageInfo : 'RaC 통로 연결');
           ROOM_CONFIGS.push({
             idx,
-            id: sp.id || `space-r${idx + 1}`,
+            id: spId,
             floorId,
-            shortName: (sp.name || `제${idx + 1}방`).slice(0, 18),
+            shortName: (sp.name || `제${idx + 1}방`).slice(0, 22),
             fullName: sp.name || `제${idx + 1}방`,
             layerLabel: fh >= 2 ? '2F 상층 (+2.6m)' : '1F 지상',
             floorHeight: fh,
@@ -6591,21 +7792,23 @@ import { CraftBuilder } from './builder.js';
             w, h,
             worldX: base ? base.worldX : nextX,
             worldZ: base ? base.worldZ : 0.0,
-            hasWestDoor: idx > 0,
-            hasEastDoor: idx < data.spaces.length - 1,
+            hasWestDoor,
+            hasEastDoor,
             materials: {
               wall: (sp.materials && sp.materials.wall) || 'plaster',
               floor: (sp.materials && sp.materials.floor) || 'tile'
             },
-            lights: Array.isArray(sp.lights) ? sp.lights : (base ? base.lights : []),
-            passageInfo: base ? base.passageInfo : 'RaC 통로 연결',
-            floorColor: base ? base.floorColor : 0x1e293b,
+            lights: Array.isArray(sp.lights) ? JSON.parse(JSON.stringify(sp.lights)) : (base ? JSON.parse(JSON.stringify(base.lights)) : []),
+            passageInfo,
+            floorColor,
             wallColor,
-            lightColor: base ? base.lightColor : 0xe0f2fe,
-            atmosphere: base ? base.atmosphere : '실내 조명',
-            doorId: `door-${sp.id || idx + 1}`
+            lightColor: (Array.isArray(sp.lights) && sp.lights[0] && typeof sp.lights[0].color === 'string' && sp.lights[0].color.startsWith('#'))
+              ? parseInt(sp.lights[0].color.slice(1), 16)
+              : (base ? base.lightColor : 0xe0f2fe),
+            atmosphere: base ? base.atmosphere : defaultAtmo,
+            doorId: (outPass && outPass.door && outPass.door.id) || `door-${spId}`
           });
-          nextX += w + 3.0;
+          nextX += chainRooms ? w : (w + 3.0);
         });
       }
       if (Array.isArray(data.passages)) {
@@ -6624,6 +7827,174 @@ import { CraftBuilder } from './builder.js';
             }
           });
         });
+      }
+    }
+
+    function loadThemeFromSampleJson(jsonData) {
+      if (!jsonData || !Array.isArray(jsonData.spaces) || !jsonData.logicGraph) {
+        throw new Error('유효한 RaC v2 테마 JSON(spaces + logicGraph)이 아닙니다.');
+      }
+      const themeMeta = jsonData.theme || {};
+      const nextThemeId = themeMeta.id || 'custom-theme';
+      const isAsylum = nextThemeId === 'asylum-404' || nextThemeId === 'asylum-404-abyssal-anatomy';
+
+      activeThemeId = isAsylum ? 'asylum-404' : nextThemeId;
+      activeThemeTitle = themeMeta.title || nextThemeId;
+      activeThemeGenre = themeMeta.genre || 'Horror';
+      timeLimitSeconds = Math.max(1, Number(themeMeta.durationMinutes || (jsonData.director && jsonData.director.timeLimitMinutes) || 60)) * 60;
+      timerElapsedSeconds = 0;
+      failureCount = 0;
+      playerInventory.clear();
+
+      // Clear 404-specific props & partitions for non-404 themes
+      PROP_ONTOLOGY.length = 0;
+      ROOM_PARTITIONS.length = 0;
+      if (isAsylum) {
+        JSON.parse(JSON.stringify(DEFAULT_PROP_ONTOLOGY)).forEach(p => PROP_ONTOLOGY.push(p));
+        JSON.parse(JSON.stringify(DEFAULT_ROOM_PARTITIONS)).forEach(p => ROOM_PARTITIONS.push(p));
+      }
+
+      applySpacesAndPassagesFromRac(jsonData, { chainRooms: !isAsylum });
+
+      const lg = jsonData.logicGraph;
+      const clues = Array.isArray(lg.clues) ? lg.clues : [];
+      const problems = Array.isArray(lg.problems) ? lg.problems : [];
+      const gates = Array.isArray(lg.gates) ? lg.gates : [];
+      const containers = Array.isArray(lg.containers) ? lg.containers : [];
+
+      const clueById = new Map(clues.map(c => [c.id, c]));
+      const probByClue = new Map();
+      problems.forEach(pr => (pr.consumes || []).forEach(cid => probByClue.set(cid, pr)));
+      const gateById = new Map(gates.map(g => [g.id, g]));
+      const contById = new Map(containers.map(c => [c.id, c]));
+
+      const built = [];
+      let qCounter = 1;
+      jsonData.spaces.forEach((sp, rIdx) => {
+        const props = Array.isArray(sp.props) ? sp.props : [];
+        props.forEach(p => {
+          const cl = clueById.get(p.targetClueId) || clues.find(c => c.propRef === p.id);
+          if (!cl && !p.qNum) return; // skip decorative-only props without clues
+          const pr = cl ? probByClue.get(cl.id) : null;
+          const gt = (pr && gateById.get(pr.outputGate)) || gates[built.length];
+          const cont = gt ? contById.get(gt.unlocks) : null;
+          const pos = (p.transform && Array.isArray(p.transform.pos)) ? p.transform.pos : [1.5, 0.5, 1.5];
+          const rot = (p.transform && Array.isArray(p.transform.rot)) ? p.transform.rot : [0, 0, 0];
+          const isDoorUnlock = !!(gt && gt.unlocks && gt.unlocks.startsWith('door-'));
+          const propType = (p.type === 'door' || p.model === 'Door' || p.model === 'FinalBlastDoor' || p.model === 'FinalDoor') ? 'door' : (p.type || p.model || 'desk');
+          const colorTint = (p.material && typeof p.material === 'object' && p.material.tint) ? p.material.tint : (isDoorUnlock ? '#ef4444' : '#64748b');
+          const matPreset = (p.material && typeof p.material === 'object') ? p.material.preset : (typeof p.material === 'string' ? p.material : null);
+
+          built.push({
+            qNum: (gt && gt.qNum) || p.qNum || qCounter++,
+            id: p.id || `prop-rac-${built.length + 1}`,
+            roomIdx: rIdx,
+            type: propType,
+            name: p.name || `기물 #${built.length + 1}`,
+            x: typeof pos[0] === 'number' ? pos[0] : 1.5,
+            z: typeof pos[2] === 'number' ? pos[2] : 1.5,
+            w: propType === 'door' ? 0.35 : 1.0,
+            d: propType === 'door' ? 1.24 : 0.7,
+            color: colorTint,
+            rotY: rot[1] || 0,
+            wallSnapped: !!p.wallSnapped,
+            clueId: (cl && cl.id) || p.targetClueId || `clue-rac-${built.length + 1}`,
+            carrierType: (cl && cl.carrierType) || 'Text',
+            cluePayload: (cl && cl.payload) || '',
+            probId: (pr && pr.id) || `prob-rac-${built.length + 1}`,
+            probRule: (pr && pr.rule) || '',
+            gateId: (gt && gt.id) || `gate-rac-${built.length + 1}`,
+            interfaceType: (gt && gt.interfaceType) || 'MechanicalLock',
+            passcode: parsePasscodeFromCondition(gt && (gt.passcode || gt.condition)),
+            unlocksId: (gt && gt.unlocks) || `cont-rac-${built.length + 1}`,
+            unlocksName: (cont && cont.name) || (isDoorUnlock ? '다음 구역 통로 개방' : '다음 단서 해금'),
+            isBossDoor: isDoorUnlock,
+            nextRoomIdx: isDoorUnlock ? (rIdx < jsonData.spaces.length - 1 ? rIdx + 1 : -1) : undefined,
+            solved: !!(gt && gt.isOpen),
+            requiresSolvedId: (gt && gt.requiresSolvedId) || null,
+            requiredItemId: (gt && gt.requiredItemId) || null,
+            storyBeat: (gt && gt.storyBeat) || '',
+            mechanism: (gt && gt.mechanism) ? JSON.parse(JSON.stringify(gt.mechanism)) : null,
+            visualSpec: (cl && cl.visualSpec) ? JSON.parse(JSON.stringify(cl.visualSpec)) : null,
+            onUnlockEffects: (gt && Array.isArray(gt.onUnlockEffects)) ? JSON.parse(JSON.stringify(gt.onUnlockEffects)) : null,
+            modelPreset: p.modelPreset || null,
+            modelUrl: p.modelUrl || null,
+            material: matPreset || null
+          });
+        });
+      });
+
+      // Normalize requiresSolvedId: map gateId references (e.g. "gate-01") to studioObject.id
+      const objIdByGateId = new Map(built.map(o => [o.gateId, o.id]));
+      built.forEach(o => {
+        if (o.requiresSolvedId && objIdByGateId.has(o.requiresSolvedId)) {
+          o.requiresSolvedId = objIdByGateId.get(o.requiresSolvedId);
+        }
+      });
+
+      studioObjects.length = 0;
+      built.forEach(o => studioObjects.push(o));
+      ensureContextualRoomLights();
+
+      applyItemsAndDirectorFromRac(jsonData);
+      currentRoomIdx = 0;
+
+      // Update FLOOR_CONFIGS cleanly for 2D Floor CAD view (prevent asylum-404 corridor/title leak)
+      Object.keys(FLOOR_CONFIGS).forEach(k => delete FLOOR_CONFIGS[k]);
+      if (isAsylum) {
+        Object.assign(FLOOR_CONFIGS, JSON.parse(JSON.stringify(DEFAULT_FLOOR_CONFIGS)));
+      } else {
+        const floorIds = [...new Set(ROOM_CONFIGS.map(r => r.floorId || '1f'))];
+        floorIds.forEach(fid => {
+          const fRooms = ROOM_CONFIGS.filter(r => (r.floorId || '1f') === fid);
+          const maxEndX = fRooms.reduce((acc, r) => Math.max(acc, r.worldX + r.w), 12);
+          const maxEndZ = fRooms.reduce((acc, r) => Math.max(acc, r.worldZ + r.h), 6);
+          FLOOR_CONFIGS[fid] = {
+            id: fid,
+            name: `${fid.toUpperCase()} ${activeThemeTitle}`,
+            height: fRooms[0]?.floorHeight || 0.0,
+            rooms: fRooms.map(r => r.idx),
+            corridorId: null,
+            corridorName: '',
+            totalW: maxEndX + 2,
+            totalH: maxEndZ + 1,
+            corridor: null
+          };
+        });
+      }
+
+      syncThemeHeaderUi();
+      applyGenreAtmosphere(cameraMode);
+      rebuild3DRoom();
+      resetAllLightsForMode(studioMode === 'playtest');
+      renderInventoryHud();
+      switchRoom(0, true);
+      syncSpaceEditorUI();
+      renderAuthorItemsAndDirectorUI();
+      if (studioObjects[0]) selectObject(studioObjects[0].id);
+      updateCodeView();
+      showDirectorWhisper(`《${activeThemeTitle}》 로드 완료! (${ROOM_CONFIGS.length}개 공간 · ${studioObjects.length}개 퍼즐 · ${activeThemeGenre})`);
+    }
+
+    async function switchThemePreset(themeId) {
+      if (themeId === 'asylum-404') {
+        restoreAsylumPreset();
+        return;
+      }
+      const sampleMap = {
+        'jamsil-quiz-room': './samples/jamsil-quiz-room.json',
+        'crimescene-penthouse': './samples/crimescene-penthouse.json'
+      };
+      const url = sampleMap[themeId];
+      if (!url) return;
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        loadThemeFromSampleJson(data);
+      } catch (err) {
+        console.error('Failed to switch theme preset:', themeId, err);
+        showDirectorWhisper(`테마 로드 실패 (${themeId}): ${err.message}`);
       }
     }
 
@@ -6718,6 +8089,7 @@ import { CraftBuilder } from './builder.js';
               storyBeat: raw.storyBeat || '',
               mechanism: raw.mechanism || null,
               visualSpec: raw.visualSpec || null,
+              onUnlockEffects: Array.isArray(raw.onUnlockEffects) ? raw.onUnlockEffects : null,
               modelPreset: raw.modelPreset || null,
               modelUrl: raw.modelUrl || null,
               material: raw.material || null
@@ -6779,6 +8151,7 @@ import { CraftBuilder } from './builder.js';
                 storyBeat: (gt && gt.storyBeat) || '',
                 mechanism: (gt && gt.mechanism) || null,
                 visualSpec: (cl && cl.visualSpec) || null,
+                onUnlockEffects: (gt && Array.isArray(gt.onUnlockEffects)) ? gt.onUnlockEffects : null,
                 modelPreset: p.modelPreset || null,
                 modelUrl: p.modelUrl || null,
                 material: p.material || null
@@ -6822,9 +8195,9 @@ import { CraftBuilder } from './builder.js';
     }
 
     // -------------------------------------------------------------
-    // LOCALSTORAGE AUTO-SAVE / RESTORE (rac_studio_autosave_v2)
+    // LOCALSTORAGE AUTO-SAVE / RESTORE (rac_studio_autosave_v5)
     // -------------------------------------------------------------
-    const STUDIO_AUTOSAVE_KEY = 'rac_studio_autosave_v4';
+    const STUDIO_AUTOSAVE_KEY = 'rac_studio_autosave_v5';
     let autosaveTimerId = null;
 
     function saveStudioAutosave() {
@@ -6834,6 +8207,7 @@ import { CraftBuilder } from './builder.js';
           version: 2,
           rooms: ROOM_CONFIGS,
           objects: studioObjects,
+          props: PROP_ONTOLOGY,
           passages: studioPassages,
           items: ITEM_CATALOG,
           interactions: ITEM_INTERACTIONS,
@@ -6861,6 +8235,10 @@ import { CraftBuilder } from './builder.js';
         if (Array.isArray(saved.objects)) {
           studioObjects.length = 0;
           saved.objects.forEach(o => studioObjects.push(o));
+        }
+        if (Array.isArray(saved.props)) {
+          PROP_ONTOLOGY.length = 0;
+          saved.props.forEach(p => PROP_ONTOLOGY.push(p));
         }
         if (Array.isArray(saved.passages)) {
           studioPassages.length = 0;
@@ -6935,7 +8313,7 @@ import { CraftBuilder } from './builder.js';
     Object.assign(window, {
       addCustomItem, addItemInteraction, addNewPuzzleObject, addNewSpace,
       addPassageFromCurrentSpace, adjustClockDevice, advanceModalHint,
-      applyInventoryItemToActiveModal, autoFillDial, checkLockSolution,
+      applyInventoryItemToActiveModal, applyModalAuthorEdit, autoFillDial, checkLockSolution,
       clearDirKeys, clearStudioAutosave, closeLockModal,
       combineEligibleInventoryItems, copyAiAgentRacPrompt, copyEscapeCertificate,
       copyShareCode, deleteCurrentSpace, deleteCustomItem, deleteItemInteraction,
@@ -6944,11 +8322,180 @@ import { CraftBuilder } from './builder.js';
       onAuthorIxEffectChange, openDirectorIntercomBarter, openImportModal,
       openLockModalForObject, openPuzzleModalForSelected, pushDirKey,
       resetAll30Puzzles, restoreAsylumPreset, rotateCupDevice,
-      runStudioIntegrityValidation, selectObject, setCadViewMode,
+      runStudioIntegrityValidation, selectObject, selectObjectFromOntologyGraph, setCadViewMode,
       setCameraMode, setOntologyGraphFilter, setViewLayout, shareThemeUrl,
       solveAll30Puzzles, solveCurrentRoomAll, startBlankTheme, switchRoom,
-      tapDirectorBarterButton, toggleLeftSidebar, toggleOrbitAllFloors,
-      toggleRightSidebar, toggleSpecimenWeight, toggleStudioMode, getStudioMode: () => studioMode, toggleCraftBuilderMode: () => craftBuilder?.toggle(), selectCraftSlot: (slot) => craftBuilder?.selectSlot(slot), deleteObjectById,
+      tapDirectorBarterButton, toggleLeftSidebar, toggleModalAuthorEdit, toggleOrbitAllFloors,
+      toggleRightSidebar, toggleSpecimenWeight, toggleStudioMode,
+      getStudioMode: () => studioMode,
+      getActiveFixtures: () => activeFixtures,
+      getMountedThreeLightCount: () => {
+        let total = 0;
+        let activePool = 0;
+        if (scene) {
+          scene.traverse(obj => {
+            if (obj.isPointLight || obj.isSpotLight) {
+              if (obj.userData && obj.userData.isLightPoolSlot) {
+                if (obj.intensity > 0) activePool++;
+                total++;
+                return;
+              }
+              if (obj === flashlight && obj.intensity <= 0) return;
+              total++;
+            }
+          });
+        }
+        return { total, activePool, fixtures: getMountedLightCount() };
+      },
+      checkWallCoplanarCollisions: (tol = 0.005) => {
+        if (!unifiedBuildingGroup) return [];
+        unifiedBuildingGroup.updateMatrixWorld(true);
+        const walls = [];
+        const tmpNorm = new THREE.Vector3();
+        const tmpQuat = new THREE.Quaternion();
+        const tmpBox = new THREE.Box3();
+        const tmpCenter = new THREE.Vector3();
+        unifiedBuildingGroup.traverse(obj => {
+          if (!obj.isMesh || !obj.userData || !obj.userData.isWallSurface) return;
+          obj.getWorldQuaternion(tmpQuat);
+          tmpNorm.set(0, 0, 1).applyQuaternion(tmpQuat).normalize();
+          // Canonicalize normal sign so opposite-facing coplanar walls are compared on the same plane
+          if (tmpNorm.x < -0.5 || (Math.abs(tmpNorm.x) <= 0.5 && tmpNorm.z < -0.5)) tmpNorm.negate();
+          tmpBox.setFromObject(obj);
+          tmpBox.getCenter(tmpCenter);
+          const d = tmpNorm.dot(tmpCenter);
+          walls.push({
+            parent: obj.parent ? obj.parent.name : '',
+            normal: tmpNorm.clone(),
+            d,
+            box: tmpBox.clone()
+          });
+        });
+        const collisions = [];
+        const EPS = 0.01;
+        for (let i = 0; i < walls.length; i++) {
+          for (let j = i + 1; j < walls.length; j++) {
+            const a = walls[i], b = walls[j];
+            if (Math.abs(a.normal.dot(b.normal)) < 0.99) continue;
+            if (Math.abs(a.d - b.d) > tol) continue;
+            const overlapX = Math.min(a.box.max.x, b.box.max.x) - Math.max(a.box.min.x, b.box.min.x);
+            const overlapY = Math.min(a.box.max.y, b.box.max.y) - Math.max(a.box.min.y, b.box.min.y);
+            const overlapZ = Math.min(a.box.max.z, b.box.max.z) - Math.max(a.box.min.z, b.box.min.z);
+            const alongX = Math.abs(a.normal.z) > 0.5;
+            const horizOverlap = alongX ? overlapX : overlapZ;
+            if (horizOverlap > EPS && overlapY > EPS) {
+              collisions.push({
+                a: a.parent,
+                b: b.parent,
+                planeGap: Number(Math.abs(a.d - b.d).toFixed(5)),
+                horizOverlap: Number(horizOverlap.toFixed(3)),
+                vertOverlap: Number(overlapY.toFixed(3))
+              });
+            }
+          }
+        }
+        return collisions;
+      },
+      getStudioObjects: () => studioObjects,
+      rebuild3DRoom,
+      get3DPerfStats: () => {
+        const geos = new Set();
+        const mats = new Set();
+        let wallCount = 0;
+        let allWallsDepthWriteFalse = true;
+        let allWallsDepthWriteTrue = true;
+        let allWallsFrontSide = true;
+        let allWallsDoubleSide = true;
+        const corridorSouthNormals = [];
+        const lintelNormalChecks = [];
+        let doorFramePenetrations = 0;
+        if (scene) {
+          scene.updateMatrixWorld(true);
+          const tmpQ = new THREE.Quaternion();
+          const tmpN = new THREE.Vector3();
+          const tmpBox = new THREE.Box3();
+          scene.traverse((obj) => {
+            if (obj.geometry) geos.add(obj.geometry);
+            if (obj.material) {
+              const arr = Array.isArray(obj.material) ? obj.material : [obj.material];
+              arr.forEach((m) => { if (m) mats.add(m); });
+            }
+            if (obj.isMesh && obj.userData && obj.userData.isWallSurface && obj.material) {
+              wallCount++;
+              if (obj.material.depthWrite !== false) allWallsDepthWriteFalse = false;
+              if (obj.material.depthWrite !== true) allWallsDepthWriteTrue = false;
+              if (obj.material.side !== THREE.FrontSide) allWallsFrontSide = false;
+              if (obj.material.side !== THREE.DoubleSide) allWallsDoubleSide = false;
+              obj.getWorldQuaternion(tmpQ);
+              tmpN.set(0, 0, 1).applyQuaternion(tmpQ).normalize();
+              if (obj.parent && (obj.parent.name === 'corridorGroup_1f' || obj.parent.name === 'corridorGroup_2f') && obj.position.z > 2.5) {
+                corridorSouthNormals.push({ parent: obj.parent.name, nz: Number(tmpN.z.toFixed(3)) });
+              }
+              if (obj.userData.isLintel) {
+                const w = obj.userData.wallSide;
+                const expected = { N: [0, 1], S: [0, -1], W: [1, 0], E: [-1, 0] }[w];
+                const dot = expected ? (tmpN.x * expected[0] + tmpN.z * expected[1]) : 0;
+                lintelNormalChecks.push({ wall: w, inwardDot: Number(dot.toFixed(3)) });
+              }
+            }
+            if (obj.isMesh && obj.userData && obj.userData.isDoorFrame && obj.parent && obj.parent.userData && obj.parent.userData.roomIdx !== undefined) {
+              const rc = ROOM_CONFIGS[obj.parent.userData.roomIdx];
+              const w = obj.userData.wallSide;
+              if (rc && w) {
+                const WALL_INSET = 0.02;
+                const halfT = 0.018;
+                const p = obj.position;
+                if (w === 'N' && (p.z - halfT) < WALL_INSET) doorFramePenetrations++;
+                if (w === 'S' && (p.z + halfT) > (rc.h - WALL_INSET)) doorFramePenetrations++;
+                if (w === 'W' && (p.x - halfT) < WALL_INSET) doorFramePenetrations++;
+                if (w === 'E' && (p.x + halfT) > (rc.w - WALL_INSET)) doorFramePenetrations++;
+              }
+            }
+          });
+        }
+        const roomVisibility = ROOM_CONFIGS.map(rc => {
+          const rg = unifiedBuildingGroup ? unifiedBuildingGroup.getObjectByName(`roomGroup_${rc.idx}`) : null;
+          return { idx: rc.idx, id: rc.id, visible: rg ? rg.visible : null };
+        });
+        return {
+          cameraMode,
+          infoMemory: renderer ? { geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures } : null,
+          infoPrograms: renderer && renderer.info && Array.isArray(renderer.info.programs) ? renderer.info.programs.length : 0,
+          drawCalls: renderer && renderer.info && renderer.info.render ? renderer.info.render.calls : 0,
+          shadowAutoUpdate: renderer ? renderer.shadowMap.autoUpdate : null,
+          roomVisibility,
+          logarithmicDepthBuffer: renderer ? !!renderer.capabilities.logarithmicDepthBuffer : false,
+          pixelRatio: renderer ? renderer.getPixelRatio() : null,
+          renderCalls: typeof window.__getRenderCallCount === 'function' ? window.__getRenderCallCount() : 0,
+          activeSceneGeometries: geos.size,
+          activeSceneMaterials: mats.size,
+          wallCount,
+          allWallsDepthWriteFalse,
+          allWallsDepthWriteTrue,
+          allWallsFrontSide,
+          allWallsDoubleSide,
+          corridorSouthNormals,
+          lintelNormalChecks,
+          doorFramePenetrations
+        };
+      },
+      switchThemePreset,
+      loadThemeFromSampleJson,
+      getActiveThemeInfo: () => ({
+        id: activeThemeId,
+        title: activeThemeTitle,
+        genre: activeThemeGenre,
+        roomCount: ROOM_CONFIGS.length,
+        puzzleCount: studioObjects.length,
+        durationMinutes: Math.round(timeLimitSeconds / 60),
+        hemiIntensity: hemiLight ? hemiLight.intensity : null,
+        ambientIntensity: ambientLight ? ambientLight.intensity : null,
+        environmentIntensity: scene ? scene.environmentIntensity : null,
+        hasFog: !!(scene && scene.fog),
+        flashlightIntensity: flashlight ? flashlight.intensity : null,
+        inventory: Array.from(playerInventory)
+      }),
+      toggleCraftBuilderMode: () => craftBuilder?.toggle(), selectCraftSlot: (slot) => craftBuilder?.selectSlot(slot), openCraftCatalog: () => craftBuilder?.openCatalog(), closeCraftCatalog: () => craftBuilder?.closeCatalog(), deleteObjectById,
       triggerDirectorBlackout, triggerNextPuzzleOrRoom, turnDial, turnSteamValve,
       updateCurrentSpaceProps, updateDirectorPersonaProps, updateSelectedObjectProps
     });
@@ -6961,6 +8508,7 @@ import { CraftBuilder } from './builder.js';
       initThree();
       restoreThemeFromUrlHash();
       switchRoom(restored ? currentRoomIdx : 0, true);
+      resetAllLightsForMode(studioMode === 'playtest');
       syncSpaceEditorUI();
       renderAuthorItemsAndDirectorUI();
       autoAdjustSidebars();

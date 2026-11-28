@@ -164,4 +164,70 @@ const resolved = await director.resolveDirective(barter, { room: "s1" });
 assert.equal(resolved.payload.challenge.includes("5번"), true, "LLM 장애 시 안전 폴백 실패");
 console.log("  ✅ Suite 3 통과: Director 동적 관측 · 쿨다운 · 페르소나 거래(barter) · LLM 안전 폴백 무결성");
 
-console.log("\n🎉 [RaC Ontology v2 Harness PASS] 3대 온톨로지 심화 불변식 100% 통과!");
+// ---------------------------------------------------------------------------
+// Suite 4: Space.lights[].initiallyOn & Gate.onUnlockEffects 연쇄 연출
+// ---------------------------------------------------------------------------
+const effectsSample = {
+  version: "1.0",
+  theme: { id: "unlock-effects-test", title: "해금 연쇄 연출 테스트", durationMinutes: 30 },
+  spaces: [
+    {
+      id: "s1",
+      name: "수술실",
+      layer: 0,
+      wallHeight: 2.6,
+      polygon: [[0, 0], [4, 0], [4, 4], [0, 4]],
+      lights: [
+        { id: "light-ambient", kind: "fluorescent", pos: [2, 2.5, 2], color: "#ffffff", intensity: 1.2, distance: 8 },
+        { id: "light-spot", kind: "surgical", pos: [1, 2.4, 1], color: "#ffe0b2", intensity: 2.0, distance: 5, initiallyOn: false, targetPropId: "prop-chart" },
+        { id: "light-emerg", kind: "emergency", pos: [3, 2.4, 3], color: "#ff2222", intensity: 1.5, distance: 6, initiallyOn: true }
+      ],
+      props: []
+    }
+  ],
+  passages: [],
+  logicGraph: {
+    clues: [
+      { id: "clue-init", payload: "초기 공개 단서" },
+      { id: "clue-hidden-chain", payload: "조명이 켜지며 드러난 벽면 혈흔 코드: 9912" }
+    ],
+    problems: [
+      { id: "prob-chain", consumes: ["clue-init"], rule: "전원 패널 해제", outputGate: "gate-power" }
+    ],
+    containers: [
+      { id: "cont-panel", name: "배전함" }
+    ],
+    gates: [
+      {
+        id: "gate-power",
+        interfaceType: "ElectronicKeypad",
+        condition: "Value == '4040'",
+        unlocks: "cont-panel",
+        onUnlockEffects: [
+          { kind: "lightOn", targetId: "light-spot", sfx: "switch-click" },
+          { kind: "lightOff", targetId: "light-ambient" },
+          { kind: "lightFlicker", targetId: "light-emerg", sfx: "buzz" },
+          { kind: "revealClue", targetId: "clue-hidden-chain" }
+        ]
+      }
+    ]
+  }
+};
+
+const fxRunner = new LogicRunner(effectsSample);
+assert.equal(fxRunner.isLightOn("light-ambient"), true, "기본 광원(initiallyOn 생략)은 초기 점등이어야 함");
+assert.equal(fxRunner.isLightOn("light-spot"), false, "initiallyOn: false 광원은 초기 소등이어야 함");
+assert.equal(fxRunner.isLightOn("light-emerg"), true, "initiallyOn: true 광원은 초기 점등이어야 함");
+assert.equal(fxRunner.getClue("clue-hidden-chain").visibility, "Hidden");
+
+const fxRes = fxRunner.submitAction("gate-power", "4040");
+assert.equal(fxRes.success, true);
+assert.equal(fxRes.triggeredEffects.length, 4, "onUnlockEffects 4건이 모두 반환되어야 함");
+assert.equal(fxRes.triggeredEffects[0].sfx, "switch-click");
+assert.equal(fxRes.triggeredEffects[2].kind, "lightFlicker");
+assert.equal(fxRunner.isLightOn("light-spot"), true, "lightOn 효과로 광원이 점등되어야 함");
+assert.equal(fxRunner.isLightOn("light-ambient"), false, "lightOff 효과로 광원이 소등되어야 함");
+assert.equal(fxRunner.getClue("clue-hidden-chain").visibility, "Revealed", "revealClue 효과로 단서가 노출되어야 함");
+console.log("  ✅ Suite 4 통과: Space.lights[].initiallyOn & Gate.onUnlockEffects(lightOn/lightOff/lightFlicker/revealClue) 무결성");
+
+console.log("\n🎉 [RaC Ontology v2 Harness PASS] 4대 온톨로지 심화 불변식 100% 통과!");

@@ -7,6 +7,7 @@ export class LogicRunner {
   constructor(racData) {
     this.theme = racData.theme;
     this.spaces = new Map();
+    this.lights = new Map();
     this.doors = new Map();
     this.gates = new Map();
     this.containers = new Map();
@@ -31,9 +32,18 @@ export class LogicRunner {
   }
 
   _initialize(data) {
-    // 1. Spaces 등록
+    // 1. Spaces & Lights 등록
     for (const space of data.spaces) {
       this.spaces.set(space.id, { ...space, status: "Unvisited" });
+      if (Array.isArray(space.lights)) {
+        for (const light of space.lights) {
+          this.lights.set(light.id, {
+            ...light,
+            spaceId: space.id,
+            isOn: light.initiallyOn !== false
+          });
+        }
+      }
     }
     if (data.spaces.length > 0) {
       this.spaces.get(data.spaces[0].id).status = "Active";
@@ -152,6 +162,8 @@ export class LogicRunner {
         targetGate.isOpen = true;
         result.unlockedGateId = targetGate.id;
         this._openTarget(targetGate.unlocks, result);
+        const triggeredEffects = this._executeUnlockEffects(targetGate);
+        if (triggeredEffects.length > 0) result.triggeredEffects = triggeredEffects;
       } else {
         this._openTarget(ix.resultId || targetId, result);
       }
@@ -270,6 +282,34 @@ export class LogicRunner {
     return this.clues.get(clueId);
   }
 
+  isLightOn(lightId) {
+    const light = this.lights.get(lightId);
+    return light ? light.isOn : false;
+  }
+
+  _executeUnlockEffects(gate) {
+    const triggered = [];
+    if (!Array.isArray(gate.onUnlockEffects)) return triggered;
+    for (const eff of gate.onUnlockEffects) {
+      if (eff.kind === "lightOn") {
+        const light = this.lights.get(eff.targetId);
+        if (light) light.isOn = true;
+        triggered.push({ ...eff });
+      } else if (eff.kind === "lightOff") {
+        const light = this.lights.get(eff.targetId);
+        if (light) light.isOn = false;
+        triggered.push({ ...eff });
+      } else if (eff.kind === "lightFlicker") {
+        triggered.push({ ...eff });
+      } else if (eff.kind === "revealClue") {
+        const clue = this.clues.get(eff.targetId);
+        if (clue) clue.visibility = "Revealed";
+        triggered.push({ ...eff });
+      }
+    }
+    return triggered;
+  }
+
   /**
    * 플레이어가 자물쇠(Gate)에 값을 입력하여 해금을 시도함
    * @param {string} gateId - 대상 자물쇠 ID
@@ -315,11 +355,13 @@ export class LogicRunner {
       }
 
       const opened = this._openTarget(gate.unlocks, {});
+      const triggeredEffects = this._executeUnlockEffects(gate);
       if (opened.unlockedDoorId) {
         return {
           success: true,
           message: `정답 일치! 자물쇠 ${gateId} 해제 완료. 문 ${opened.unlockedDoorId}이(가) 열렸습니다.`,
-          ...opened
+          ...opened,
+          triggeredEffects
         };
       }
       if (opened.unlockedContainerId) {
@@ -327,10 +369,11 @@ export class LogicRunner {
         return {
           success: true,
           message: `금고 ${opened.unlockedContainerId} 개방 성공! 내부에서 단서 [${opened.revealedClue ? opened.revealedClue.id : 'None'}] 획득.${itemNote}`,
-          ...opened
+          ...opened,
+          triggeredEffects
         };
       }
-      return { success: true, message: `자물쇠 ${gateId} 해제 성공.` };
+      return { success: true, message: `자물쇠 ${gateId} 해제 성공.`, triggeredEffects };
     } else {
       // 오답: 실패 횟수 증가 및 Director 긴장감 에스컬레이션
       gate.failureCount += 1;

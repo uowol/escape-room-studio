@@ -1,9 +1,108 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// Procedural 512x512 4-Map PBR Texture Pack & Material Caches
+// Procedural 256x256 4-Map PBR Texture Pack, Geometry Interning & Material Caches
 export const textureCache = new Map();
 export const pbrPackCache = new Map();
+const geometryCache = new Map();
+
+function markSharedGeo(geo) {
+  geo.userData = geo.userData || {};
+  geo.userData.shared = true;
+  return geo;
+}
+
+export function getBoxGeo(w, h, d) {
+  const key = `box_${w.toFixed(3)}_${h.toFixed(3)}_${d.toFixed(3)}`;
+  let geo = geometryCache.get(key);
+  if (!geo) {
+    geo = markSharedGeo(new THREE.BoxGeometry(w, h, d));
+    geometryCache.set(key, geo);
+  }
+  return geo;
+}
+
+export function getCylGeo(rt, rb, h, seg = 12, openEnded = false) {
+  const key = `cyl_${rt.toFixed(3)}_${rb.toFixed(3)}_${h.toFixed(3)}_${seg}_${openEnded ? 1 : 0}`;
+  let geo = geometryCache.get(key);
+  if (!geo) {
+    geo = markSharedGeo(new THREE.CylinderGeometry(rt, rb, h, seg, 1, openEnded));
+    geometryCache.set(key, geo);
+  }
+  return geo;
+}
+
+export function getPlaneGeo(w, h) {
+  const key = `plane_${w.toFixed(3)}_${h.toFixed(3)}`;
+  let geo = geometryCache.get(key);
+  if (!geo) {
+    geo = markSharedGeo(new THREE.PlaneGeometry(w, h));
+    geometryCache.set(key, geo);
+  }
+  return geo;
+}
+
+/**
+ * Convert a 2D HTMLCanvasElement into a lightweight THREE.DataTexture and immediately
+ * release the 2D canvas backing store (width = height = 0) so it can be GC'd.
+ */
+function canvasToDataTexture(canvas, {
+  isSRGB = false,
+  wrapRepeat = false,
+  repeatX = 1,
+  repeatY = 1,
+  anisotropy = 1
+} = {}) {
+  const w = canvas.width;
+  const h = canvas.height;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = new Uint8Array(imgData.data.buffer.slice(0));
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
+  tex.flipY = true; // Preserve CanvasTexture vertical orientation
+  if (isSRGB) tex.colorSpace = THREE.SRGBColorSpace;
+  if (wrapRepeat) {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+  }
+  if (repeatX !== 1 || repeatY !== 1) tex.repeat.set(repeatX, repeatY);
+  tex.generateMipmaps = true;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  if (anisotropy > 1) tex.anisotropy = anisotropy;
+  tex.needsUpdate = true;
+  // Release 2D canvas backing store immediately
+  canvas.width = 0;
+  canvas.height = 0;
+  return tex;
+}
+
+/**
+ * Safely dispose non-shared geometries and materials under a Three.js Object3D subtree.
+ * Never disposes shared singletons (userData.shared === true) or cached PBR/canvas textures.
+ */
+export function disposeObject3D(root) {
+  if (!root) return;
+  const disposedGeos = new Set();
+  const disposedMats = new Set();
+  root.traverse((obj) => {
+    const geo = obj.geometry;
+    if (geo && (!geo.userData || geo.userData.shared !== true) && !disposedGeos.has(geo)) {
+      geo.dispose();
+      disposedGeos.add(geo);
+    }
+    if (obj.material) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (let i = 0; i < mats.length; i++) {
+        const m = mats[i];
+        if (m && (!m.userData || m.userData.shared !== true) && !disposedMats.has(m)) {
+          m.dispose();
+          disposedMats.add(m);
+        }
+      }
+    }
+  });
+}
 
 // Cached GLTF/GLB Loader for custom modelUrl props
 const gltfLoader = new GLTFLoader();
@@ -12,7 +111,24 @@ const gltfModelCache = new Map();
 export function loadGlbCached(url) {
   if (!gltfModelCache.has(url)) {
     const p = new Promise((resolve, reject) => {
-      gltfLoader.load(url, (gltf) => resolve(gltf.scene), undefined, (err) => {
+      gltfLoader.load(url, (gltf) => {
+        gltf.scene.traverse((c) => {
+          if (c.geometry) {
+            c.geometry.userData = c.geometry.userData || {};
+            c.geometry.userData.shared = true;
+          }
+          if (c.material) {
+            const mats = Array.isArray(c.material) ? c.material : [c.material];
+            for (let i = 0; i < mats.length; i++) {
+              if (mats[i]) {
+                mats[i].userData = mats[i].userData || {};
+                mats[i].userData.shared = true;
+              }
+            }
+          }
+        });
+        resolve(gltf.scene);
+      }, undefined, (err) => {
         gltfModelCache.delete(url);
         reject(err);
       });
@@ -95,20 +211,20 @@ export function loadGlbCached(url) {
     export function getPbrTexturePack(kind) {
       if (pbrPackCache.has(kind)) return pbrPackCache.get(kind);
 
-      const size = 512;
+      const size = 256;
       const cAlbedo = document.createElement('canvas'); cAlbedo.width = size; cAlbedo.height = size;
       const cBump = document.createElement('canvas');   cBump.width = size;   cBump.height = size;
       const ctx = cAlbedo.getContext('2d');
       const bctx = cBump.getContext('2d');
 
       if (kind === 'wood') {
-        // Aged Dark Asylum Wood Grain + Scratches (512px)
+        // Aged Dark Asylum Wood Grain + Scratches (256px)
         ctx.fillStyle = '#5c3419';
         ctx.fillRect(0, 0, size, size);
         bctx.fillStyle = '#808080';
         bctx.fillRect(0, 0, size, size);
         for (let y = 0; y < size; y += 2) {
-          const wave = Math.sin(y * 0.05) * 14 + Math.sin(y * 0.17) * 5 + (Math.random() - 0.5) * 10;
+          const wave = Math.sin(y * 0.1) * 14 + Math.sin(y * 0.34) * 5 + (Math.random() - 0.5) * 10;
           const v = Math.max(20, Math.min(125, 68 + wave));
           ctx.fillStyle = `rgb(${Math.round(v * 1.15)}, ${Math.round(v * 0.65)}, ${Math.round(v * 0.35)})`;
           ctx.fillRect(0, y, size, 2);
@@ -119,9 +235,9 @@ export function loadGlbCached(url) {
         // Plank seams & grime
         ctx.fillStyle = 'rgba(15, 8, 4, 0.58)';
         bctx.fillStyle = '#181818';
-        for (let py = 128; py < size; py += 128) {
-          ctx.fillRect(0, py, size, 3);
-          bctx.fillRect(0, py, size, 3);
+        for (let py = 64; py < size; py += 64) {
+          ctx.fillRect(0, py, size, 2);
+          bctx.fillRect(0, py, size, 2);
         }
         for (let i = 0; i < 140; i++) {
           const sx = Math.random() * size, sy = Math.random() * size, sw = 24 + Math.random() * 72;
@@ -227,25 +343,18 @@ export function loadGlbCached(url) {
       const normalStrength = kind === 'wood' ? 2.6 : kind === 'surgicalSteel' ? 1.4 : 2.2;
       const cNormal = heightCanvasToNormalCanvas(cBump, normalStrength);
       const { cRough, cAo } = deriveRoughnessAndAoCanvases(cBump, kind);
-
-      const map = new THREE.CanvasTexture(cAlbedo);
-      map.colorSpace = THREE.SRGBColorSpace;
-      const normalMap = new THREE.CanvasTexture(cNormal);
-      const roughnessMap = new THREE.CanvasTexture(cRough);
-      const aoMap = new THREE.CanvasTexture(cAo);
-      aoMap.channel = 0; // Use primary UV so standard geometries get AO without UV2 duplication
-      const bumpMap = new THREE.CanvasTexture(cBump);
+      // Release intermediate height canvas backing store immediately
+      cBump.width = 0;
+      cBump.height = 0;
 
       const maxAniso = 4;
-      [map, normalMap, roughnessMap, aoMap, bumpMap].forEach(t => {
-        t.wrapS = THREE.RepeatWrapping;
-        t.wrapT = THREE.RepeatWrapping;
-        t.generateMipmaps = true;
-        t.minFilter = THREE.LinearMipmapLinearFilter;
-        t.anisotropy = maxAniso;
-      });
+      const map = canvasToDataTexture(cAlbedo, { isSRGB: true, wrapRepeat: true, anisotropy: maxAniso });
+      const normalMap = canvasToDataTexture(cNormal, { wrapRepeat: true, anisotropy: maxAniso });
+      const roughnessMap = canvasToDataTexture(cRough, { wrapRepeat: true, anisotropy: maxAniso });
+      const aoMap = canvasToDataTexture(cAo, { wrapRepeat: true, anisotropy: maxAniso });
+      aoMap.channel = 0; // Use primary UV so standard geometries get AO without UV2 duplication
 
-      const pack = { map, normalMap, roughnessMap, aoMap, bumpMap };
+      const pack = { map, normalMap, roughnessMap, aoMap, bumpMap: null };
       pbrPackCache.set(kind, pack);
       return pack;
     }
@@ -353,9 +462,7 @@ export function loadGlbCached(url) {
         ctx.strokeRect(10, 10, 236, 236);
       }
 
-      const tex = new THREE.CanvasTexture(c);
-      tex.generateMipmaps = true;
-      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      const tex = canvasToDataTexture(c, { isSRGB: kind !== 'contactAo' });
       textureCache.set(key, tex);
       return tex;
     }
@@ -392,13 +499,8 @@ export function loadGlbCached(url) {
         ctx.beginPath(); ctx.arc(nx, ny, radius, 0, Math.PI * 2); ctx.fill();
       }
 
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(isCorridor ? 4 : 3, isCorridor ? 4 : 3);
-      tex.generateMipmaps = true;
-      tex.minFilter = THREE.LinearMipmapLinearFilter;
-      tex.magFilter = THREE.LinearFilter;
+      const rep = isCorridor ? 4 : 3;
+      const tex = canvasToDataTexture(canvas, { isSRGB: true, wrapRepeat: true, repeatX: rep, repeatY: rep });
       textureCache.set(key, tex);
       return tex;
     }
@@ -433,10 +535,7 @@ export function loadGlbCached(url) {
         ctx.fillRect(nx, ny, 1.5, 1.5);
       }
 
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(4, 1);
+      const tex = canvasToDataTexture(canvas, { isSRGB: true, wrapRepeat: true, repeatX: 4, repeatY: 1 });
       textureCache.set(key, tex);
       return tex;
     }

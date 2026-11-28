@@ -75,9 +75,13 @@
         <svg id="icon-toggle-left" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
       </button>
 
-      <div class="w-6 h-6 bg-zinc-900 border border-rose-500/40 rounded flex items-center justify-center font-mono font-semibold text-rose-400 text-[11px]">404</div>
-      <span class="font-semibold text-zinc-100 tracking-tight text-xs sm:text-sm">폐쇄병동 404호</span>
-      <span class="text-[11px] text-zinc-500 font-mono hidden md:inline">6 Spaces · 30 Puzzles</span>
+      <div id="header-theme-badge" class="min-w-[2.25rem] px-1.5 h-6 bg-zinc-900 border border-rose-500/40 rounded flex items-center justify-center font-mono font-semibold text-rose-400 text-[11px]">Q30</div>
+      <select id="theme-preset-selector" onchange="switchThemePreset(this.value)" title="테마 프리셋 1-클릭 전환" class="bg-zinc-900 hover:bg-zinc-800 border border-white/15 rounded-md px-2 py-1 text-xs font-semibold text-zinc-100 outline-none focus:border-emerald-400/60 cursor-pointer max-w-[230px] sm:max-w-[280px] truncate">
+        <option value="asylum-404">폐쇄병동 404호 (공포 · 6방 30문제)</option>
+        <option value="jamsil-quiz-room">잠실 퀴즈카페: 100개의 자물쇠 (퀴즈 · 4구역 100문제 · 210분)</option>
+        <option value="crimescene-penthouse">한강 펜트하우스 2301호 (크라임씬 · 3방 10문제)</option>
+      </select>
+      <span id="header-theme-subtitle" class="text-[11px] text-zinc-500 font-mono hidden lg:inline">6 Spaces · 30 Puzzles</span>
     </div>
 
     <!-- Center View Mode Selector & Status -->
@@ -269,7 +273,7 @@
 
           <div class="flex items-center gap-2.5 font-mono text-[11px]">
             <span class="text-zinc-500">조도 <b id="hud-lighting-val" class="text-emerald-400">100%</b></span>
-            <button onclick="triggerDirectorBlackout()" class="px-2 py-0.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 rounded text-rose-300 font-medium transition-colors">
+            <button id="btn-director-blackout" onclick="triggerDirectorBlackout()" class="px-2 py-0.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 rounded text-rose-300 font-medium transition-colors">
               공포 암전
             </button>
           </div>
@@ -292,6 +296,12 @@
 
         <!-- FPS Crosshair -->
         <div id="fps-crosshair" class="fps-crosshair hidden"></div>
+      <div id="craft-hold-ring" class="hidden" style="position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;pointer-events:none;z-index:21;">
+        <svg viewBox="0 0 44 44" width="44" height="44" style="transform:rotate(-90deg)">
+          <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="3"></circle>
+          <circle id="craft-hold-ring-arc" cx="22" cy="22" r="18" fill="none" stroke="#22d3ee" stroke-width="3" stroke-linecap="round" stroke-dasharray="113.097" stroke-dashoffset="113.097"></circle>
+        </svg>
+      </div>
 
         <!-- FPS Interaction Prompt Overlay -->
         <div id="fps-prompt" class="hidden absolute top-2/3 left-1/2 -translate-x-1/2 bg-zinc-950/95 border border-amber-400/60 text-zinc-100 px-3.5 py-1.5 rounded-lg flex items-center gap-2 z-20 pointer-events-none backdrop-blur text-xs font-medium text-center">
@@ -300,7 +310,7 @@
         </div>
 
         <!-- 3D Controls Helper Overlay -->
-        <div id="three-help-overlay" class="absolute bottom-2.5 left-2.5 bg-zinc-950/85 backdrop-blur px-2.5 py-1 rounded text-[11px] text-zinc-400 border border-white/10 flex gap-2 z-10 font-mono">
+        <div id="three-help-overlay" class="absolute bottom-2.5 right-3 bg-zinc-950/85 backdrop-blur px-2.5 py-1 rounded text-[11px] text-zinc-400 border border-white/10 flex gap-2 z-10 font-mono">
           <span id="help-orbit-txt">드래그: 회전 · WASD: 이동 · 휠: 줌 · 소품 클릭: 조사</span>
           <span id="help-fps-txt" class="hidden">WASD: 보행 · 마우스: 시선 · E: 조사 · ESC: 커서 해제</span>
         </div>
@@ -314,10 +324,10 @@
             <p class="text-xs text-zinc-500 mt-0.5">Prop / Clue → Problem → Gate → Container / Door 인과율 연결망. 노드를 클릭하면 해당 퍼즐을 엽니다.</p>
           </div>
           <div class="flex items-center gap-1.5 flex-wrap">
-            <button onclick="solveCurrentRoomAll()" class="px-2.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-medium border border-white/10 transition-colors">
+            <button id="btn-solve-room-all" onclick="solveCurrentRoomAll()" class="px-2.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-medium border border-white/10 transition-colors">
               현재 방 5문제 해금
             </button>
-            <button onclick="solveAll30Puzzles()" class="px-2.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-emerald-400 text-xs font-medium border border-emerald-500/20 transition-colors">
+            <button id="btn-solve-all-puzzles" onclick="solveAll30Puzzles()" class="px-2.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-emerald-400 text-xs font-medium border border-emerald-500/20 transition-colors">
               30문제 전수 해금
             </button>
             <button onclick="resetAll30Puzzles()" class="px-2.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 text-xs font-medium border border-white/10 transition-colors">
@@ -327,7 +337,7 @@
         </div>
 
         <!-- Room Filter Pills for Ontology Graph -->
-        <div id="ontology-room-filter" class="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 shrink-0">
+        <div id="ontology-room-filter" class="flex flex-wrap items-center gap-1.5 mb-3 pb-1 shrink-0">
           <!-- JS로 방 필터 버튼 렌더링 -->
         </div>
 
@@ -439,6 +449,11 @@
                 <option value="pressure-valve">증기 밸브</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label class="text-zinc-500 block mb-1 text-[10px]">해금 시 점등 광원 (Unlock Light)</label>
+            <select id="prop-unlock-light" onchange="updateSelectedObjectProps()" class="w-full bg-[#111114] border border-white/10 rounded px-1.5 py-1 text-amber-300 font-mono text-[10px] outline-none"></select>
           </div>
 
           <div class="grid grid-cols-2 gap-1.5">
@@ -640,6 +655,12 @@
                 </label>
               </div>
             </div>
+            <div class="pt-0.5">
+              <label class="flex items-center gap-1.5 cursor-pointer select-none text-[10px] text-zinc-300">
+                <input type="checkbox" id="space-light-init-on" onchange="updateCurrentSpaceProps()" class="accent-emerald-400">
+                <span>시작 시 켜짐 (initiallyOn)</span>
+              </label>
+            </div>
           </div>
 
           <!-- Dynamic Passages Editor for Current Space -->
@@ -783,11 +804,16 @@
 
       <!-- RIGHT COLUMN: CLEAN INTERACTION PANEL (TEXT CLUE HIDDEN -> VISUALIZED ON LEFT) -->
       <div class="md:col-span-5 p-7 flex flex-col justify-between bg-[#0e0e12]/95">
-        <div>
+        <div class="flex flex-col flex-1 min-h-0">
           <!-- Modal Header -->
-          <div class="flex items-center gap-2 mb-2 pr-8">
-            <span id="modal-q-badge" class="px-2.5 py-0.5 rounded bg-zinc-900 border border-white/15 text-zinc-200 font-mono text-xs font-semibold">Q01 / 30</span>
-            <span id="modal-room-badge" class="text-sm text-zinc-400 truncate">제1방: 1F 원무과 접수처</span>
+          <div class="flex items-center justify-between gap-2 mb-2 pr-8">
+            <div class="flex items-center gap-2 min-w-0">
+              <span id="modal-q-badge" class="px-2.5 py-0.5 rounded bg-zinc-900 border border-white/15 text-zinc-200 font-mono text-xs font-semibold shrink-0">Q01 / 30</span>
+              <span id="modal-room-badge" class="text-sm text-zinc-400 truncate">제1방: 1F 원무과 접수처</span>
+            </div>
+            <button id="btn-modal-author-edit" type="button" onclick="toggleModalAuthorEdit()" class="hidden px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-sky-500/40 text-sky-300 text-xs font-medium shrink-0 transition-colors cursor-pointer">
+              ✎ 바로 편집
+            </button>
           </div>
           <div id="modal-obj-title" class="text-2xl font-bold text-zinc-100 tracking-tight mb-4">원무과 접수 데스크</div>
 
@@ -801,95 +827,184 @@
             </div>
           </div>
 
-          <!-- Unlock Target & 2-Stage Progressive Hint System -->
-          <div class="p-4 bg-[#09090b] rounded-xl border border-white/10 mb-5 text-left space-y-3">
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-xs text-zinc-500">해금 타겟</span>
-              <span id="modal-unlock-desc" class="text-xs text-emerald-400 font-mono truncate"></span>
+          <!-- CREATOR MODE INLINE LIVE EDITOR (Hidden in playtest) -->
+          <div id="modal-author-editor" class="hidden flex-1 overflow-y-auto pr-1 space-y-3 text-xs">
+            <div class="p-3 rounded-lg bg-[#09090b] border border-white/10 space-y-2.5">
+              <div class="text-[11px] font-medium text-sky-300 flex items-center justify-between">
+                <span>WYSIWYG 실시간 단서 편집</span>
+                <span class="text-[10px] font-mono text-zinc-500">0ms 자동 반영</span>
+              </div>
+
+              <div>
+                <label for="me-name" class="text-zinc-400 block mb-1 text-[11px]">제목</label>
+                <input type="text" id="me-name" oninput="applyModalAuthorEdit()" class="w-full bg-[#111114] border border-white/10 rounded-md px-2.5 py-1.5 text-zinc-100 text-xs focus:border-sky-400/60 outline-none">
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label for="me-tpl" class="text-zinc-400 block mb-1 text-[11px]">단서 시각화 템플릿</label>
+                  <select id="me-tpl" onchange="applyModalAuthorEdit()" class="w-full bg-[#111114] border border-white/10 rounded-md px-2 py-1.5 text-zinc-200 font-mono text-[11px] focus:border-sky-400/60 outline-none">
+                    <option value="document">document (문서)</option>
+                    <option value="blueprint">blueprint (도면)</option>
+                    <option value="crt">crt (CRT 모니터)</option>
+                    <option value="photo">photo (사진)</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="me-highlight" class="text-zinc-400 block mb-1 text-[11px]">배지 / 강조 문구</label>
+                  <input type="text" id="me-highlight" oninput="applyModalAuthorEdit()" placeholder="예: 붉은 메모 / 핵심 강조" class="w-full bg-[#111114] border border-white/10 rounded-md px-2.5 py-1.5 text-zinc-200 text-xs focus:border-sky-400/60 outline-none">
+                </div>
+              </div>
+
+              <div>
+                <label for="me-clue" class="text-zinc-400 block mb-1 text-[11px]">관측 단서 본문 (줄바꿈 지원)</label>
+                <textarea id="me-clue" rows="3" oninput="applyModalAuthorEdit()" class="w-full bg-[#111114] border border-white/10 rounded-md px-2.5 py-1.5 text-zinc-100 font-mono text-[11px] leading-relaxed focus:border-sky-400/60 outline-none resize-y"></textarea>
+              </div>
+
+              <div>
+                <label for="me-hint1" class="text-zinc-400 block mb-1 text-[11px]">1차 힌트 (커스텀 오버라이드)</label>
+                <input type="text" id="me-hint1" oninput="applyModalAuthorEdit()" placeholder="비우면 기본 힌트 사용" class="w-full bg-[#111114] border border-white/10 rounded-md px-2.5 py-1.5 text-zinc-200 text-xs focus:border-sky-400/60 outline-none">
+              </div>
             </div>
 
-            <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
-              <span class="text-sm font-medium text-zinc-300">단계별 힌트</span>
-              <button id="btn-modal-hint" onclick="advanceModalHint()" class="px-3.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-100 text-xs font-semibold transition-colors">
-                힌트 보기 (1/2)
+            <div class="p-3 rounded-lg bg-[#09090b] border border-white/10 space-y-2.5">
+              <div class="text-[11px] font-medium text-amber-300">풀이 · 물리 장치 · 온톨로지 연결</div>
+
+              <div class="grid grid-cols-3 gap-2">
+                <div class="col-span-2">
+                  <label for="me-rule" class="text-zinc-400 block mb-1 text-[11px]">풀이 규칙</label>
+                  <input type="text" id="me-rule" oninput="applyModalAuthorEdit()" class="w-full bg-[#111114] border border-white/10 rounded-md px-2.5 py-1.5 text-zinc-200 font-mono text-[11px] focus:border-amber-400/60 outline-none">
+                </div>
+                <div>
+                  <label for="me-passcode" class="text-amber-400 block mb-1 text-[11px] font-medium">정답 코드</label>
+                  <input type="text" maxlength="8" id="me-passcode" oninput="applyModalAuthorEdit()" class="w-full bg-[#111114] border border-amber-500/40 rounded-md px-2.5 py-1.5 text-amber-300 font-mono font-semibold text-xs focus:border-amber-400 outline-none">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label for="me-mechanism" class="text-zinc-400 block mb-1 text-[11px]">물리 장치</label>
+                  <select id="me-mechanism" onchange="applyModalAuthorEdit()" class="w-full bg-[#111114] border border-white/10 rounded-md px-2 py-1.5 text-zinc-200 font-mono text-[11px] outline-none">
+                    <option value="">없음 (일반 자물쇠)</option>
+                    <option value="rotary-dial">rotary-dial (머그잔 회전)</option>
+                    <option value="clock-hands">clock-hands (괘종시계 바늘)</option>
+                    <option value="balance-scale">balance-scale (장기 저울)</option>
+                    <option value="uv-scan">uv-scan (UV 스캔)</option>
+                    <option value="pressure-valve">pressure-valve (증기 밸브)</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="me-requires" class="text-zinc-400 block mb-1 text-[11px]">선행 퍼즐</label>
+                  <select id="me-requires" onchange="applyModalAuthorEdit()" class="w-full bg-[#111114] border border-white/10 rounded-md px-2 py-1.5 text-zinc-200 font-mono text-[11px] outline-none"></select>
+                </div>
+              </div>
+
+              <div>
+                <label for="me-unlock-light" class="text-zinc-400 block mb-1 text-[11px]">해금 시 점등 광원</label>
+                <select id="me-unlock-light" onchange="applyModalAuthorEdit()" class="w-full bg-[#111114] border border-white/10 rounded-md px-2 py-1.5 text-amber-300 font-mono text-[11px] outline-none"></select>
+              </div>
+
+              <div>
+                <label for="me-story" class="text-zinc-400 block mb-1 text-[11px]">스토리 파편</label>
+                <input type="text" id="me-story" oninput="applyModalAuthorEdit()" placeholder="해금 시 출력할 서사 대사..." class="w-full bg-[#111114] border border-white/10 rounded-md px-2.5 py-1.5 text-zinc-200 text-xs focus:border-white/30 outline-none">
+              </div>
+            </div>
+          </div>
+
+          <!-- PLAY CONTROLS WRAPPER (Hidden while inline author editor is open) -->
+          <div id="modal-play-controls" class="flex-1 flex flex-col justify-between">
+            <div>
+              <!-- Unlock Target & 2-Stage Progressive Hint System -->
+              <div class="p-4 bg-[#09090b] rounded-xl border border-white/10 mb-5 text-left space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs text-zinc-500">해금 타겟</span>
+                  <span id="modal-unlock-desc" class="text-xs text-emerald-400 font-mono truncate"></span>
+                </div>
+
+                <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                  <span class="text-sm font-medium text-zinc-300">단계별 힌트</span>
+                  <button id="btn-modal-hint" onclick="advanceModalHint()" class="px-3.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-100 text-xs font-semibold transition-colors">
+                    힌트 보기 (1/2)
+                  </button>
+                </div>
+
+                <!-- Stage 1 Hint (Direction only, no answer) -->
+                <div id="modal-hint-stage1" class="hidden p-4 rounded-lg bg-zinc-900/90 border border-white/15 text-sm text-zinc-100 leading-relaxed break-keep"></div>
+
+                <!-- Stage 2 Answer Reveal (Rule + Passcode) -->
+                <div id="modal-hint-stage2" class="hidden p-4 rounded-lg bg-amber-950/35 border border-amber-500/40 text-sm text-amber-200 font-mono leading-relaxed break-keep">
+                  <span id="modal-prob-rule"></span>
+                </div>
+              </div>
+
+              <!-- Physical Mechanism Interactive Controls (Driven by obj.mechanism.kind) -->
+              <div id="modal-device-controls" class="hidden mb-5"></div>
+
+              <!-- Eligible Inventory Item Apply Controls (Driven by ITEM_INTERACTIONS) -->
+              <div id="modal-item-apply-box" class="hidden mb-5 p-3.5 rounded-lg bg-amber-950/30 border border-amber-500/30 space-y-2">
+                <div class="text-xs font-medium text-amber-300">소지품 적용 가능</div>
+                <div id="modal-item-apply-list" class="flex flex-wrap gap-2"></div>
+              </div>
+            </div>
+
+            <div>
+              <!-- 4-Slot Dial Input Section (Shown when code lock input is required) -->
+              <div id="modal-dial-section">
+                <div class="flex justify-center gap-3.5 my-4">
+                  <div class="flex flex-col items-center">
+                    <button onclick="turnDial(0, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
+                    <div id="d0" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
+                    <button onclick="turnDial(0, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
+                  </div>
+                  <div class="flex flex-col items-center">
+                    <button onclick="turnDial(1, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
+                    <div id="d1" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
+                    <button onclick="turnDial(1, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
+                  </div>
+                  <div class="flex flex-col items-center">
+                    <button onclick="turnDial(2, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
+                    <div id="d2" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
+                    <button onclick="turnDial(2, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
+                  </div>
+                  <div class="flex flex-col items-center">
+                    <button onclick="turnDial(3, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
+                    <div id="d3" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
+                    <button onclick="turnDial(3, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
+                  </div>
+                </div>
+
+                <!-- Directional Quick Pad (Shown when DirectionalLock) -->
+                <div id="modal-dir-pad" class="hidden mb-3 p-2 bg-[#09090b] rounded-lg border border-white/10 text-center">
+                  <div class="text-[10px] text-zinc-500 font-mono mb-1.5">방향 자물쇠 입력 (U:위 · D:아래 · L:왼쪽 · R:오른쪽)</div>
+                  <div class="flex justify-center gap-1.5">
+                    <button onclick="pushDirKey('U')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">↑ U</button>
+                    <button onclick="pushDirKey('D')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">↓ D</button>
+                    <button onclick="pushDirKey('L')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">← L</button>
+                    <button onclick="pushDirKey('R')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">→ R</button>
+                    <button onclick="clearDirKeys()" class="px-2.5 py-1 rounded bg-zinc-950 hover:bg-zinc-800 border border-white/10 text-zinc-400 font-mono text-xs">지우기</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="lock-feedback" class="text-xs py-2 px-3 rounded-md text-zinc-400 bg-[#09090b] mb-3 border border-white/10 text-center">
+                좌측 단서를 관찰해 장치를 조작하거나 코드를 입력한 뒤 해금을 누르세요.
+              </div>
+
+              <div class="flex gap-2">
+                <button onclick="autoFillDial()" class="w-1/3 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-medium py-2.5 rounded-md text-xs border border-white/10 transition-colors">
+                  정답 자동입력
+                </button>
+                <button onclick="checkLockSolution()" class="w-2/3 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold py-2.5 rounded-md text-xs transition-colors">
+                  자물쇠 해금 (Unlock)
+                </button>
+              </div>
+
+              <!-- Next Puzzle / Next Room Quick Jump Button -->
+              <button id="modal-next-action-btn" onclick="triggerNextPuzzleOrRoom()" class="hidden w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-md text-xs transition-colors">
+                다음 단계로 이동 →
               </button>
             </div>
-
-            <!-- Stage 1 Hint (Direction only, no answer) -->
-            <div id="modal-hint-stage1" class="hidden p-4 rounded-lg bg-zinc-900/90 border border-white/15 text-sm text-zinc-100 leading-relaxed break-keep"></div>
-
-            <!-- Stage 2 Answer Reveal (Rule + Passcode) -->
-            <div id="modal-hint-stage2" class="hidden p-4 rounded-lg bg-amber-950/35 border border-amber-500/40 text-sm text-amber-200 font-mono leading-relaxed break-keep">
-              <span id="modal-prob-rule"></span>
-            </div>
           </div>
-
-          <!-- Physical Mechanism Interactive Controls (Driven by obj.mechanism.kind) -->
-          <div id="modal-device-controls" class="hidden mb-5"></div>
-
-          <!-- Eligible Inventory Item Apply Controls (Driven by ITEM_INTERACTIONS) -->
-          <div id="modal-item-apply-box" class="hidden mb-5 p-3.5 rounded-lg bg-amber-950/30 border border-amber-500/30 space-y-2">
-            <div class="text-xs font-medium text-amber-300">소지품 적용 가능</div>
-            <div id="modal-item-apply-list" class="flex flex-wrap gap-2"></div>
-          </div>
-        </div>
-
-        <div>
-          <!-- 4-Slot Dial Input Section (Shown when code lock input is required) -->
-          <div id="modal-dial-section">
-            <div class="flex justify-center gap-3.5 my-4">
-              <div class="flex flex-col items-center">
-                <button onclick="turnDial(0, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
-                <div id="d0" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
-                <button onclick="turnDial(0, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
-              </div>
-              <div class="flex flex-col items-center">
-                <button onclick="turnDial(1, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
-                <div id="d1" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
-                <button onclick="turnDial(1, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
-              </div>
-              <div class="flex flex-col items-center">
-                <button onclick="turnDial(2, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
-                <div id="d2" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
-                <button onclick="turnDial(2, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
-              </div>
-              <div class="flex flex-col items-center">
-                <button onclick="turnDial(3, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
-                <div id="d3" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
-                <button onclick="turnDial(3, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
-              </div>
-            </div>
-
-            <!-- Directional Quick Pad (Shown when DirectionalLock) -->
-            <div id="modal-dir-pad" class="hidden mb-3 p-2 bg-[#09090b] rounded-lg border border-white/10 text-center">
-              <div class="text-[10px] text-zinc-500 font-mono mb-1.5">방향 자물쇠 입력 (U:위 · D:아래 · L:왼쪽 · R:오른쪽)</div>
-              <div class="flex justify-center gap-1.5">
-                <button onclick="pushDirKey('U')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">↑ U</button>
-                <button onclick="pushDirKey('D')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">↓ D</button>
-                <button onclick="pushDirKey('L')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">← L</button>
-                <button onclick="pushDirKey('R')" class="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-200 font-mono text-xs">→ R</button>
-                <button onclick="clearDirKeys()" class="px-2.5 py-1 rounded bg-zinc-950 hover:bg-zinc-800 border border-white/10 text-zinc-400 font-mono text-xs">지우기</button>
-              </div>
-            </div>
-          </div>
-
-          <div id="lock-feedback" class="text-xs py-2 px-3 rounded-md text-zinc-400 bg-[#09090b] mb-3 border border-white/10 text-center">
-            좌측 단서를 관찰해 장치를 조작하거나 코드를 입력한 뒤 해금을 누르세요.
-          </div>
-
-          <div class="flex gap-2">
-            <button onclick="autoFillDial()" class="w-1/3 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-medium py-2.5 rounded-md text-xs border border-white/10 transition-colors">
-              정답 자동입력
-            </button>
-            <button onclick="checkLockSolution()" class="w-2/3 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold py-2.5 rounded-md text-xs transition-colors">
-              자물쇠 해금 (Unlock)
-            </button>
-          </div>
-
-          <!-- Next Puzzle / Next Room Quick Jump Button -->
-          <button id="modal-next-action-btn" onclick="triggerNextPuzzleOrRoom()" class="hidden w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-md text-xs transition-colors">
-            다음 단계로 이동 →
-          </button>
         </div>
       </div>
     </div>
@@ -900,9 +1015,9 @@
     <div class="bg-slate-900 border-2 border-emerald-500 rounded-2xl w-[480px] max-w-full p-6 shadow-2xl relative text-center max-h-[90vh] overflow-y-auto">
       <button onclick="document.getElementById('victory-modal').classList.add('hidden')" title="닫기 (ESC)" class="absolute top-3 right-3 text-slate-400 hover:text-white text-lg font-bold">✕</button>
       <span class="text-4xl animate-bounce block mb-2">🏆</span>
-      <div class="text-xs font-bold text-emerald-400 tracking-wider uppercase mb-1">6 Rooms · 30 Puzzles Conquered</div>
-      <div class="text-xl font-black text-white mb-2">폐쇄병동 404호 완전 탈출 성공!</div>
-      <p class="text-xs text-slate-300 mb-4 leading-relaxed">
+      <div id="vic-subtitle" class="text-xs font-bold text-emerald-400 tracking-wider uppercase mb-1">6 Rooms · 30 Puzzles Conquered</div>
+      <div id="vic-title" class="text-xl font-black text-white mb-2">폐쇄병동 404호 완전 탈출 성공!</div>
+      <p id="vic-desc" class="text-xs text-slate-300 mb-4 leading-relaxed">
         축하합니다! <b>제1방 원무과 접수처</b>부터 <b>제6방 지하 소각로</b>까지 6개 공간과 <b>30개의 닫힌 세계 인과율(FSM)</b>을 완벽히 격파하고 지상 비상구로 탈출하셨습니다!
       </p>
 
@@ -910,7 +1025,7 @@
       <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs font-mono text-slate-400 space-y-1.5 mb-3 text-left">
         <div class="flex justify-between"><span>⏱️ 총 탈출 소요 시간:</span><span id="vic-elapsed-time" class="text-emerald-400 font-bold">12분 34초</span></div>
         <div class="flex justify-between"><span>🧩 해금한 퍼즐 수:</span><span id="vic-solved-count" class="text-white font-bold">30 / 30 문항 (100%)</span></div>
-        <div class="flex justify-between"><span>🏢 건축 관통 동선:</span><span class="text-indigo-400 font-bold">1F접수 ➔ 복도 ➔ B1사다리 ➔ 2F영안 ➔ B2소각</span></div>
+        <div class="flex justify-between gap-2"><span class="shrink-0">🏢 건축 관통 동선:</span><span id="vic-route" class="text-indigo-400 font-bold text-right truncate">1F접수 ➔ 복도 ➔ B1사다리 ➔ 2F영안 ➔ B2소각</span></div>
         <div class="flex justify-between"><span>⚠️ 누적 오답 횟수:</span><span id="vic-failures-count" class="text-rose-400 font-bold">0회</span></div>
         <div class="flex justify-between"><span>👁️ Director 탈출 등급:</span><span id="vic-director-rank" class="text-amber-400 font-bold">S+ (심연의 지배자)</span></div>
       </div>
@@ -918,40 +1033,10 @@
       <!-- Room-by-Room Breakdown Bar -->
       <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 mb-4 text-left">
         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between">
-          <span>6개 공간 클리어 타임라인</span>
+          <span id="vic-timeline-title">6개 공간 클리어 타임라인</span>
           <span class="text-emerald-400 font-mono">ALL CLEARED</span>
         </div>
-        <div class="grid grid-cols-6 gap-1 text-center font-mono text-[9px]">
-          <div class="bg-slate-900 border border-emerald-500/50 p-1 rounded">
-            <div class="text-emerald-400 font-bold">1F접수</div>
-            <div class="text-slate-400">Q01~05</div>
-            <div class="text-white font-bold mt-0.5">완료</div>
-          </div>
-          <div class="bg-slate-900 border border-emerald-500/50 p-1 rounded">
-            <div class="text-emerald-400 font-bold">1F진료</div>
-            <div class="text-slate-400">Q06~10</div>
-            <div class="text-white font-bold mt-0.5">완료</div>
-          </div>
-          <div class="bg-slate-900 border border-emerald-500/50 p-1 rounded">
-            <div class="text-emerald-400 font-bold">B1격리</div>
-            <div class="text-slate-400">Q11~15</div>
-            <div class="text-white font-bold mt-0.5">완료</div>
-          </div>
-          <div class="bg-slate-900 border border-emerald-500/50 p-1 rounded">
-            <div class="text-emerald-400 font-bold">2F영안</div>
-            <div class="text-slate-400">Q16~20</div>
-            <div class="text-white font-bold mt-0.5">완료</div>
-          </div>
-          <div class="bg-slate-900 border border-emerald-500/50 p-1 rounded">
-            <div class="text-emerald-400 font-bold">2F연구</div>
-            <div class="text-slate-400">Q21~25</div>
-            <div class="text-white font-bold mt-0.5">완료</div>
-          </div>
-          <div class="bg-slate-900 border border-emerald-500/50 p-1 rounded">
-            <div class="text-emerald-400 font-bold">B2소각</div>
-            <div class="text-slate-400">Q26~30</div>
-            <div class="text-white font-bold mt-0.5">탈출!</div>
-          </div>
+        <div id="vic-room-grid" class="grid grid-cols-6 gap-1 text-center font-mono text-[9px]">
         </div>
       </div>
 
@@ -959,7 +1044,7 @@
         <button onclick="copyEscapeCertificate()" class="w-1/2 bg-indigo-700 hover:bg-indigo-600 text-white font-bold py-2.5 rounded-lg text-xs shadow-md border border-indigo-500 flex items-center justify-center gap-1">
           <span>📋</span><span>탈출 인증서 복사</span>
         </button>
-        <button onclick="document.getElementById('victory-modal').classList.add('hidden'); setViewLayout('logic');" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-lg text-xs border border-slate-700">
+        <button id="vic-map-btn" onclick="document.getElementById('victory-modal').classList.add('hidden'); setViewLayout('logic');" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-lg text-xs border border-slate-700">
           30문제 맵 보기
         </button>
       </div>
@@ -1006,10 +1091,10 @@
     <!-- Controls Help Pill -->
     <div class="bg-zinc-950/90 backdrop-blur border border-cyan-500/30 text-cyan-300 px-3 py-1 rounded-full text-[11px] font-mono shadow-lg flex items-center gap-2">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-      <span id="craft-hotbar-instructions">[R/휠] 회전 · [좌클릭] 배치 · [우클릭/X] 집기 · [Del] 삭제 · [B] 종료</span>
+      <span id="craft-hotbar-instructions">[클릭] 배치 · [길게 클릭] 집기 · [R/휠] 회전 · [Tab] 카탈로그 · [Del] 삭제 · [B] 종료</span>
     </div>
 
-    <!-- 1~6 Hotbar Slots -->
+    <!-- 1~5 Hotbar Slots (assign any model via the Tab catalog) -->
     <div class="flex items-center gap-1.5 p-1.5 bg-zinc-950/90 backdrop-blur border border-white/15 rounded-xl shadow-2xl">
       <button onclick="window.selectCraftSlot(1)" id="craft-slot-1" class="craft-slot px-2.5 py-1.5 rounded-lg border flex flex-col items-center gap-0.5 transition-all text-xs border-cyan-400 bg-cyan-950/60 text-cyan-200">
         <span class="text-[9px] font-mono text-cyan-400 font-bold">[1]</span>
@@ -1031,10 +1116,25 @@
         <span class="text-[9px] font-mono text-zinc-500 font-bold">[5]</span>
         <span class="font-medium text-[11px]">천장 조명</span>
       </button>
-      <button onclick="window.selectCraftSlot(6)" id="craft-slot-6" class="craft-slot px-2.5 py-1.5 rounded-lg border flex flex-col items-center gap-0.5 transition-all text-xs border-white/10 bg-zinc-900/80 text-zinc-400 hover:text-zinc-200">
-        <span class="text-[9px] font-mono text-zinc-500 font-bold">[6]</span>
-        <span class="font-medium text-[11px]">기물 집기</span>
+      <div class="w-px self-stretch bg-white/10 mx-0.5"></div>
+      <button type="button" onclick="window.openCraftCatalog()" id="craft-catalog-btn" title="모델링 카탈로그 (Tab)" class="px-2.5 py-1.5 rounded-lg border border-white/15 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 text-[11px] font-medium transition-colors">
+        [Tab: 카탈로그]
       </button>
+    </div>
+  </div>
+
+  <!-- CRAFT CATALOG MODAL (Tab) -->
+  <div id="craft-catalog-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div class="w-[min(960px,94vw)] max-h-[84vh] flex flex-col rounded-xl border border-white/15 bg-zinc-950 shadow-2xl">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <div class="flex items-center gap-3">
+          <span class="text-sm font-semibold text-zinc-100">크래프트 카탈로그</span>
+          <span id="craft-catalog-active-slot" class="text-[11px] font-mono text-cyan-300">현재 슬롯 [1]</span>
+          <span class="text-[11px] text-zinc-500">카드 클릭: 현재 슬롯에 등록 · [1]~[5]: 해당 슬롯에 등록</span>
+        </div>
+        <button type="button" onclick="window.closeCraftCatalog()" class="px-2 py-1 rounded border border-white/10 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-[11px]">닫기 [Tab/ESC]</button>
+      </div>
+      <div id="craft-catalog-body" class="flex-1 overflow-y-auto p-4 space-y-5"></div>
     </div>
   </div>
 

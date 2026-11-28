@@ -16,7 +16,7 @@
         "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "title": { "type": "string" },
         "genre": { "type": "string", "enum": ["Horror", "Mystery", "SciFi", "Emotional", "Adventure"] },
-        "durationMinutes": { "type": "integer", "minimum": 10, "maximum": 180 }
+        "durationMinutes": { "type": "integer", "minimum": 10, "maximum": 300 }
       }
     },
     "spaces": {
@@ -68,20 +68,36 @@
               "required": ["id", "kind", "pos", "color", "intensity", "distance"],
               "properties": {
                 "id": { "type": "string" },
-                "kind": { "type": "string", "enum": ["fluorescent", "surgical", "emergency", "lamp", "candle"] },
+                "kind": { "type": "string", "enum": ["fluorescent", "ceiling", "surgical", "emergency", "lamp", "desk-lamp", "wall-sconce", "pin-spot", "candle"] },
+                "fixtureType": { "type": "string", "enum": ["fluorescent", "ceiling", "surgical", "emergency", "lamp", "desk-lamp", "wall-sconce", "pin-spot", "candle"], "description": "물리 등기구 형태 (생략 시 kind 사용)" },
                 "pos": {
                   "type": "array",
                   "items": { "type": "number" },
                   "minItems": 3,
                   "maxItems": 3
                 },
+                "targetPos": {
+                  "type": "array",
+                  "items": { "type": "number" },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "핀스포트/스콘스 조준 대상 로컬 좌표 [x, y, z] (선택)"
+                },
+                "wallSide": { "type": "string", "enum": ["N", "E", "S", "W"], "description": "벽부등/비상등 부착 벽면 방위 (선택)" },
                 "color": {
                   "type": "string",
                   "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
                 },
                 "intensity": { "type": "number" },
                 "distance": { "type": "number" },
-                "flicker": { "type": "boolean", "default": false }
+                "flicker": { "type": "boolean", "default": false },
+                "initiallyOn": { "type": "boolean", "default": true, "description": "초기 점등 여부 (false면 해금 연쇄 연출로 점등)" },
+                "targetPropId": { "type": "string", "description": "이 광원이 지향·강조하는 대상 소품 ID (선택)" },
+                "targetPropIds": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "이 광원이 공유하여 비추는 대상 소품 ID 목록 (선택)"
+                }
               }
             }
           },
@@ -235,6 +251,19 @@
                 }
               },
               "unlocks": { "type": "string", "description": "해금할 doorId 또는 containerId" },
+              "onUnlockEffects": {
+                "type": "array",
+                "description": "게이트 해금 시 연쇄 발동하는 광원·단서 연출 효과 목록",
+                "items": {
+                  "type": "object",
+                  "required": ["kind", "targetId"],
+                  "properties": {
+                    "kind": { "type": "string", "enum": ["lightOn", "lightOff", "lightFlicker", "revealClue"] },
+                    "targetId": { "type": "string", "description": "대상 광원 ID 또는 단서 ID" },
+                    "sfx": { "type": "string", "description": "연출 시 재생할 효과음 식별자 (선택)" }
+                  }
+                }
+              },
               "isOpen": { "type": "boolean", "default": false }
             }
           }

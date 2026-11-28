@@ -1,0 +1,985 @@
+{
+  "version": "1.0",
+  "theme": {
+    "id": "crimescene-penthouse",
+    "title": "크라임씬: 한강 펜트하우스 2301호",
+    "genre": "Mystery",
+    "durationMinutes": 60
+  },
+  "spaces": [
+    {
+      "id": "space-c1",
+      "name": "현장 1: 피살된 회장의 펜트하우스 거실",
+      "layer": 0,
+      "floorHeight": 0.0,
+      "wallHeight": 2.8,
+      "polygon": [
+        [0.0, 0.0],
+        [6.5, 0.0],
+        [6.5, 5.0],
+        [0.0, 5.0]
+      ],
+      "materials": {
+        "wall": "plaster",
+        "floor": "wood",
+        "wallTint": "#3a3532",
+        "floorTint": "#2b211a"
+      },
+      "lights": [
+        {
+          "id": "light-c1-lamp",
+          "kind": "lamp",
+          "pos": [2.0, 2.4, 2.5],
+          "color": "#ffaa55",
+          "intensity": 1.3,
+          "distance": 7.0,
+          "flicker": false,
+          "initiallyOn": true
+        },
+        {
+          "id": "light-c1-spot",
+          "kind": "surgical",
+          "pos": [4.5, 2.6, 1.5],
+          "color": "#d8ecff",
+          "intensity": 2.0,
+          "distance": 6.0,
+          "flicker": false,
+          "initiallyOn": false,
+          "targetPropId": "prop-c1-clock"
+        }
+      ],
+      "props": [
+        {
+          "id": "prop-c1-desk",
+          "name": "거실 중앙 사건 현장 테이블",
+          "model": "Desk",
+          "modelPreset": "desk-plain",
+          "type": "desk",
+          "targetClueId": "clue-01",
+          "wallSnapped": false,
+          "material": { "preset": "wood", "tint": "#4a3222" },
+          "gimmick": {
+            "kind": "blood-marking",
+            "data": { "caseCode": "2335", "discoveredAt": "22:30", "elapsedMinutes": 35 },
+            "description": "깨진 찻잔 옆에 1차 부검 소견서와 감식반 증거 보관함이 놓여 있다."
+          },
+          "transform": { "pos": [2.2, 0.4, 2.4], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-c1-clock",
+          "name": "충격으로 멈춘 회장 시계 & 거실 괘종시계",
+          "model": "Clock",
+          "modelPreset": "clock",
+          "type": "artifact",
+          "targetClueId": "clue-02",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "material": { "preset": "wood", "tint": "#3b2416" },
+          "gimmick": {
+            "kind": "clock-angle",
+            "data": { "timeString": "21:55", "hour": 9, "minute": 55 },
+            "description": "몸싸움 충격으로 21시 55분에 멈춰 버린 회장의 금장 시계와 연동된 괘종시계."
+          },
+          "transform": { "pos": [4.6, 1.2, 0.35], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-c1-cabinet",
+          "name": "과학수사 감식 장비 캐비닛",
+          "model": "Cabinet",
+          "modelPreset": "cabinet",
+          "type": "cabinet",
+          "targetClueId": "clue-03",
+          "wallSnapped": true,
+          "wallSide": "W",
+          "material": { "preset": "surgicalSteel", "tint": "#525860" },
+          "gimmick": {
+            "kind": "custom",
+            "data": { "suspects": ["01 강서연(A)", "02 박도현(AB)", "03 한지훈(B)"] },
+            "description": "용의자 3인의 1차 알리바이 진술서와 혈액형 대조표가 꽂힌 감식 캐비닛."
+          },
+          "transform": { "pos": [0.5, 0.85, 3.6], "rot": [0, 1.57, 0] }
+        },
+        {
+          "id": "prop-c1-intercom",
+          "name": "거실 월패드 및 동선도 게시판",
+          "model": "Phone",
+          "modelPreset": "phone",
+          "type": "console",
+          "targetClueId": "clue-04",
+          "wallSnapped": true,
+          "wallSide": "S",
+          "material": { "preset": "concrete", "tint": "#333840" },
+          "gimmick": {
+            "kind": "custom",
+            "data": { "secretEntrance": "북동쪽 비밀 책장 키홀" },
+            "description": "펜트하우스 2301호 평면도와 비밀 서재 출입구 표시가 남아 있는 월패드."
+          },
+          "transform": { "pos": [3.4, 0.9, 4.65], "rot": [0, 3.14, 0] }
+        },
+        {
+          "id": "prop-c1-bookcase",
+          "name": "서재로 이어지는 비밀 책장 문",
+          "model": "SecretBookcase",
+          "modelPreset": "door-bookshelf",
+          "type": "door",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "material": { "preset": "wood", "tint": "#3d2618" },
+          "gimmick": {
+            "kind": "book-spine",
+            "data": { "requiredItem": "item-study-key" },
+            "description": "고서적 사이에 마스터키 소켓이 숨겨진 전동식 비밀 책장."
+          },
+          "transform": { "pos": [6.3, 1.05, 2.5], "rot": [0, -1.57, 0] }
+        }
+      ]
+    },
+    {
+      "id": "space-c2",
+      "name": "현장 2: 비밀 서재 & 개인 금고실",
+      "layer": 0,
+      "floorHeight": 0.0,
+      "wallHeight": 2.8,
+      "polygon": [
+        [0.0, 0.0],
+        [6.5, 0.0],
+        [6.5, 5.0],
+        [0.0, 5.0]
+      ],
+      "materials": {
+        "wall": "wood",
+        "floor": "wood",
+        "wallTint": "#2e1f16",
+        "floorTint": "#231710"
+      },
+      "lights": [
+        {
+          "id": "light-c2-lamp",
+          "kind": "lamp",
+          "pos": [2.2, 2.4, 2.5],
+          "color": "#e89c42",
+          "intensity": 1.1,
+          "distance": 6.5,
+          "flicker": false,
+          "initiallyOn": true
+        },
+        {
+          "id": "light-c2-uv",
+          "kind": "surgical",
+          "pos": [4.8, 2.6, 1.4],
+          "color": "#8b5cf6",
+          "intensity": 2.2,
+          "distance": 5.5,
+          "flicker": false,
+          "initiallyOn": false,
+          "targetPropId": "prop-c2-safe"
+        }
+      ],
+      "props": [
+        {
+          "id": "prop-c2-desk",
+          "name": "한태성 회장 서재 집무실 책상",
+          "model": "Desk",
+          "modelPreset": "desk-terminal",
+          "type": "desk",
+          "targetClueId": "clue-05",
+          "wallSnapped": false,
+          "material": { "preset": "wood", "tint": "#382214" },
+          "gimmick": {
+            "kind": "blood-marking",
+            "data": { "uvTarget": "금고 다이얼 혈흔" },
+            "description": "서류들이 흩어진 마호가니 집무 책상. 카펫 위로 미세한 혈흔이 금고 쪽으로 이어진다."
+          },
+          "transform": { "pos": [2.0, 0.4, 2.2], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-c2-safe",
+          "name": "벽면 매립형 회장 개인 강철 금고",
+          "model": "Safe",
+          "modelPreset": "safe",
+          "type": "safe",
+          "targetClueId": "clue-06",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "material": { "preset": "rustedMetal", "tint": "#3f444c" },
+          "gimmick": {
+            "kind": "custom",
+            "data": { "safeCode": "3068", "uvDigits": [3, 0, 6, 8] },
+            "description": "UV 감식등 아래에서만 4개의 형광 지문 숫자가 드러나는 대형 강철 금고."
+          },
+          "transform": { "pos": [4.8, 0.45, 0.55], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-c2-portrait",
+          "name": "대성그룹 창립자 유화 초상화",
+          "model": "Portrait",
+          "modelPreset": "portrait",
+          "type": "artifact",
+          "wallSnapped": true,
+          "wallSide": "W",
+          "material": { "preset": "wood", "tint": "#5c3d1e" },
+          "gimmick": {
+            "kind": "portrait-pointer",
+            "data": { "pointingVector": "NORTH-EAST", "socket": "자석 배지 홈" },
+            "description": "창립자 초상화 액자 하단에 원형 자석 배지를 끼우는 숨겨진 홈이 있다."
+          },
+          "transform": { "pos": [0.25, 1.65, 2.5], "rot": [0, 1.57, 0] }
+        },
+        {
+          "id": "prop-c2-medicine",
+          "name": "주치의 전용 처방 약품 보관장",
+          "model": "SpecimenShelf",
+          "modelPreset": "specimen-shelf",
+          "type": "artifact",
+          "targetClueId": "clue-07",
+          "wallSnapped": true,
+          "wallSide": "S",
+          "material": { "preset": "surgicalSteel", "tint": "#5c6670" },
+          "gimmick": {
+            "kind": "custom",
+            "data": { "directionCode": "URDL" },
+            "description": "청산칼륨 혼입 흔적이 남은 약병 4개가 방향 라벨 순서대로 진열되어 있다."
+          },
+          "transform": { "pos": [3.5, 0.75, 4.55], "rot": [0, 3.14, 0] }
+        },
+        {
+          "id": "prop-c2-door",
+          "name": "CCTV 관제실 보안 출입문",
+          "model": "Door",
+          "modelPreset": "door-standard",
+          "type": "door",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "material": { "preset": "surgicalSteel", "tint": "#454c54" },
+          "gimmick": {
+            "kind": "custom",
+            "data": { "lockType": "DirectionalLock", "code": "URDL" },
+            "description": "4방향 보안 레버가 부착된 관제실 방화문."
+          },
+          "transform": { "pos": [6.35, 1.05, 2.5], "rot": [0, -1.57, 0] }
+        }
+      ]
+    },
+    {
+      "id": "space-c3",
+      "name": "현장 3: CCTV 관제 & 최종 범인 지목실",
+      "layer": 0,
+      "floorHeight": 0.0,
+      "wallHeight": 2.8,
+      "polygon": [
+        [0.0, 0.0],
+        [6.0, 0.0],
+        [6.0, 5.0],
+        [0.0, 5.0]
+      ],
+      "materials": {
+        "wall": "concrete",
+        "floor": "tile",
+        "wallTint": "#262b33",
+        "floorTint": "#1c2026"
+      },
+      "lights": [
+        {
+          "id": "light-c3-crt",
+          "kind": "fluorescent",
+          "pos": [2.0, 2.5, 1.8],
+          "color": "#93c5fd",
+          "intensity": 1.2,
+          "distance": 6.5,
+          "flicker": false,
+          "initiallyOn": true
+        },
+        {
+          "id": "light-c3-spot",
+          "kind": "surgical",
+          "pos": [4.2, 2.6, 3.2],
+          "color": "#fef08a",
+          "intensity": 2.3,
+          "distance": 5.5,
+          "flicker": false,
+          "initiallyOn": false,
+          "targetPropId": "prop-c3-board"
+        },
+        {
+          "id": "light-c3-emerg",
+          "kind": "emergency",
+          "pos": [5.4, 2.4, 2.5],
+          "color": "#ef4444",
+          "intensity": 1.3,
+          "distance": 5.0,
+          "flicker": true,
+          "initiallyOn": true
+        }
+      ],
+      "props": [
+        {
+          "id": "prop-c3-console",
+          "name": "23층 CCTV 관제 CRT 모니터 뱅크",
+          "model": "Console",
+          "modelPreset": "console",
+          "type": "console",
+          "targetClueId": "clue-08",
+          "wallSnapped": true,
+          "wallSide": "N",
+          "material": { "preset": "surgicalSteel", "tint": "#2f3742" },
+          "gimmick": {
+            "kind": "custom",
+            "data": { "mountCode": "2301", "requiredItem": "item-cctv-chip" },
+            "description": "삭제된 21:40~22:00 CCTV 메모리칩 슬롯이 장착된 다채널 관제 콘솔."
+          },
+          "transform": { "pos": [2.2, 0.5, 0.65], "rot": [0, 0, 0] }
+        },
+        {
+          "id": "prop-c3-lightbox",
+          "name": "알리바이 타임라인 교차검증 보드",
+          "model": "XRayLightbox",
+          "modelPreset": "xray-lightbox",
+          "type": "console",
+          "targetClueId": "clue-09",
+          "wallSnapped": true,
+          "wallSide": "W",
+          "material": { "preset": "surgicalSteel", "tint": "#38414d" },
+          "gimmick": {
+            "kind": "custom",
+            "data": { "contradictionTime": "2158" },
+            "description": "용의자 3인의 진술 타임라인과 복구된 CCTV 타임스탬프를 대조하는 발광 보드."
+          },
+          "transform": { "pos": [0.4, 1.4, 2.8], "rot": [0, 1.57, 0] }
+        },
+        {
+          "id": "prop-c3-board",
+          "name": "최종 범인 지목 투표 단말기",
+          "model": "DeskTerminal",
+          "modelPreset": "desk-terminal",
+          "type": "desk",
+          "targetClueId": "clue-10",
+          "wallSnapped": false,
+          "material": { "preset": "concrete", "tint": "#2b3038" },
+          "gimmick": {
+            "kind": "custom",
+            "data": { "suspectCode": "0258", "culprit": "02 주치의 박도현" },
+            "description": "취조 스포트라이트 아래 놓인 최종 범인 지목 및 체포 영장 발부 단말기."
+          },
+          "transform": { "pos": [4.0, 0.45, 3.2], "rot": [0, -0.5, 0] }
+        },
+        {
+          "id": "prop-c3-exit",
+          "name": "2301호 경찰 봉쇄 해제 출입문",
+          "model": "FinalDoor",
+          "modelPreset": "door-standard",
+          "type": "door",
+          "wallSnapped": true,
+          "wallSide": "E",
+          "material": { "preset": "surgicalSteel", "tint": "#3b424c" },
+          "gimmick": {
+            "kind": "custom",
+            "data": { "finalCode": "0258" },
+            "description": "진범 지목이 완료되어야 봉쇄가 해제되는 2301호 최종 출입문."
+          },
+          "transform": { "pos": [5.85, 1.05, 2.5], "rot": [0, -1.57, 0] }
+        }
+      ]
+    }
+  ],
+  "passages": [
+    {
+      "id": "pass-c1-c2",
+      "fromSpaceId": "space-c1",
+      "toSpaceId": "space-c2",
+      "directionality": "TwoWay",
+      "traverseCost": "Walk",
+      "door": {
+        "id": "door-c1-c2",
+        "type": "SecretBookcase",
+        "isLocked": true,
+        "transform": { "pos": [6.5, 0.0, 2.5], "rot": [0, 1.57, 0] }
+      }
+    },
+    {
+      "id": "pass-c2-c3",
+      "fromSpaceId": "space-c2",
+      "toSpaceId": "space-c3",
+      "directionality": "TwoWay",
+      "traverseCost": "Walk",
+      "door": {
+        "id": "door-c2-c3",
+        "type": "StandardDoor",
+        "isLocked": true,
+        "transform": { "pos": [6.5, 0.0, 2.5], "rot": [0, 1.57, 0] }
+      }
+    },
+    {
+      "id": "pass-c3-exit",
+      "fromSpaceId": "space-c3",
+      "toSpaceId": "space-exterior",
+      "directionality": "OneWay",
+      "traverseCost": "Walk",
+      "door": {
+        "id": "door-final-exit",
+        "type": "EMLockDoor",
+        "isLocked": true,
+        "transform": { "pos": [6.0, 0.0, 2.5], "rot": [0, 1.57, 0] }
+      }
+    }
+  ],
+  "logicGraph": {
+    "clues": [
+      {
+        "id": "clue-01",
+        "propRef": "prop-c1-desk",
+        "carrierType": "Text",
+        "payload": "[현장 감식 #01] 국립과학수사연구원 1차 부검 소견서: 한태성 회장(68, O형), 발견 시각 22:30, 사후 경과 35분. 현장 층수(23) + 사후 경과 분(35) = 사건 증거함 접수 코드 [2335].",
+        "visualSpec": {
+          "template": "document",
+          "title": "국과수 1차 검시 및 부검 소견서",
+          "badge": "CASE #2301-A",
+          "lines": [
+            "피해자: 한태성 회장 (68세, 혈액형 O형)",
+            "발견 시각: 22:30 / 추정 사인: 청산칼륨 중독 + 후두부 둔기 타격",
+            "직장 온도 측정 결과: 사후 약 35분 경과",
+            "증거 보관함 코드: 현장 층수(23) + 경과 분(35)"
+          ],
+          "highlight": "23 + 35 → 2335"
+        }
+      },
+      {
+        "id": "clue-02",
+        "propRef": "prop-c1-clock",
+        "carrierType": "PhysicalState",
+        "payload": "[현장 감식 #02] 현장 폴라로이드 #01: 발견 시각 22:30 기준 사후 35분 경과 = 21:55. 몸싸움 충격으로 깨진 회장의 금장 손목시계가 정확히 21시 55분(9시 55분)에 멈춰 있다.",
+        "visualSpec": {
+          "template": "photo",
+          "title": "현장 폴라로이드 #01 — 멈춘 금장 손목시계",
+          "badge": "FORENSIC PHOTO",
+          "lines": [
+            "촬영 구역: 2301호 거실 중앙 테이블 우측 바닥",
+            "발견 시각 22:30 - 사후 경과 35분 = 21:55",
+            "유리판이 파손된 시침(9)과 분침(55)이 고정되어 있음",
+            "괘종시계 장치에 사망 추정 시각 [21:55]을 세팅하라."
+          ],
+          "highlight": "사망 추정 시각 21:55 (시침 9, 분침 55)"
+        }
+      },
+      {
+        "id": "clue-03",
+        "propRef": "prop-c1-cabinet",
+        "carrierType": "Trace",
+        "payload": "[현장 감식 #03] 용의자 3인 알리바이 진술서 & 혈액형 대조표: (01) 비서 강서연[A형, 21:40 로비 이동], (02) 주치의 박도현[AB형, 21:35 비상계단 퇴근 주장], (03) 조카 한지훈[B형, 21:50 출차 주장]. 혈흔 손수건+루미놀 시약 감식 결과는 AB형! 박도현이 주장한 퇴근 시각 4자리 [2135]로 거실 비밀 서랍을 열어라.",
+        "visualSpec": {
+          "template": "document",
+          "title": "용의자 3인 1차 알리바이 진술서",
+          "badge": "SUSPECT FILE",
+          "lines": [
+            "[01] 비서 강서연 (A형) — 21:40 1층 로비 택배 수령, 22:15까지 체류",
+            "[02] 주치의 박도현 (AB형) — 21:35 정기 진료 후 비상계단 퇴근 주장",
+            "[03] 조카 한지훈 (B형) — 21:45 유언장 언쟁 후 21:50 퇴장 주장",
+            "손수건 루미놀 감식(AB형) 완료 후 의심 용의자 퇴근 주장 시각 입력"
+          ],
+          "highlight": "박도현(AB형) 진술 퇴근 시각: 2135"
+        }
+      },
+      {
+        "id": "clue-04",
+        "propRef": "prop-c1-intercom",
+        "carrierType": "Text",
+        "payload": "[현장 감식 #04] 펜트하우스 2301호 동선도: 거실 동쪽 벽면 책장 뒤에 회장 전용 비밀 서재가 숨겨져 있다. 서랍에서 확보한 [서재 마스터키]를 비밀 책장 키홀에 꽂아 개방하라.",
+        "visualSpec": {
+          "template": "blueprint",
+          "title": "한강 펜트하우스 2301호 내부 동선도",
+          "badge": "FLOOR PLAN 23F",
+          "lines": [
+            "ZONE 1: 메인 거실 (피해자 발견 지점, 동쪽 비밀 책장)",
+            "ZONE 2: 회장 비밀 서재 & 개인 금고실 (마스터키 필요)",
+            "ZONE 3: 23층 CCTV 관제실 & 비상계단 출구 연결",
+            "비밀 책장 마스터키 슬롯에 열쇠를 적용하여 진입하라."
+          ],
+          "highlight": "서재 마스터키 → 동쪽 비밀 책장 개방"
+        }
+      },
+      {
+        "id": "clue-05",
+        "propRef": "prop-c2-desk",
+        "carrierType": "Trace",
+        "payload": "[현장 감식 #05] 서재 카펫 UV 루미놀 촬영본: 닦아낸 혈흔 자국이 집무 책상에서 북쪽 개인 금고 다이얼까지 이어져 있다. 점등된 UV 감식등 아래에서 금고 다이얼을 UV 스캔하라.",
+        "visualSpec": {
+          "template": "photo",
+          "title": "서재 카펫 & 금고 다이얼 UV 루미놀 촬영본",
+          "badge": "UV TRACE",
+          "lines": [
+            "감식 구역: 비밀 서재 북쪽 벽면 개인 강철 금고",
+            "육안으로 지워진 혈흔이 365nm UV 파장에서 강하게 발광함",
+            "범인이 범행 직후 서재 금고를 열려 시도한 흔적 포착",
+            "UV 스캔 장치로 금고 다이얼을 정밀 감식하라."
+          ],
+          "highlight": "UV 스캔 활성화 → 형광 지문 추출"
+        }
+      },
+      {
+        "id": "clue-06",
+        "propRef": "prop-c2-safe",
+        "carrierType": "Text",
+        "payload": "[현장 감식 #06] UV 감식 파일 & 신약 사기 내사 요약: 범인이 노린 문서는 주치의 박도현의 30억 신약 투자 사기 내사 보고서다. UV 다이얼에 남은 형광 숫자: 사기 피해액(30억) + 한태성 회장 나이(68세) = 금고 비밀번호 [3068].",
+        "visualSpec": {
+          "template": "document",
+          "title": "대성그룹 감사팀 극비 내사 보고서 (사본)",
+          "badge": "CONFIDENTIAL",
+          "lines": [
+            "피조사자: 주치의 박도현 (대성바이오 신약 임상 자문)",
+            "혐의 내용: 임상 데이터 조작 및 30억 원 투자금 횡령 적발",
+            "한태성 회장(68세), 사건 당일 밤 검찰 고발장 서명 예정이었음",
+            "UV 형광 다이얼 조합: 횡령액(30) + 회장 나이(68)"
+          ],
+          "highlight": "금고 비밀번호: 3068"
+        }
+      },
+      {
+        "id": "clue-07",
+        "propRef": "prop-c2-medicine",
+        "carrierType": "PhysicalState",
+        "payload": "[현장 감식 #07] 약품 보관장 독극물 병 배치 사진: 청산칼륨 캡슐이 바꿔치기된 혈압약 병 4개의 화살표 라벨이 순서대로 [위(U) → 오른쪽(R) → 아래(D) → 왼쪽(L)]을 가리킨다. 관제실 방향키 코드: [URDL].",
+        "visualSpec": {
+          "template": "photo",
+          "title": "처방 약품 보관장 — 독극물 혼입 라벨 사진",
+          "badge": "TOXICOLOGY",
+          "lines": [
+            "1번 병(혈압강하제): 화살표 북쪽 [U]",
+            "2번 병(수면유도제): 화살표 동쪽 [R]",
+            "3번 병(영양캡슐-청산칼륨 검출): 화살표 남쪽 [D]",
+            "4번 병(비상주사제): 화살표 서쪽 [L]"
+          ],
+          "highlight": "관제실 보안문 방향 코드: URDL"
+        }
+      },
+      {
+        "id": "clue-08",
+        "propRef": "prop-c3-console",
+        "carrierType": "AudioVisual",
+        "payload": "[현장 감식 #08] CCTV 관제 시스템 로그인 터미널: 삭제된 21:40~22:00 비상계단 영상을 복구하려면 금고에서 확보한 [CCTV 메모리칩]을 장착하고 펜트하우스 호실 번호 [2301]을 입력하라.",
+        "visualSpec": {
+          "template": "crt",
+          "title": "PENTHOUSE 23F — CCTV ARCHIVE TERMINAL",
+          "badge": "SYSTEM LOCKED",
+          "lines": [
+            "> SECTOR_23F_STAIRWELL : DELETED AT 21:59:12",
+            "> BACKUP_CHIP_REQUIRED : [CCTV 메모리칩]",
+            "> ENTER PENTHOUSE UNIT NUMBER TO MOUNT BACKUP",
+            "> UNIT ID : 2301"
+          ],
+          "highlight": "메모리칩 연동 + 호실 코드 2301"
+        }
+      },
+      {
+        "id": "clue-09",
+        "propRef": "prop-c3-lightbox",
+        "carrierType": "AudioVisual",
+        "payload": "[현장 감식 #09] 복구된 23층 CCTV & 출차 통합 로그: [21:41 로비] 강서연(01) 체류 확인(성립), [21:53 지하주차장] 한지훈(03) 출차 완료(성립), [21:58 23층 비상계단] 주치의 박도현(02) 청진기 가방을 들고 급히 도주 포착! 박도현의 21:35 퇴근 진술은 거짓이며 실제 도주 포착 시각은 [2158]이다.",
+        "visualSpec": {
+          "template": "crt",
+          "title": "RECOVERED CCTV & ACCESS LOG (21:40 ~ 22:05)",
+          "badge": "ALIBI BROKEN",
+          "lines": [
+            "21:41:09 [1F LOBBY]  강서연(01) 택배 수령 (~22:14 체류 / 알리바이 성립)",
+            "21:53:22 [B2 GARAGE] 한지훈(03) 차량 출차 완료 (사망 21:55 전 이탈 / 성립)",
+            "21:55:00 [2301호]    한태성 회장 손목시계 정지 (추정 사망 시각)",
+            "21:58:14 [23F STAIR] 박도현(02) 비상계단 급히 도주 포착 (진술 모순!)"
+          ],
+          "highlight": "알리바이 붕괴 타임스탬프: 2158"
+        }
+      },
+      {
+        "id": "clue-10",
+        "propRef": "prop-c3-board",
+        "carrierType": "Text",
+        "payload": "[최종 추리 #10] 강력계 최종 범인 지목 프로토콜: AB형 혈흔, 30억 신약 사기 고발 저지 동기, 사망 추정 시각(21:55) 직후 21:58 비상계단 도주 포착까지 모든 증거가 주치의 박도현(용의자 02)을 가리킨다. 최종 범인 지목 코드 = 용의자 번호(02) + 도주 시각 분(58) = [0258].",
+        "visualSpec": {
+          "template": "document",
+          "title": "서울청 강력계 최종 범인 지목서",
+          "badge": "FINAL VERDICT",
+          "lines": [
+            "물증 1: 거실 혈흔 손수건 루미놀 감식 → AB형 (박도현 일치)",
+            "물증 2: 서재 금고 30억 신약 사기 내사 보고서 (확실한 살해 동기)",
+            "물증 3: 21:55 사망 직후 21:58 비상계단 도주 CCTV (알리바이 붕괴)",
+            "최종 지목 코드: 진범 번호(02) + 도주 분(58)"
+          ],
+          "highlight": "최종 범인 지목 코드: 0258 (박도현)"
+        }
+      }
+    ],
+    "problems": [
+      {
+        "id": "prob-01",
+        "consumes": ["clue-01"],
+        "rule": "부검 소견서의 현장 층수(23)와 사후 경과 시간(35분)을 조합해 사건 증거 보관함을 개방한다.",
+        "outputGate": "gate-01"
+      },
+      {
+        "id": "prob-02",
+        "consumes": ["clue-02"],
+        "rule": "발견 시각(22:30)에서 사후 경과(35분)를 역산한 사망 추정 시각(21:55)을 시계 기믹에 맞춘다.",
+        "outputGate": "gate-02"
+      },
+      {
+        "id": "prob-03",
+        "consumes": ["clue-03"],
+        "rule": "손수건과 루미놀 시약을 조합해 AB형 혈흔을 입증하고, 해당 용의자(박도현)의 진술 퇴근 시각(2135)으로 비밀 서랍을 연다.",
+        "outputGate": "gate-03"
+      },
+      {
+        "id": "prob-04",
+        "consumes": ["clue-04"],
+        "rule": "동선도를 확인하고 확보한 서재 마스터키를 비밀 책장 키홀에 꽂아 2번 현장으로 진입한다.",
+        "outputGate": "gate-04"
+      },
+      {
+        "id": "prob-05",
+        "consumes": ["clue-05"],
+        "rule": "점등된 UV 감식등 아래에서 개인 금고 다이얼의 지워진 혈흔을 UV 스캔한다.",
+        "outputGate": "gate-05"
+      },
+      {
+        "id": "prob-06",
+        "consumes": ["clue-06"],
+        "rule": "신약 사기 횡령액(30억)과 회장 나이(68세) 및 UV 형광 지문으로 개인 강철 금고를 개방한다.",
+        "outputGate": "gate-06"
+      },
+      {
+        "id": "prob-07",
+        "consumes": ["clue-07"],
+        "rule": "독극물 혼입 약병 4개의 라벨 화살표 순서(URDL)로 CCTV 관제실 보안문을 해제한다.",
+        "outputGate": "gate-07"
+      },
+      {
+        "id": "prob-08",
+        "consumes": ["clue-08"],
+        "rule": "금고에서 확보한 CCTV 메모리칩과 호실 번호(2301)로 삭제된 관제 아카이브를 복구한다.",
+        "outputGate": "gate-08"
+      },
+      {
+        "id": "prob-09",
+        "consumes": ["clue-09"],
+        "rule": "복구된 CCTV 로그에서 3인의 알리바이를 교차검증하여 박도현의 거짓을 깬 도주 시각(2158)을 입력한다.",
+        "outputGate": "gate-09"
+      },
+      {
+        "id": "prob-10",
+        "consumes": ["clue-10"],
+        "rule": "긴급 체포 영장 카드와 최종 범인 지목 코드(0258: 용의자 02 박도현 + 58분 도주)를 제출해 사건을 종결한다.",
+        "outputGate": "gate-10"
+      }
+    ],
+    "containers": [
+      {
+        "id": "cont-c1-evidence",
+        "name": "감식반 거실 증거 보관함",
+        "isOpen": false,
+        "containsClueId": "clue-02",
+        "containsItemId": "item-handkerchief"
+      },
+      {
+        "id": "cont-c1-forensic-kit",
+        "name": "과학수사 루미놀 시약함",
+        "isOpen": false,
+        "containsClueId": "clue-03",
+        "containsItemId": "item-luminol"
+      },
+      {
+        "id": "cont-c1-desk-drawer",
+        "name": "거실 테이블 비밀 서랍",
+        "isOpen": false,
+        "containsClueId": "clue-04",
+        "containsItemId": "item-study-key"
+      },
+      {
+        "id": "cont-c2-uv-drawer",
+        "name": "서재 집무 책상 감식 파일함",
+        "isOpen": false,
+        "containsClueId": "clue-06",
+        "containsItemId": "item-uv-badge"
+      },
+      {
+        "id": "cont-c2-safe",
+        "name": "한태성 회장 개인 강철 금고",
+        "isOpen": false,
+        "containsClueId": "clue-07",
+        "containsItemId": "item-cctv-chip"
+      },
+      {
+        "id": "cont-c3-archive",
+        "name": "CCTV 암호화 아카이브 드라이브",
+        "isOpen": false,
+        "containsClueId": "clue-09"
+      },
+      {
+        "id": "cont-c3-verdict-box",
+        "name": "최종 범인 지목 승인함",
+        "isOpen": false,
+        "containsClueId": "clue-10",
+        "containsItemId": "item-warrant"
+      }
+    ],
+    "items": [
+      {
+        "id": "item-handkerchief",
+        "name": "혈흔 묻은 손수건",
+        "description": "거실 테이블 아래서 수거된 고급 실크 손수건. 마른 혈흔이 묻어 있다.",
+        "tags": ["evidence", "blood"],
+        "consumable": true,
+        "visual": "handkerchief"
+      },
+      {
+        "id": "item-luminol",
+        "name": "루미놀 시약",
+        "description": "미세 혈흔과 혈액형 반응을 즉각 판별하는 과학수사 포렌식 시약.",
+        "tags": ["forensic", "reagent"],
+        "consumable": true,
+        "visual": "flask"
+      },
+      {
+        "id": "item-forensic-report",
+        "name": "감식 완료 증거 (AB형 혈흔)",
+        "description": "손수건에 루미놀 시약을 반응시켜 확정한 AB형 혈흔 감식 결과표.",
+        "tags": ["evidence", "verified"],
+        "consumable": false,
+        "visual": "document"
+      },
+      {
+        "id": "item-study-key",
+        "name": "서재 마스터키",
+        "description": "거실 동쪽 비밀 책장 키홀에 맞는 황동 마스터키.",
+        "tags": ["key"],
+        "consumable": false,
+        "visual": "key"
+      },
+      {
+        "id": "item-uv-badge",
+        "name": "대성그룹 자석 배지",
+        "description": "창립자 초상화 하단 숨겨진 자석 스위치에 맞는 금속 배지.",
+        "tags": ["tool", "magnet"],
+        "consumable": true,
+        "visual": "badge"
+      },
+      {
+        "id": "item-cctv-chip",
+        "name": "CCTV 메모리칩",
+        "description": "회장이 비상용으로 금고에 백업해 둔 23층 비상계단 CCTV 원본 메모리칩.",
+        "tags": ["media", "evidence"],
+        "consumable": false,
+        "visual": "chip"
+      },
+      {
+        "id": "item-warrant",
+        "name": "긴급 체포 영장 카드",
+        "description": "알리바이 교차검증이 완료되어 최종 범인 지목 단말기에 인증할 수 있는 영장 카드.",
+        "tags": ["warrant", "key"],
+        "consumable": true,
+        "visual": "card"
+      }
+    ],
+    "interactions": [
+      {
+        "id": "ix-combine-blood",
+        "itemId": "item-handkerchief",
+        "targetId": "item-luminol",
+        "effect": "combine",
+        "resultId": "item-forensic-report",
+        "message": "혈흔 묻은 손수건에 루미놀 시약을 분사하자 선명한 푸른 발광과 함께 [AB형] 혈액형 반응이 확인되었습니다!"
+      },
+      {
+        "id": "ix-unlock-study",
+        "itemId": "item-study-key",
+        "targetId": "gate-04",
+        "effect": "unlock",
+        "resultId": "gate-04",
+        "message": "서재 마스터키를 비밀 책장 키홀에 꽂고 돌리자 묵직한 굉음과 함께 비밀 서재가 열립니다!"
+      },
+      {
+        "id": "ix-activate-portrait",
+        "itemId": "item-uv-badge",
+        "targetId": "prop-c2-portrait",
+        "effect": "activate",
+        "resultId": "prop-c2-portrait",
+        "message": "창립자 초상화 하단 홈에 자석 배지를 끼우자 숨겨진 릴레이가 작동하며 개인 금고 보조 잠금이 해제됩니다!"
+      },
+      {
+        "id": "ix-reveal-cctv",
+        "itemId": "item-cctv-chip",
+        "targetId": "prop-c3-console",
+        "effect": "revealClue",
+        "resultId": "clue-09",
+        "message": "CCTV 메모리칩을 관제 콘솔에 삽입하자 21:58 비상계단 도주 타임스탬프 영상이 즉시 복구됩니다!"
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate-01",
+        "interfaceType": "MechanicalLock",
+        "condition": "Value == '2335'",
+        "requiresSolvedId": null,
+        "storyBeat": "거실 증거 보관함이 열리며 범죄현장 스포트라이트가 점등됩니다! [혈흔 묻은 손수건]과 멈춘 시계 사진이 드러납니다.",
+        "unlocks": "cont-c1-evidence",
+        "onUnlockEffects": [
+          { "kind": "lightOn", "targetId": "light-c1-spot", "sfx": "spotlight_on" },
+          { "kind": "revealClue", "targetId": "clue-02" }
+        ],
+        "isOpen": false
+      },
+      {
+        "id": "gate-02",
+        "interfaceType": "PhysicalMechanism",
+        "condition": "Value == '2155'",
+        "requiresSolvedId": "gate-01",
+        "mechanism": {
+          "kind": "clock-hands",
+          "params": { "label": "사망 추정 시각 고정 (21:55)" },
+          "targetState": { "hour": 9, "minute": 55 },
+          "tolerance": 0
+        },
+        "storyBeat": "멈춘 손목시계 감식 완료! 사망 추정 시각이 21:55로 고정되며 과학수사 함에서 [루미놀 시약]을 확보했습니다.",
+        "unlocks": "cont-c1-forensic-kit",
+        "isOpen": false
+      },
+      {
+        "id": "gate-03",
+        "interfaceType": "ElectronicKeypad",
+        "condition": "Value == '2135'",
+        "requiresSolvedId": "gate-02",
+        "requiredItemId": "item-forensic-report",
+        "storyBeat": "AB형 혈흔 감식 결과와 박도현의 진술 퇴근 시각(21:35)을 대조해 비밀 서랍을 열었습니다! [서재 마스터키] 획득.",
+        "unlocks": "cont-c1-desk-drawer",
+        "isOpen": false
+      },
+      {
+        "id": "gate-04",
+        "interfaceType": "ItemSocket",
+        "condition": "Value == 'KEY_STUDY'",
+        "requiresSolvedId": "gate-03",
+        "requiredItemId": "item-study-key",
+        "storyBeat": "비밀 책장이 열리며 2번 현장 [비밀 서재 & 개인 금고실]로 진입합니다! 안쪽 UV 감식등이 자동으로 켜집니다.",
+        "unlocks": "door-c1-c2",
+        "onUnlockEffects": [
+          { "kind": "lightOn", "targetId": "light-c2-uv", "sfx": "secret_door" },
+          { "kind": "lightFlicker", "targetId": "light-c2-lamp" }
+        ],
+        "isOpen": false
+      },
+      {
+        "id": "gate-05",
+        "interfaceType": "PhysicalMechanism",
+        "condition": "Value == 'UV_SCAN_OK'",
+        "requiresSolvedId": "gate-04",
+        "mechanism": {
+          "kind": "uv-scan",
+          "params": { "targetArea": "개인 금고 다이얼 혈흔" },
+          "targetState": { "revealed": true }
+        },
+        "storyBeat": "UV 혈흔 감식 성공! 금고 다이얼 위 4개의 형광 지문과 감사팀 내사 보고서 단서, [대성그룹 자석 배지]를 확보했습니다.",
+        "unlocks": "cont-c2-uv-drawer",
+        "isOpen": false
+      },
+      {
+        "id": "gate-06",
+        "interfaceType": "MechanicalLock",
+        "condition": "Value == '3068'",
+        "requiresSolvedId": "gate-05",
+        "storyBeat": "개인 강철 금고가 개방되었습니다! 회장이 숨겨둔 원본 [CCTV 메모리칩]과 독극물 처방전 단서를 회수했습니다.",
+        "unlocks": "cont-c2-safe",
+        "isOpen": false
+      },
+      {
+        "id": "gate-07",
+        "interfaceType": "DirectionalLock",
+        "condition": "Value == 'URDL'",
+        "requiresSolvedId": "gate-06",
+        "storyBeat": "독극물 약병 방향 코드(URDL) 일치! 3번 현장 [CCTV 관제 & 최종 범인 지목실] 보안문이 열립니다.",
+        "unlocks": "door-c2-c3",
+        "isOpen": false
+      },
+      {
+        "id": "gate-08",
+        "interfaceType": "ElectronicKeypad",
+        "condition": "Value == '2301'",
+        "requiresSolvedId": "gate-07",
+        "requiredItemId": "item-cctv-chip",
+        "storyBeat": "CCTV 백업 아카이브 복구 완료! 취조 스포트라이트가 최종 범인 지목 보드를 비추며 용의자 3인의 알리바이 진위가 드러납니다.",
+        "unlocks": "cont-c3-archive",
+        "onUnlockEffects": [
+          { "kind": "lightOn", "targetId": "light-c3-spot", "sfx": "power_up" },
+          { "kind": "revealClue", "targetId": "clue-09" }
+        ],
+        "isOpen": false
+      },
+      {
+        "id": "gate-09",
+        "interfaceType": "ElectronicKeypad",
+        "condition": "Value == '2158'",
+        "requiresSolvedId": "gate-08",
+        "storyBeat": "알리바이 교차검증 완료! 21:58 비상계단 도주 영상으로 주치의 박도현의 알리바이가 완전히 붕괴되었습니다. [긴급 체포 영장 카드] 발급!",
+        "unlocks": "cont-c3-verdict-box",
+        "isOpen": false
+      },
+      {
+        "id": "gate-10",
+        "interfaceType": "ElectronicKeypad",
+        "condition": "Value == '0258'",
+        "requiresSolvedId": "gate-09",
+        "requiredItemId": "item-warrant",
+        "storyBeat": "최종 범인 지목 성공 — 진범 [02 주치의 박도현]! 30억 신약 사기 고발을 막기 위한 계획 살인이 입증되며 2301호 봉쇄선이 해제됩니다.",
+        "unlocks": "door-final-exit",
+        "onUnlockEffects": [
+          { "kind": "lightOff", "targetId": "light-c3-emerg", "sfx": "case_closed" }
+        ],
+        "isOpen": false
+      }
+    ]
+  },
+  "director": {
+    "timeLimitMinutes": 60,
+    "tensionLevel": 1,
+    "panicThresholdFailures": 2,
+    "persona": {
+      "name": "강력계 한 반장",
+      "role": "서울청 광역수사대 현장 지휘관",
+      "tone": "묵직하고 냉철한 누아르 베테랑 형사 어조",
+      "barterPrompt": "자네, 수사 진도가 막혔나? 감식반에 추가 협조를 요청하려면 지금 가장 의심되는 용의자 한 명과 그 근거를 무전으로 보고하게. 타당한 추리면 결정적 단서 하나를 넘겨주지."
+    },
+    "rules": [
+      {
+        "id": "rule-stall-noir",
+        "trigger": { "kind": "stallSeconds", "threshold": 120 },
+        "action": "whisper",
+        "cooldownSeconds": 90,
+        "payload": {
+          "text": "[강력계 한 반장] 진술은 거짓말을 하지만 물증과 타임스탬프는 거짓말을 안 해. 부검 소견서와 시계부터 다시 보게."
+        }
+      },
+      {
+        "id": "rule-fail-noir",
+        "trigger": { "kind": "consecutiveFailures", "threshold": 2 },
+        "action": "blackout",
+        "cooldownSeconds": 60,
+        "payload": {
+          "text": "[강력계 한 반장] 성급한 오판은 진범에게 도주 시간만 벌어줄 뿐이야! 침착하게 증거를 교차검증하게."
+        }
+      },
+      {
+        "id": "rule-room2-enter",
+        "trigger": { "kind": "roomEntered", "spaceId": "space-c2" },
+        "action": "whisper",
+        "cooldownSeconds": 180,
+        "payload": {
+          "text": "[강력계 한 반장] 비밀 서재로 들어갔군. UV 감식등이 켜졌으니 카펫과 금고 다이얼의 지워진 혈흔부터 훑어보게."
+        }
+      },
+      {
+        "id": "rule-help-barter",
+        "trigger": { "kind": "helpRequested" },
+        "action": "barter",
+        "cooldownSeconds": 30,
+        "payload": {
+          "challenge": "수사 협조 요청: 현재까지 확보한 물증 중 가장 결정적인 모순점 하나를 무전으로 보고하게.",
+          "rewardHint": "강서연은 21:41~22:14 로비 체류, 한지훈은 21:53 출차 완료일세. 21:55 사망 시각과 AB형 혈흔, 21:58 비상계단 영상을 연결해 보게."
+        }
+      }
+    ]
+  }
+}
