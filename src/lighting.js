@@ -38,7 +38,7 @@ export function createLightFixtureMesh(lightDef, roomIdx = null) {
   let pointLight = null;
 
   // Physically-attenuated PointLight (decay = 2 for inverse-square physical falloff)
-  pointLight = new THREE.PointLight(colorHex, intensity, distance, 2.0);
+  pointLight = new THREE.PointLight(colorHex, intensity, distance, 2.2);
   pointLight.castShadow = false; // Horror soft fill; FPS flashlight owns real-time shadow casting
   pointLight.name = `pointLight_${lightDef.id}`;
 

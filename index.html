@@ -82,7 +82,7 @@
 
     <!-- Center View Mode Selector & Status -->
     <div class="flex items-center gap-2 shrink-0">
-      <div class="flex bg-zinc-900 p-0.5 rounded-md border border-white/10">
+      <div id="view-layout-tabs" class="flex bg-zinc-900 p-0.5 rounded-md border border-white/10">
         <button onclick="setViewLayout('split')" id="layout-btn-split" title="2D+3D 분할 뷰" class="px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors bg-zinc-800 text-zinc-100">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
           <span class="hidden md:inline">분할</span>
@@ -113,13 +113,18 @@
     <!-- Right Primary Action (Ponytail Consolidated: Single Playtest <-> Author Switch) -->
     <div class="flex items-center gap-1.5 shrink-0">
       <button onclick="toggleStudioMode()" id="btn-studio-mode" title="1인칭 플레이테스트 진입 (편집 스냅샷 보존 · 뒷 단계 단서 숨김)" class="bg-zinc-100 hover:bg-white text-zinc-950 font-semibold px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-colors cursor-pointer">
-        <span id="studio-mode-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-        <span id="studio-mode-label">플레이테스트</span>
+        <span id="studio-mode-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-600 pointer-events-none"></span>
+        <span id="studio-mode-label" class="pointer-events-none">플레이테스트</span>
       </button>
 
-      <button onclick="openImportModal()" title="RaC JSON 내보내기 / 불러오기 / AI 에이전트 연동" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-medium px-2.5 py-1.5 rounded-md text-xs border border-white/10 flex items-center gap-1.5 transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-        <span class="hidden md:inline">RaC JSON</span>
+      <button onclick="toggleCraftBuilderMode()" id="btn-craft-builder" title="Subnautica 스타일 1인칭 크래프트 빌더 모드 (B 키)" class="bg-zinc-900 hover:bg-zinc-800 text-cyan-400 font-medium px-2.5 py-1.5 rounded-md text-xs border border-cyan-500/30 flex items-center gap-1.5 transition-colors cursor-pointer">
+        <svg class="w-3.5 h-3.5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        <span class="hidden sm:inline pointer-events-none">크래프트 빌더</span>
+      </button>
+
+      <button onclick="openImportModal()" id="btn-rac-json" title="RaC JSON 내보내기 / 불러오기 / AI 에이전트 연동" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-medium px-2.5 py-1.5 rounded-md text-xs border border-white/10 flex items-center gap-1.5 transition-colors">
+        <svg class="w-3.5 h-3.5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        <span class="hidden md:inline pointer-events-none">RaC JSON</span>
       </button>
 
       <button onclick="toggleRightSidebar()" id="btn-toggle-right" title="우측 인스펙터 토글" class="p-1.5 rounded hover:bg-zinc-900 text-zinc-400 hover:text-zinc-100 border border-white/10 transition-colors">
@@ -762,29 +767,29 @@
 
   <!-- INTERACTIVE MODAL: RESIDENT-EVIL STYLE 2-COLUMN VISUAL INSPECTION & LOCK MODAL -->
   <div id="lock-modal" onclick="if(event.target === this) closeLockModal();" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#0b0b0e] border border-white/15 rounded-xl w-[920px] max-w-[95vw] max-h-[90vh] overflow-y-auto shadow-2xl relative grid grid-cols-1 md:grid-cols-12">
+    <div class="bg-[#0b0b0e] border border-white/15 rounded-xl w-[90vw] max-w-[1380px] min-h-[76vh] max-h-[88vh] overflow-y-auto shadow-2xl relative grid grid-cols-1 md:grid-cols-12">
       <button onclick="closeLockModal()" title="닫기 (ESC)" class="absolute top-3.5 right-3.5 z-20 w-7 h-7 rounded-md bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 text-zinc-400 hover:text-zinc-100 flex items-center justify-center text-xs transition-colors">✕</button>
 
       <!-- LEFT COLUMN: PHYSICAL PROP CLOSE-UP VISUAL ARTWORK (SPOTLIGHT STAGE) -->
-      <div class="md:col-span-6 relative bg-[#070709] border-b md:border-b-0 md:border-r border-white/10 p-6 flex flex-col items-center justify-center min-h-[340px] md:min-h-[520px] overflow-hidden"
+      <div class="md:col-span-7 relative bg-[#070709] border-b md:border-b-0 md:border-r border-white/10 p-10 flex flex-col items-center justify-center min-h-[400px] md:min-h-[76vh] overflow-hidden"
            style="background: radial-gradient(circle at 48% 42%, rgba(63, 63, 70, 0.28) 0%, rgba(9, 9, 11, 0.96) 72%);">
-        <div id="modal-visual-stage" class="w-full flex items-center justify-center">
+        <div id="modal-visual-stage" class="w-full flex items-center justify-center md:scale-[1.32] lg:scale-[1.45] origin-center transition-transform">
           <!-- JS renderPropVisualArtwork()가 실물 문서/시계/금고/초상화/체스판 아트워크 렌더링 -->
         </div>
-        <div id="modal-visual-caption" class="mt-4 text-[11px] font-mono text-zinc-500 text-center">
+        <div id="modal-visual-caption" class="mt-20 text-xs font-mono text-zinc-500 text-center">
           물리 소품 정밀 조사 뷰
         </div>
       </div>
 
       <!-- RIGHT COLUMN: CLEAN INTERACTION PANEL (TEXT CLUE HIDDEN -> VISUALIZED ON LEFT) -->
-      <div class="md:col-span-6 p-6 flex flex-col justify-between bg-[#0e0e12]/95">
+      <div class="md:col-span-5 p-7 flex flex-col justify-between bg-[#0e0e12]/95">
         <div>
           <!-- Modal Header -->
-          <div class="flex items-center gap-2 mb-1.5 pr-8">
-            <span id="modal-q-badge" class="px-2 py-0.5 rounded bg-zinc-900 border border-white/15 text-zinc-200 font-mono text-[11px] font-semibold">Q01 / 30</span>
-            <span id="modal-room-badge" class="text-xs text-zinc-400 truncate">제1방: 1F 원무과 접수처</span>
+          <div class="flex items-center gap-2 mb-2 pr-8">
+            <span id="modal-q-badge" class="px-2.5 py-0.5 rounded bg-zinc-900 border border-white/15 text-zinc-200 font-mono text-xs font-semibold">Q01 / 30</span>
+            <span id="modal-room-badge" class="text-sm text-zinc-400 truncate">제1방: 1F 원무과 접수처</span>
           </div>
-          <div id="modal-obj-title" class="text-lg font-semibold text-zinc-100 tracking-tight mb-3">원무과 접수 데스크</div>
+          <div id="modal-obj-title" class="text-2xl font-bold text-zinc-100 tracking-tight mb-4">원무과 접수 데스크</div>
 
           <!-- Hidden raw text containers (kept for DOM compatibility; clues are visualized on Left) -->
           <div class="hidden">
@@ -797,61 +802,61 @@
           </div>
 
           <!-- Unlock Target & 2-Stage Progressive Hint System -->
-          <div class="p-3 bg-[#09090b] rounded-lg border border-white/10 mb-4 text-left text-xs space-y-2">
+          <div class="p-4 bg-[#09090b] rounded-xl border border-white/10 mb-5 text-left space-y-3">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-[11px] text-zinc-500">해금 타겟</span>
-              <span id="modal-unlock-desc" class="text-[11px] text-emerald-400 font-mono truncate"></span>
+              <span class="text-xs text-zinc-500">해금 타겟</span>
+              <span id="modal-unlock-desc" class="text-xs text-emerald-400 font-mono truncate"></span>
             </div>
 
-            <div class="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
-              <span class="text-[11px] text-zinc-400">단계별 힌트</span>
-              <button id="btn-modal-hint" onclick="advanceModalHint()" class="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-200 text-[11px] font-medium transition-colors">
+            <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+              <span class="text-sm font-medium text-zinc-300">단계별 힌트</span>
+              <button id="btn-modal-hint" onclick="advanceModalHint()" class="px-3.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-100 text-xs font-semibold transition-colors">
                 힌트 보기 (1/2)
               </button>
             </div>
 
             <!-- Stage 1 Hint (Direction only, no answer) -->
-            <div id="modal-hint-stage1" class="hidden p-2.5 rounded bg-zinc-900/90 border border-white/10 text-[11px] text-zinc-300 leading-relaxed break-keep"></div>
+            <div id="modal-hint-stage1" class="hidden p-4 rounded-lg bg-zinc-900/90 border border-white/15 text-sm text-zinc-100 leading-relaxed break-keep"></div>
 
             <!-- Stage 2 Answer Reveal (Rule + Passcode) -->
-            <div id="modal-hint-stage2" class="hidden p-2.5 rounded bg-amber-950/30 border border-amber-500/30 text-[11px] text-amber-200 font-mono leading-relaxed break-keep">
+            <div id="modal-hint-stage2" class="hidden p-4 rounded-lg bg-amber-950/35 border border-amber-500/40 text-sm text-amber-200 font-mono leading-relaxed break-keep">
               <span id="modal-prob-rule"></span>
             </div>
           </div>
 
           <!-- Physical Mechanism Interactive Controls (Driven by obj.mechanism.kind) -->
-          <div id="modal-device-controls" class="hidden mb-4"></div>
+          <div id="modal-device-controls" class="hidden mb-5"></div>
 
           <!-- Eligible Inventory Item Apply Controls (Driven by ITEM_INTERACTIONS) -->
-          <div id="modal-item-apply-box" class="hidden mb-4 p-2.5 rounded-lg bg-amber-950/30 border border-amber-500/30 space-y-1.5">
-            <div class="text-[11px] font-medium text-amber-300">소지품 적용 가능</div>
-            <div id="modal-item-apply-list" class="flex flex-wrap gap-1.5"></div>
+          <div id="modal-item-apply-box" class="hidden mb-5 p-3.5 rounded-lg bg-amber-950/30 border border-amber-500/30 space-y-2">
+            <div class="text-xs font-medium text-amber-300">소지품 적용 가능</div>
+            <div id="modal-item-apply-list" class="flex flex-wrap gap-2"></div>
           </div>
         </div>
 
         <div>
           <!-- 4-Slot Dial Input Section (Shown when code lock input is required) -->
           <div id="modal-dial-section">
-            <div class="flex justify-center gap-3 my-3">
+            <div class="flex justify-center gap-3.5 my-4">
               <div class="flex flex-col items-center">
-                <button onclick="turnDial(0, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
-                <div id="d0" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
-                <button onclick="turnDial(0, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
+                <button onclick="turnDial(0, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
+                <div id="d0" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
+                <button onclick="turnDial(0, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
               </div>
               <div class="flex flex-col items-center">
-                <button onclick="turnDial(1, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
-                <div id="d1" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
-                <button onclick="turnDial(1, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
+                <button onclick="turnDial(1, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
+                <div id="d1" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
+                <button onclick="turnDial(1, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
               </div>
               <div class="flex flex-col items-center">
-                <button onclick="turnDial(2, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
-                <div id="d2" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
-                <button onclick="turnDial(2, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
+                <button onclick="turnDial(2, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
+                <div id="d2" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
+                <button onclick="turnDial(2, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
               </div>
               <div class="flex flex-col items-center">
-                <button onclick="turnDial(3, 1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mb-1">▲</button>
-                <div id="d3" class="w-12 h-12 bg-[#09090b] border border-white/20 rounded-md flex items-center justify-center font-mono text-xl font-semibold text-zinc-100">0</div>
-                <button onclick="turnDial(3, -1)" class="dial-btn w-12 h-7 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-xs mt-1">▼</button>
+                <button onclick="turnDial(3, 1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mb-1.5">▲</button>
+                <div id="d3" class="w-14 h-14 bg-[#09090b] border border-white/20 rounded-lg flex items-center justify-center font-mono text-2xl font-bold text-zinc-100">0</div>
+                <button onclick="turnDial(3, -1)" class="dial-btn w-14 h-8 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-sm mt-1.5">▼</button>
               </div>
             </div>
 
@@ -994,6 +999,69 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- SUBNAUTICA STYLE 1ST-PERSON CRAFT HOTBAR (Creator Mode) -->
+  <div id="craft-builder-hotbar" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-1.5 select-none pointer-events-auto">
+    <!-- Controls Help Pill -->
+    <div class="bg-zinc-950/90 backdrop-blur border border-cyan-500/30 text-cyan-300 px-3 py-1 rounded-full text-[11px] font-mono shadow-lg flex items-center gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+      <span id="craft-hotbar-instructions">[R/휠] 회전 · [좌클릭] 배치 · [우클릭/X] 집기 · [Del] 삭제 · [B] 종료</span>
+    </div>
+
+    <!-- 1~6 Hotbar Slots -->
+    <div class="flex items-center gap-1.5 p-1.5 bg-zinc-950/90 backdrop-blur border border-white/15 rounded-xl shadow-2xl">
+      <button onclick="window.selectCraftSlot(1)" id="craft-slot-1" class="craft-slot px-2.5 py-1.5 rounded-lg border flex flex-col items-center gap-0.5 transition-all text-xs border-cyan-400 bg-cyan-950/60 text-cyan-200">
+        <span class="text-[9px] font-mono text-cyan-400 font-bold">[1]</span>
+        <span class="font-medium text-[11px]">단서 책상</span>
+      </button>
+      <button onclick="window.selectCraftSlot(2)" id="craft-slot-2" class="craft-slot px-2.5 py-1.5 rounded-lg border flex flex-col items-center gap-0.5 transition-all text-xs border-white/10 bg-zinc-900/80 text-zinc-400 hover:text-zinc-200">
+        <span class="text-[9px] font-mono text-zinc-500 font-bold">[2]</span>
+        <span class="font-medium text-[11px]">철제 금고</span>
+      </button>
+      <button onclick="window.selectCraftSlot(3)" id="craft-slot-3" class="craft-slot px-2.5 py-1.5 rounded-lg border flex flex-col items-center gap-0.5 transition-all text-xs border-white/10 bg-zinc-900/80 text-zinc-400 hover:text-zinc-200">
+        <span class="text-[9px] font-mono text-zinc-500 font-bold">[3]</span>
+        <span class="font-medium text-[11px]">괘종시계</span>
+      </button>
+      <button onclick="window.selectCraftSlot(4)" id="craft-slot-4" class="craft-slot px-2.5 py-1.5 rounded-lg border flex flex-col items-center gap-0.5 transition-all text-xs border-white/10 bg-zinc-900/80 text-zinc-400 hover:text-zinc-200">
+        <span class="text-[9px] font-mono text-zinc-500 font-bold">[4]</span>
+        <span class="font-medium text-[11px]">물리 콘솔</span>
+      </button>
+      <button onclick="window.selectCraftSlot(5)" id="craft-slot-5" class="craft-slot px-2.5 py-1.5 rounded-lg border flex flex-col items-center gap-0.5 transition-all text-xs border-white/10 bg-zinc-900/80 text-zinc-400 hover:text-zinc-200">
+        <span class="text-[9px] font-mono text-zinc-500 font-bold">[5]</span>
+        <span class="font-medium text-[11px]">천장 조명</span>
+      </button>
+      <button onclick="window.selectCraftSlot(6)" id="craft-slot-6" class="craft-slot px-2.5 py-1.5 rounded-lg border flex flex-col items-center gap-0.5 transition-all text-xs border-white/10 bg-zinc-900/80 text-zinc-400 hover:text-zinc-200">
+        <span class="text-[9px] font-mono text-zinc-500 font-bold">[6]</span>
+        <span class="font-medium text-[11px]">기물 집기</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- PLAY MODE METAVERSE HUD (Strict Isolation) -->
+  <div id="playtest-hud" class="hidden pointer-events-none fixed bottom-4 left-4 z-30 flex flex-col gap-2 max-w-xs">
+    <!-- Compact Player Inventory Pills -->
+    <div class="p-2.5 bg-zinc-950/90 backdrop-blur rounded-lg border border-white/15 space-y-1.5 text-xs shadow-2xl pointer-events-auto">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-medium text-amber-400 flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          소지품 (Inventory)
+        </span>
+        <span id="playtest-inv-count-badge" class="font-mono text-[10px] text-zinc-400">0개</span>
+      </div>
+      <div id="playtest-inv-slots" class="flex flex-wrap gap-1.5 min-h-[22px]">
+        <span class="text-[10px] text-zinc-600">획득한 아이템 없음</span>
+      </div>
+      <button id="btn-playtest-inv-combine" onclick="combineEligibleInventoryItems()" class="hidden w-full py-1 px-2 rounded bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 text-amber-200 text-[10px] font-medium transition-colors">
+        아이템 조합하기
+      </button>
+    </div>
+
+    <!-- Intercom Button -->
+    <button onclick="openDirectorIntercomBarter()" class="pointer-events-auto w-full py-2 px-3 rounded-lg bg-zinc-950/90 hover:bg-zinc-900 border border-amber-500/40 text-amber-300 font-sans text-xs font-semibold shadow-xl transition-all flex items-center justify-center gap-2 backdrop-blur cursor-pointer">
+      <svg class="w-4 h-4 text-amber-400 animate-pulse" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+      <span>인터폰 호출 (당직 간호사)</span>
+    </button>
   </div>
 
   <!-- 3. MAIN SCRIPT: 6-ROOMS × 30-PUZZLES HORROR STUDIO ENGINE -->

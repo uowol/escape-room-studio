@@ -25,6 +25,7 @@ import {
   activeFixtures
 } from './lighting.js';
 import { validateRaC } from '../engine/validator.js';
+import { CraftBuilder } from './builder.js';
     // -------------------------------------------------------------
     // 0. ARCHITECTURAL BUILDING & FLOORS CONFIG (Unified Spine)
     // -------------------------------------------------------------
@@ -77,7 +78,7 @@ import { validateRaC } from '../engine/validator.js';
         floorColor: 0x1e293b, wallColor: 0x475569, lightColor: 0xe0f2fe, atmosphere: "차가운 청백색 형광등",
         doorId: "door-r1-r2",
         lights: [
-          { id: "light-r1-fl1", kind: "fluorescent", pos: [3.0, 2.4, 2.5], color: "#c8dcff", intensity: 1.2, distance: 6.5, flicker: true }
+          { id: "light-r1-fl1", kind: "fluorescent", pos: [3.0, 2.4, 2.5], color: "#c8dcff", intensity: 2.8, distance: 4.5, flicker: true }
         ]
       },
       {
@@ -89,7 +90,7 @@ import { validateRaC } from '../engine/validator.js';
         floorColor: 0x261f1a, wallColor: 0x574c43, lightColor: 0xfef3c7, atmosphere: "어두운 호박색 최면등",
         doorId: "door-r2-r3",
         lights: [
-          { id: "light-r2-lamp1", kind: "lamp", pos: [2.2, 2.3, 1.8], color: "#ffaa44", intensity: 1.0, distance: 5.0, flicker: false }
+          { id: "light-r2-lamp1", kind: "lamp", pos: [2.2, 2.3, 1.8], color: "#ffaa44", intensity: 2.4, distance: 4.0, flicker: false }
         ]
       },
       {
@@ -101,7 +102,7 @@ import { validateRaC } from '../engine/validator.js';
         floorColor: 0x1c1c20, wallColor: 0x383436, lightColor: 0xe2e8f0, atmosphere: "차가운 격리 비상등",
         doorId: "door-r3-r4",
         lights: [
-          { id: "light-r3-em1", kind: "emergency", pos: [2.5, 2.3, 2.5], color: "#ff3322", intensity: 0.8, distance: 5.5, flicker: true }
+          { id: "light-r3-em1", kind: "emergency", pos: [2.5, 2.3, 2.5], color: "#ff3322", intensity: 2.2, distance: 4.0, flicker: true }
         ]
       },
       {
@@ -114,7 +115,7 @@ import { validateRaC } from '../engine/validator.js';
         floorColor: 0x1a2024, wallColor: 0x343f45, lightColor: 0xdbeafe, atmosphere: "차가운 영안실 수술등",
         doorId: "door-r4-r5",
         lights: [
-          { id: "light-r4-surg1", kind: "surgical", pos: [3.5, 2.4, 2.5], color: "#d6f0ff", intensity: 2.2, distance: 6.5, flicker: false }
+          { id: "light-r4-surg1", kind: "surgical", pos: [3.5, 2.4, 2.5], color: "#d6f0ff", intensity: 3.6, distance: 4.6, flicker: false }
         ]
       },
       {
@@ -126,7 +127,7 @@ import { validateRaC } from '../engine/validator.js';
         floorColor: 0x1f1b18, wallColor: 0x3c342e, lightColor: 0xfef3c7, atmosphere: "어두운 연구실 스탠드등",
         doorId: "door-r5-r6",
         lights: [
-          { id: "light-r5-lamp1", kind: "lamp", pos: [2.5, 2.3, 2.2], color: "#ffdfa0", intensity: 1.4, distance: 5.5, flicker: false }
+          { id: "light-r5-lamp1", kind: "lamp", pos: [2.5, 2.3, 2.2], color: "#ffdfa0", intensity: 2.6, distance: 4.2, flicker: false }
         ]
       },
       {
@@ -138,7 +139,7 @@ import { validateRaC } from '../engine/validator.js';
         floorColor: 0x1a1817, wallColor: 0x36302c, lightColor: 0xffedd5, atmosphere: "소각로 비상등",
         doorId: "door-final-exit",
         lights: [
-          { id: "light-r6-em1", kind: "emergency", pos: [3.0, 2.4, 2.5], color: "#ff4d1a", intensity: 1.8, distance: 7.0, flicker: true }
+          { id: "light-r6-em1", kind: "emergency", pos: [3.0, 2.4, 2.5], color: "#ff4d1a", intensity: 3.0, distance: 4.6, flicker: true }
         ]
       }
     ];
@@ -2221,6 +2222,7 @@ import { validateRaC } from '../engine/validator.js';
     // 7. THREE.JS 3D ENGINE (ROOM-ISOLATED HIGH-DETAIL RENDERING)
     // -------------------------------------------------------------
     let scene, camera, renderer, orbitControls, spotLight, ambientLight, hemiLight, flashlight, gridHelper;
+    let craftBuilder = null;
     let currentFloorMesh, currentWallGroup;
     const meshMap = new Map();
     let cameraMode = 'orbit';
@@ -2376,7 +2378,7 @@ import { validateRaC } from '../engine/validator.js';
       spotLight = null;
 
       // Flashlight aims straight ahead of camera (Real-time horror shadows ONLY on FPS flashlight)
-      flashlight = new THREE.SpotLight(0xfff1dc, 3.8, 14, Math.PI / 5.2, 0.55, 1.2);
+      flashlight = new THREE.SpotLight(0xfff1dc, 6.2, 22, Math.PI / 6.2, 0.45, 1.1);
       flashlight.castShadow = true;
       flashlight.shadow.mapSize.set(1024, 1024);
       flashlight.shadow.bias = -0.0005;
@@ -2434,10 +2436,63 @@ import { validateRaC } from '../engine/validator.js';
         return null;
       }
 
+      // Initialize CraftBuilder Controller
+      craftBuilder = new CraftBuilder({
+        scene,
+        camera,
+        renderer,
+        getRoomConfigs: () => ROOM_CONFIGS,
+        getCurrentRoomConfig: () => ROOM_CONFIGS[currentRoomIdx],
+        getCurrentRoomIdx: () => currentRoomIdx,
+        getStudioObjects: () => studioObjects,
+        getStudioMode: () => studioMode,
+        meshMap,
+        getHitObjectId,
+        selectObject,
+        get selectedObjectId() { return selectedObjectId; },
+        deleteSelectedObject,
+        deleteObjectById,
+        rebuild3DRoom,
+        render2DCadObjects,
+        renderRoomSidebarAndProgress,
+        updateInspectorValues,
+        updateCodeView,
+        scheduleStudioAutosave,
+        playSfx,
+        showDirectorWhisper,
+        setCameraMode,
+        setViewLayout,
+        ambientLight,
+        hemiLight,
+        flashlight,
+        setFpsLightingMultiplier
+      });
+      window.craftBuilder = craftBuilder;
+
+      renderer.domElement.addEventListener('contextmenu', (e) => {
+        if (studioMode === 'author' && craftBuilder && craftBuilder.isActive()) {
+          e.preventDefault();
+          craftBuilder.onRightClick();
+        }
+      });
+
+      renderer.domElement.addEventListener('wheel', (e) => {
+        if (studioMode === 'author' && craftBuilder && craftBuilder.isActive()) {
+          craftBuilder.rotateGhost(e.deltaY > 0 ? 1 : -1);
+          e.preventDefault();
+        }
+      }, { passive: false });
+
       // PointerLock & Raycast Click Binding (With Drag Detection to Prevent Accidental Clicks)
       renderer.domElement.addEventListener('click', (e) => {
         // If any puzzle or victory modal is open, completely ignore canvas clicks
         if (isAnyModalOpen()) return;
+
+        // If Craft Builder mode is active, forward click to craft builder!
+        if (studioMode === 'author' && craftBuilder && craftBuilder.isActive()) {
+          craftBuilder.onLeftClick();
+          return;
+        }
 
         // If mouse moved significantly between mousedown and click, consider it an intentional camera rotation drag
         const moveDist = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
@@ -2562,6 +2617,28 @@ import { validateRaC } from '../engine/validator.js';
         const code = e.code;
         const key = e.key ? e.key.toLowerCase() : '';
 
+        // Craft Builder Key Controls (Exclusive to Author Mode)
+        if (studioMode === 'author') {
+          if (code === 'KeyB' || key === 'b' || key === 'ㅠ') {
+            if (craftBuilder) {
+              craftBuilder.toggle();
+              e.preventDefault();
+              return;
+            }
+          }
+          if (craftBuilder && craftBuilder.isActive()) {
+            if (code === 'Digit1' || key === '1') { craftBuilder.selectSlot(1); e.preventDefault(); return; }
+            if (code === 'Digit2' || key === '2') { craftBuilder.selectSlot(2); e.preventDefault(); return; }
+            if (code === 'Digit3' || key === '3') { craftBuilder.selectSlot(3); e.preventDefault(); return; }
+            if (code === 'Digit4' || key === '4') { craftBuilder.selectSlot(4); e.preventDefault(); return; }
+            if (code === 'Digit5' || key === '5') { craftBuilder.selectSlot(5); e.preventDefault(); return; }
+            if (code === 'Digit6' || key === '6') { craftBuilder.selectSlot(6); e.preventDefault(); return; }
+            if (code === 'KeyR' || key === 'r' || key === 'ㄱ') { craftBuilder.rotateGhost(1); e.preventDefault(); return; }
+            if (code === 'KeyX' || key === 'x' || key === 'ㅌ') { craftBuilder.onRightClick(); e.preventDefault(); return; }
+            if (code === 'Delete' || key === 'delete') { craftBuilder.onDelete(); e.preventDefault(); return; }
+          }
+        }
+
         if (code === 'KeyW' || key === 'w' || key === 'ㅈ' || key === 'arrowup') { fpsState.moveForward = true; e.preventDefault(); }
         if (code === 'KeyS' || key === 's' || key === 'ㄴ' || key === 'arrowdown') { fpsState.moveBackward = true; e.preventDefault(); }
         if (code === 'KeyA' || key === 'a' || key === 'ㅁ' || key === 'arrowleft') { fpsState.moveLeft = true; e.preventDefault(); }
@@ -2627,6 +2704,9 @@ import { validateRaC } from '../engine/validator.js';
           orbitControls.update();
         } else {
           updateFpsMovement(dt);
+        }
+        if (craftBuilder && craftBuilder.isActive()) {
+          craftBuilder.update(dt);
         }
         updateLightFixtures(now / 1000);
         renderer.render(scene, camera);
@@ -4585,7 +4665,7 @@ import { validateRaC } from '../engine/validator.js';
           scene.environmentIntensity = 0.06;
           scene.fog = new THREE.FogExp2(0x030508, 0.13);
         }
-        setFpsLightingMultiplier(0.35);
+        setFpsLightingMultiplier(0.62);
 
         // Keep flashlight bright & focused with dramatic contrast and real-time shadows
         if (flashlight) {
@@ -4858,8 +4938,20 @@ import { validateRaC } from '../engine/validator.js';
       const sbLeft = document.getElementById('sidebar-left');
       const sbRight = document.getElementById('sidebar-right');
 
+      const viewTabs = document.getElementById('view-layout-tabs');
+      const btnCraft = document.getElementById('btn-craft-builder');
+      const btnRacJson = document.getElementById('btn-rac-json');
+      const btnToggleL = document.getElementById('btn-toggle-left');
+      const btnToggleR = document.getElementById('btn-toggle-right');
+      const craftHotbar = document.getElementById('craft-builder-hotbar');
+      const playtestHud = document.getElementById('playtest-hud');
+
       if (studioMode === 'author') {
         // Author -> Playtest: 스냅샷 보존 + 진행 초기화 + 1인칭 3D 전면 진입 + 사이드바 접힘
+        if (craftBuilder && craftBuilder.isActive()) {
+          craftBuilder.deactivate();
+        }
+
         authorSnapshot = {
           objects: JSON.parse(JSON.stringify(studioObjects)),
           inventory: Array.from(playerInventory),
@@ -4875,6 +4967,16 @@ import { validateRaC } from '../engine/validator.js';
         if (leftActions) leftActions.classList.add('hidden');
         if (sbLeft) sbLeft.classList.add('hidden');
         if (sbRight) sbRight.classList.add('hidden');
+
+        // Play mode UI isolation: Hide all authoring tools
+        if (viewTabs) viewTabs.classList.add('hidden');
+        if (btnCraft) btnCraft.classList.add('hidden');
+        if (btnRacJson) btnRacJson.classList.add('hidden');
+        if (btnToggleL) btnToggleL.classList.add('hidden');
+        if (btnToggleR) btnToggleR.classList.add('hidden');
+        if (craftHotbar) craftHotbar.classList.add('hidden');
+        if (playtestHud) playtestHud.classList.remove('hidden');
+
         setViewLayout('3d-only');
         setCameraMode('fps');
         showDirectorWhisper("플레이테스트 시작: 1인칭 시점으로 전환되었습니다. 선행 단서를 풀어야 뒷 단계 단서가 열립니다.");
@@ -4895,6 +4997,16 @@ import { validateRaC } from '../engine/validator.js';
         if (leftActions) leftActions.classList.remove('hidden');
         if (sbLeft) sbLeft.classList.remove('hidden');
         if (sbRight) sbRight.classList.remove('hidden');
+
+        // Restore Creator Author UI
+        if (viewTabs) viewTabs.classList.remove('hidden');
+        if (btnCraft) btnCraft.classList.remove('hidden');
+        if (btnRacJson) btnRacJson.classList.remove('hidden');
+        if (btnToggleL) btnToggleL.classList.remove('hidden');
+        if (btnToggleR) btnToggleR.classList.remove('hidden');
+        if (craftHotbar) craftHotbar.classList.add('hidden');
+        if (playtestHud) playtestHud.classList.add('hidden');
+
         setCameraMode('orbit');
         setViewLayout('split');
         showDirectorWhisper("제작 모드로 복귀했습니다. 편집 스냅샷이 원복되었습니다.");
@@ -4944,19 +5056,28 @@ import { validateRaC } from '../engine/validator.js';
 
     function deleteSelectedObject() {
       if (!selectedObjectId) return;
-      const idx = studioObjects.findIndex(o => o.id === selectedObjectId);
+      deleteObjectById(selectedObjectId);
+    }
+
+    function deleteObjectById(id) {
+      if (!id) return;
+      const idx = studioObjects.findIndex(o => o.id === id);
       if (idx < 0) return;
       const removed = studioObjects.splice(idx, 1)[0];
       // 삭제된 오브젝트를 선행 조건으로 참조하던 항목 정리
       studioObjects.forEach(o => { if (o.requiresSolvedId === removed.id) o.requiresSolvedId = null; });
-      const next = studioObjects.find(o => o.roomIdx === currentRoomIdx) || studioObjects[0] || null;
-      selectedObjectId = next ? next.id : null;
-      rebuild3DObjectsForCurrentRoom();
+      if (selectedObjectId === id) {
+        const next = studioObjects.find(o => o.roomIdx === currentRoomIdx) || studioObjects[0] || null;
+        selectedObjectId = next ? next.id : null;
+        if (next) updateInspectorValues(next);
+      }
+      rebuild3DRoom();
       render2DCadObjects();
       renderRoomSidebarAndProgress();
-      if (next) updateInspectorValues(next);
       updateCodeView();
-      showDirectorWhisper(`[삭제 완료] '${removed.name}' 오브젝트를 제거했습니다.`);
+      scheduleStudioAutosave();
+      playSfx('click');
+      showDirectorWhisper(`[삭제 완료] '${removed.name}' 기물을 제거했습니다.`);
     }
 
     function startBlankTheme() {
@@ -5020,23 +5141,30 @@ import { validateRaC } from '../engine/validator.js';
       const listEl = document.getElementById('inv-slot-list');
       const cntEl = document.getElementById('inv-count-badge');
       const combBtn = document.getElementById('btn-inv-combine');
-      if (!listEl || !cntEl) return;
+
+      const ptListEl = document.getElementById('playtest-inv-slots');
+      const ptCntEl = document.getElementById('playtest-inv-count-badge');
+      const ptCombBtn = document.getElementById('btn-playtest-inv-combine');
 
       const items = Array.from(playerInventory).map(id => ITEM_CATALOG[id]).filter(Boolean);
-      cntEl.textContent = `${items.length}개`;
-      if (items.length === 0) {
-        listEl.innerHTML = '<span class="text-[10px] text-zinc-600">획득한 아이템 없음</span>';
-      } else {
-        listEl.innerHTML = items.map(it => `
-          <span class="px-2 py-0.5 rounded bg-zinc-900 border border-amber-500/30 text-amber-200 font-mono text-[10px]">
-            ${it.name}${it.consumable ? '' : ' · 영구'}
-          </span>
-        `).join('');
-      }
+      if (cntEl) cntEl.textContent = `${items.length}개`;
+      if (ptCntEl) ptCntEl.textContent = `${items.length}개`;
+
+      const emptyHtml = '<span class="text-[10px] text-zinc-600">획득한 아이템 없음</span>';
+      const itemsHtml = items.map(it => `
+        <span class="px-2 py-0.5 rounded bg-zinc-900 border border-amber-500/30 text-amber-200 font-mono text-[10px]">
+          ${it.name}${it.consumable ? '' : ' · 영구'}
+        </span>
+      `).join('');
+
+      if (listEl) listEl.innerHTML = items.length === 0 ? emptyHtml : itemsHtml;
+      if (ptListEl) ptListEl.innerHTML = items.length === 0 ? emptyHtml : itemsHtml;
+
       const canCombine = ITEM_INTERACTIONS.some(
         ix => ix.effect === 'combine' && playerInventory.has(ix.itemId) && playerInventory.has(ix.targetItemId)
       );
       if (combBtn) combBtn.classList.toggle('hidden', !canCombine);
+      if (ptCombBtn) ptCombBtn.classList.toggle('hidden', !canCombine);
     }
 
     function grantRewardItemForPuzzle(obj) {
@@ -6696,7 +6824,7 @@ import { validateRaC } from '../engine/validator.js';
     // -------------------------------------------------------------
     // LOCALSTORAGE AUTO-SAVE / RESTORE (rac_studio_autosave_v2)
     // -------------------------------------------------------------
-    const STUDIO_AUTOSAVE_KEY = 'rac_studio_autosave_v3';
+    const STUDIO_AUTOSAVE_KEY = 'rac_studio_autosave_v4';
     let autosaveTimerId = null;
 
     function saveStudioAutosave() {
@@ -6820,7 +6948,7 @@ import { validateRaC } from '../engine/validator.js';
       setCameraMode, setOntologyGraphFilter, setViewLayout, shareThemeUrl,
       solveAll30Puzzles, solveCurrentRoomAll, startBlankTheme, switchRoom,
       tapDirectorBarterButton, toggleLeftSidebar, toggleOrbitAllFloors,
-      toggleRightSidebar, toggleSpecimenWeight, toggleStudioMode,
+      toggleRightSidebar, toggleSpecimenWeight, toggleStudioMode, getStudioMode: () => studioMode, toggleCraftBuilderMode: () => craftBuilder?.toggle(), selectCraftSlot: (slot) => craftBuilder?.selectSlot(slot), deleteObjectById,
       triggerDirectorBlackout, triggerNextPuzzleOrRoom, turnDial, turnSteamValve,
       updateCurrentSpaceProps, updateDirectorPersonaProps, updateSelectedObjectProps
     });
