@@ -19,6 +19,12 @@
         [4.0, 3.0],
         [0.0, 3.0]
       ],
+      "materials": {
+        "wall": "concrete",
+        "floor": "concrete",
+        "wallTint": "#7a7e7c",
+        "floorTint": "#5a5e5c"
+      },
       "props": [
         {
           "id": "desk-01",
@@ -39,6 +45,12 @@
         [4.0, 3.0],
         [0.0, 3.0]
       ],
+      "materials": {
+        "wall": "tile",
+        "floor": "surgicalSteel",
+        "wallTint": "#b8c8c4",
+        "floorTint": "#7c8c8a"
+      },
       "floorHole": {
         "pos": [2.0, 1.5],
         "size": [1.0, 1.0]
@@ -135,6 +147,20 @@
   "director": {
     "timeLimitMinutes": 60,
     "tensionLevel": 1,
-    "panicThresholdFailures": 2
+    "panicThresholdFailures": 2,
+    "persona": {
+      "name": "404호 야간 감시자",
+      "role": "폐쇄병동 관제사",
+      "tone": "낮고 건조한 어조"
+    },
+    "rules": [
+      {
+        "id": "rule-stall-cw",
+        "trigger": { "kind": "stallSeconds", "threshold": 90 },
+        "action": "whisper",
+        "cooldownSeconds": 60,
+        "payload": { "text": "책상 위 시계의 바늘 각도를 다시 확인해 보세요." }
+      }
+    ]
   }
 }

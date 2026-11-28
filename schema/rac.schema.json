@@ -60,6 +60,31 @@
               "floorTint": { "type": "string" }
             }
           },
+          "lights": {
+            "type": "array",
+            "description": "공간 내에 배치된 물리 조명 광원 (천장/벽/작업등)",
+            "items": {
+              "type": "object",
+              "required": ["id", "kind", "pos", "color", "intensity", "distance"],
+              "properties": {
+                "id": { "type": "string" },
+                "kind": { "type": "string", "enum": ["fluorescent", "surgical", "emergency", "lamp", "candle"] },
+                "pos": {
+                  "type": "array",
+                  "items": { "type": "number" },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "color": {
+                  "type": "string",
+                  "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                },
+                "intensity": { "type": "number" },
+                "distance": { "type": "number" },
+                "flicker": { "type": "boolean", "default": false }
+              }
+            }
+          },
           "props": {
             "type": "array",
             "description": "공간 내에 배치된 물리적 가구, 기물 및 단서 담지체(Prop)",
@@ -70,6 +95,8 @@
                 "id": { "type": "string" },
                 "name": { "type": "string" },
                 "model": { "type": "string" },
+                "modelUrl": { "type": "string", "description": "외부 또는 로컬 3D 에셋(.glb) URL/경로 (선택)" },
+                "modelPreset": { "type": "string", "description": "내장 지오메트리 프리셋 키" },
                 "type": { "type": "string" },
                 "targetClueId": { "type": "string", "description": "이 소품이 운반하는 논리 단서 ID" },
                 "targetObjId": { "type": "string", "description": "이 소품이 얹혀있는 부모 가구 기물 ID" },
@@ -149,7 +176,19 @@
               "id": { "type": "string" },
               "propRef": { "type": "string" },
               "payload": { "type": "string" },
-              "carrierType": { "type": "string", "enum": ["Text", "PhysicalState", "Trace", "AudioVisual"], "default": "Text" }
+              "carrierType": { "type": "string", "enum": ["Text", "PhysicalState", "Trace", "AudioVisual"], "default": "Text" },
+              "visualSpec": {
+                "type": "object",
+                "description": "선언적 단서 2D/3D 시각화 명세 (4종 템플릿)",
+                "required": ["template", "title", "lines"],
+                "properties": {
+                  "template": { "type": "string", "enum": ["document", "blueprint", "crt", "photo"] },
+                  "title": { "type": "string" },
+                  "lines": { "type": "array", "items": { "type": "string" } },
+                  "highlight": { "type": "string" },
+                  "badge": { "type": "string" }
+                }
+              }
             }
           }
         },
@@ -175,6 +214,14 @@
               "id": { "type": "string" },
               "interfaceType": { "type": "string", "enum": ["MechanicalLock", "DirectionalLock", "ElectronicKeypad", "SensorSwitch", "ItemSocket", "PhysicalMechanism"], "default": "MechanicalLock" },
               "condition": { "type": "string" },
+              "requiresSolvedId": {
+                "type": ["string", "null"],
+                "description": "선행 해결되어야 하는 게이트 ID (비선형 순차 서사 DAG 결속)"
+              },
+              "storyBeat": {
+                "type": "string",
+                "description": "게이트 해금 시 격발되는 내러티브/스토리 비트"
+              },
               "requiredItemId": { "type": "string", "description": "해금에 필요한 소지 아이템 ID (선택)" },
               "mechanism": {
                 "type": "object",
@@ -254,7 +301,8 @@
           "properties": {
             "name": { "type": "string" },
             "role": { "type": "string" },
-            "tone": { "type": "string" }
+            "tone": { "type": "string" },
+            "barterPrompt": { "type": "string", "description": "힌트 거래 시 연출자 협상/교환 프롬프트" }
           }
         },
         "rules": {

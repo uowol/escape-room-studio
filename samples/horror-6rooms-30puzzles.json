@@ -13,7 +13,24 @@
       "layer": 0,
       "floorHeight": 0.0,
       "wallHeight": 2.6,
-      "polygon": [[0.0, 0.0], [4.0, 0.0], [4.0, 3.0], [0.0, 3.0]],
+      "polygon": [[0.0, 0.0], [6.0, 0.0], [6.0, 5.0], [0.0, 5.0]],
+      "materials": {
+        "wall": "plaster",
+        "floor": "tile",
+        "wallTint": "#c8c2b4",
+        "floorTint": "#8a867c"
+      },
+      "lights": [
+        {
+          "id": "light-r1-fl1",
+          "kind": "fluorescent",
+          "pos": [3.0, 2.4, 2.5],
+          "color": "#c8dcff",
+          "intensity": 1.2,
+          "distance": 6.5,
+          "flicker": true
+        }
+      ],
       "props": [
         {
           "id": "prop-r1-01",
@@ -126,6 +143,23 @@
       "floorHeight": 0.0,
       "wallHeight": 2.6,
       "polygon": [[0.0, 0.0], [4.5, 0.0], [4.5, 3.5], [0.0, 3.5]],
+      "materials": {
+        "wall": "concrete",
+        "floor": "concrete",
+        "wallTint": "#7a7e7c",
+        "floorTint": "#5a5e5c"
+      },
+      "lights": [
+        {
+          "id": "light-r2-lamp1",
+          "kind": "lamp",
+          "pos": [2.2, 2.3, 1.8],
+          "color": "#ffaa44",
+          "intensity": 1.0,
+          "distance": 5.0,
+          "flicker": false
+        }
+      ],
       "props": [
         {
           "id": "prop-r2-06",
@@ -154,7 +188,7 @@
             "data": { "pointingVector": "SOUTH-WEST" },
             "description": "유화 액자 속 인물의 검지 손가락이 남서쪽 사물함을 뚜렷하게 가리키고 있다."
           },
-          "transform": { "pos": [4.8, 1.7, 0.05], "rot": [0, 0, 0] }
+          "transform": { "pos": [3.8, 1.7, 0.05], "rot": [0, 0, 0] }
         },
         {
           "id": "prop-r2-07",
@@ -222,6 +256,23 @@
       "floorHeight": -2.8,
       "wallHeight": 2.8,
       "polygon": [[0.0, 0.0], [5.0, 0.0], [5.0, 3.5], [0.0, 3.5]],
+      "materials": {
+        "wall": "concrete",
+        "floor": "concrete",
+        "wallTint": "#585c58",
+        "floorTint": "#404440"
+      },
+      "lights": [
+        {
+          "id": "light-r3-em1",
+          "kind": "emergency",
+          "pos": [2.5, -0.4, 1.75],
+          "color": "#ff3322",
+          "intensity": 0.7,
+          "distance": 5.5,
+          "flicker": true
+        }
+      ],
       "props": [
         {
           "id": "prop-r3-11",
@@ -305,6 +356,23 @@
       "floorHeight": 2.6,
       "wallHeight": 2.6,
       "polygon": [[0.0, 0.0], [5.0, 0.0], [5.0, 4.0], [0.0, 4.0]],
+      "materials": {
+        "wall": "tile",
+        "floor": "surgicalSteel",
+        "wallTint": "#b8c8c4",
+        "floorTint": "#7c8c8a"
+      },
+      "lights": [
+        {
+          "id": "light-r4-surg1",
+          "kind": "surgical",
+          "pos": [2.6, 4.8, 1.8],
+          "color": "#d6f0ff",
+          "intensity": 2.2,
+          "distance": 6.5,
+          "flicker": false
+        }
+      ],
       "floorHole": {
         "pos": [1.0, 3.0],
         "size": [1.0, 1.0]
@@ -392,6 +460,23 @@
       "floorHeight": 2.6,
       "wallHeight": 2.6,
       "polygon": [[0.0, 0.0], [4.5, 0.0], [4.5, 4.0], [0.0, 4.0]],
+      "materials": {
+        "wall": "wood",
+        "floor": "wood",
+        "wallTint": "#6e4e37",
+        "floorTint": "#4c3525"
+      },
+      "lights": [
+        {
+          "id": "light-r5-lamp1",
+          "kind": "lamp",
+          "pos": [2.2, 4.8, 2.0],
+          "color": "#ffdfa0",
+          "intensity": 1.4,
+          "distance": 5.5,
+          "flicker": false
+        }
+      ],
       "props": [
         {
           "id": "prop-r5-21",
@@ -490,6 +575,23 @@
       "floorHeight": -5.6,
       "wallHeight": 3.0,
       "polygon": [[0.0, 0.0], [6.0, 0.0], [6.0, 4.0], [0.0, 4.0]],
+      "materials": {
+        "wall": "rustedMetal",
+        "floor": "rustedMetal",
+        "wallTint": "#6a4232",
+        "floorTint": "#3e322e"
+      },
+      "lights": [
+        {
+          "id": "light-r6-em1",
+          "kind": "emergency",
+          "pos": [3.0, -2.9, 2.0],
+          "color": "#ff4d1a",
+          "intensity": 1.8,
+          "distance": 7.0,
+          "flicker": true
+        }
+      ],
       "props": [
         {
           "id": "prop-r6-26",
@@ -695,7 +797,7 @@
     "containers": [
       { "id": "cont-01", "name": "접수대 하단 서랍", "isOpen": false, "containsClueId": "clue-02" },
       { "id": "cont-02", "name": "차트 철제 캐비닛", "isOpen": false, "containsClueId": "clue-03" },
-      { "id": "cont-03", "name": "간호사 사물함", "isOpen": false, "containsClueId": "clue-04" },
+      { "id": "cont-03", "name": "간호사 사물함", "isOpen": false, "containsClueId": "clue-04", "containsItemId": "item-nurse-key" },
       { "id": "cont-04", "name": "전화기 비밀 단자함", "isOpen": false, "containsClueId": "clue-05" },
 
       { "id": "cont-05", "name": "시계 추 은닉함", "isOpen": false, "containsClueId": "clue-07" },
@@ -711,26 +813,26 @@
       { "id": "cont-13", "name": "5번 시신 냉동고 트레이", "isOpen": false, "containsClueId": "clue-17" },
       { "id": "cont-14", "name": "부검 메스 보관함", "isOpen": false, "containsClueId": "clue-18" },
       { "id": "cont-15", "name": "X-Ray 필름 케이스", "isOpen": false, "containsClueId": "clue-19" },
-      { "id": "cont-16", "name": "표본 진열장 하단 금고", "isOpen": false, "containsClueId": "clue-20" },
+      { "id": "cont-16", "name": "표본 진열장 하단 금고", "isOpen": false, "containsClueId": "clue-20", "containsItemId": "item-battery" },
 
-      { "id": "cont-17", "name": "병원장 강철 금고 내부", "isOpen": false, "containsClueId": "clue-22" },
+      { "id": "cont-17", "name": "병원장 강철 금고 내부", "isOpen": false, "containsClueId": "clue-22", "containsItemId": "item-uv-empty" },
       { "id": "cont-18", "name": "초상화 후면 비밀 벽감", "isOpen": false, "containsClueId": "clue-23" },
       { "id": "cont-19", "name": "혈청 냉장 보관함", "isOpen": false, "containsClueId": "clue-24" },
       { "id": "cont-20", "name": "체스판 하단 비밀 공간", "isOpen": false, "containsClueId": "clue-25" },
 
-      { "id": "cont-21", "name": "증기 밸브 제어함", "isOpen": false, "containsClueId": "clue-27" },
-      { "id": "cont-22", "name": "냉각수 보조 탱크함", "isOpen": false, "containsClueId": "clue-28" },
+      { "id": "cont-21", "name": "증기 밸브 제어함", "isOpen": false, "containsClueId": "clue-27", "containsItemId": "item-master-card-left" },
+      { "id": "cont-22", "name": "냉각수 보조 탱크함", "isOpen": false, "containsClueId": "clue-28", "containsItemId": "item-master-card-right" },
       { "id": "cont-23", "name": "보안 터미널 코어함", "isOpen": false, "containsClueId": "clue-29" },
       { "id": "cont-24", "name": "발전기 마스터 릴레이함", "isOpen": false, "containsClueId": "clue-30" }
     ],
     "gates": [
       { "id": "gate-01", "interfaceType": "MechanicalLock", "condition": "Value == '1420'", "unlocks": "cont-01", "isOpen": false },
       { "id": "gate-02", "interfaceType": "ElectronicKeypad", "condition": "Value == '4132'", "unlocks": "cont-02", "isOpen": false },
-      { "id": "gate-03", "interfaceType": "DirectionalLock", "condition": "Value == 'URDL'", "unlocks": "cont-03", "isOpen": false },
+      { "id": "gate-03", "interfaceType": "PhysicalMechanism", "condition": "Value == 'URDL'", "mechanism": { "kind": "rotary-dial", "params": { "slots": 4, "directions": ["U", "R", "D", "L"] }, "targetState": ["U", "R", "D", "L"], "tolerance": 0 }, "unlocks": "cont-03", "isOpen": false },
       { "id": "gate-04", "interfaceType": "MechanicalLock", "condition": "Value == '0404'", "unlocks": "cont-04", "isOpen": false },
       { "id": "gate-05", "interfaceType": "ElectronicKeypad", "condition": "Value == '1590'", "unlocks": "door-r1-r2", "isOpen": false },
 
-      { "id": "gate-06", "interfaceType": "MechanicalLock", "condition": "Value == '0903'", "unlocks": "cont-05", "isOpen": false },
+      { "id": "gate-06", "interfaceType": "PhysicalMechanism", "condition": "Value == '0903'", "mechanism": { "kind": "clock-hands", "params": { "dialType": "12h" }, "targetState": { "hour": 3, "minute": 0 }, "tolerance": 0 }, "unlocks": "cont-05", "isOpen": false },
       { "id": "gate-07", "interfaceType": "MechanicalLock", "condition": "Value == '2381'", "unlocks": "cont-06", "isOpen": false },
       { "id": "gate-08", "interfaceType": "ElectronicKeypad", "condition": "Value == '9677'", "unlocks": "cont-07", "isOpen": false },
       { "id": "gate-09", "interfaceType": "MechanicalLock", "condition": "Value == 'MADK'", "unlocks": "cont-08", "isOpen": false },
@@ -745,25 +847,79 @@
       { "id": "gate-16", "interfaceType": "MechanicalLock", "condition": "Value == '1592'", "unlocks": "cont-13", "isOpen": false },
       { "id": "gate-17", "interfaceType": "ElectronicKeypad", "condition": "Value == '1540'", "unlocks": "cont-14", "isOpen": false },
       { "id": "gate-18", "interfaceType": "MechanicalLock", "condition": "Value == '7249'", "unlocks": "cont-15", "isOpen": false },
-      { "id": "gate-19", "interfaceType": "SensorSwitch", "condition": "Value == '1780'", "unlocks": "cont-16", "isOpen": false },
+      { "id": "gate-19", "interfaceType": "PhysicalMechanism", "condition": "Value == '1780'", "mechanism": { "kind": "balance-scale", "params": { "unit": "g", "maxWeight": 2500 }, "targetState": 1780, "tolerance": 10 }, "unlocks": "cont-16", "isOpen": false },
       { "id": "gate-20", "interfaceType": "ElectronicKeypad", "condition": "Value == '2068'", "unlocks": "door-r4-r5", "isOpen": false },
 
       { "id": "gate-21", "interfaceType": "ElectronicKeypad", "condition": "Value == '5433'", "unlocks": "cont-17", "isOpen": false },
-      { "id": "gate-22", "interfaceType": "MechanicalLock", "condition": "Value == 'MIND'", "unlocks": "cont-18", "isOpen": false },
+      { "id": "gate-22", "interfaceType": "PhysicalMechanism", "condition": "Value == 'MIND'", "mechanism": { "kind": "uv-scan", "params": { "targetPropId": "prop-r5-22", "wavelengthNm": 365 }, "targetState": { "revealed": true, "word": "MIND" }, "tolerance": 0 }, "unlocks": "cont-18", "isOpen": false },
       { "id": "gate-23", "interfaceType": "ElectronicKeypad", "condition": "Value == '3142'", "unlocks": "cont-19", "isOpen": false },
       { "id": "gate-24", "interfaceType": "DirectionalLock", "condition": "Value == 'URUL'", "unlocks": "cont-20", "isOpen": false },
       { "id": "gate-25", "interfaceType": "ElectronicKeypad", "condition": "Value == '0602'", "unlocks": "door-r5-r6", "isOpen": false },
 
-      { "id": "gate-26", "interfaceType": "ElectronicKeypad", "condition": "Value == '0800'", "unlocks": "cont-21", "isOpen": false },
+      { "id": "gate-26", "interfaceType": "PhysicalMechanism", "condition": "Value == '0800'", "mechanism": { "kind": "pressure-valve", "params": { "unit": "PSI", "initial": 1250, "max": 1500 }, "targetState": 800, "tolerance": 15 }, "unlocks": "cont-21", "isOpen": false },
       { "id": "gate-27", "interfaceType": "DirectionalLock", "condition": "Value == 'DRDL'", "unlocks": "cont-22", "isOpen": false },
       { "id": "gate-28", "interfaceType": "ElectronicKeypad", "condition": "Value == '8912'", "unlocks": "cont-23", "isOpen": false },
       { "id": "gate-29", "interfaceType": "MechanicalLock", "condition": "Value == '1342'", "unlocks": "cont-24", "isOpen": false },
       { "id": "gate-30", "interfaceType": "ElectronicKeypad", "condition": "Value == '4040'", "unlocks": "door-final-exit", "isOpen": false }
+    ],
+    "items": [
+      { "id": "item-nurse-key", "name": "원무과 비상 열쇠", "description": "간호사 사물함에서 발견한 낡은 황동 비상 열쇠", "tags": ["key"], "consumable": true, "visual": "key" },
+      { "id": "item-battery", "name": "비상용 AA 건전지", "description": "영안실 표본 금고에 보관되어 있던 예비 건전지", "tags": ["power"], "consumable": true, "visual": "battery" },
+      { "id": "item-uv-empty", "name": "방전된 UV 손전등", "description": "건전지가 빠져 작동하지 않는 자외선 손전등", "tags": ["tool", "uv"], "consumable": true, "visual": "flashlight" },
+      { "id": "item-uv-flashlight", "name": "작동하는 UV 손전등", "description": "365nm 자외선을 투사해 비가시 형광 흔적을 드러내는 손전등", "tags": ["tool", "uv"], "consumable": false, "visual": "uv-flashlight" },
+      { "id": "item-master-card-left", "name": "반파된 마스터키 카드 (좌)", "description": "좌측 절반에 숫자 [89]가 인쇄된 보안 IC 카드 조각", "tags": ["key", "part"], "consumable": true, "visual": "card-part" },
+      { "id": "item-master-card-right", "name": "반파된 마스터키 카드 (우)", "description": "우측 절반에 숫자 [12]가 인쇄된 보안 IC 카드 조각", "tags": ["key", "part"], "consumable": true, "visual": "card-part" },
+      { "id": "item-master-card", "name": "복원된 마스터키 보안 카드", "description": "양쪽 조각을 결합해 복원한 지하 소각로 단말기용 마스터키", "tags": ["key"], "consumable": false, "visual": "cardkey" }
+    ],
+    "interactions": [
+      { "id": "ix-unlock-r1-door", "itemId": "item-nurse-key", "targetId": "gate-05", "effect": "unlock", "resultId": "gate-05", "message": "원무과 비상 열쇠로 중앙 복도 차단 철문의 보조 잠금을 해제했습니다." },
+      { "id": "ix-combine-uv", "itemId": "item-battery", "targetId": "item-uv-empty", "effect": "combine", "resultId": "item-uv-flashlight", "message": "건전지를 장착하자 UV 자외선 손전등이 보랏빛으로 점등됩니다." },
+      { "id": "ix-uv-portrait", "itemId": "item-uv-flashlight", "targetId": "prop-r5-22", "effect": "revealClue", "resultId": "clue-22", "message": "초상화 눈동자에 UV 빛을 비추자 형광 영문 [M-I-N-D]가 선명하게 떠오릅니다." },
+      { "id": "ix-combine-master", "itemId": "item-master-card-left", "targetId": "item-master-card-right", "effect": "combine", "resultId": "item-master-card", "message": "두 조각의 보안 카드를 결합해 마스터키 [8912]를 복원했습니다." },
+      { "id": "ix-activate-terminal", "itemId": "item-master-card", "targetId": "prop-r6-28", "effect": "activate", "resultId": "prop-r6-28", "message": "복원된 마스터키 카드를 단말기 슬롯에 삽입하자 전원이 인가됩니다." }
     ]
   },
   "director": {
     "timeLimitMinutes": 60,
     "tensionLevel": 1,
-    "panicThresholdFailures": 2
+    "panicThresholdFailures": 2,
+    "persona": {
+      "name": "야간 당직 수간호사",
+      "role": "폐쇄병동 404호 감시자",
+      "tone": "차분하지만 서늘하고 집요한 반말·존댓말 혼용"
+    },
+    "rules": [
+      {
+        "id": "rule-stall-r1",
+        "trigger": { "kind": "stallSeconds", "threshold": 90, "spaceId": "space-r1" },
+        "action": "whisper",
+        "cooldownSeconds": 60,
+        "payload": { "text": "접수대 위 당직표와 머그잔 손잡이 방향을 다시 살펴보시죠..." }
+      },
+      {
+        "id": "rule-fail-blackout",
+        "trigger": { "kind": "consecutiveFailures", "threshold": 2 },
+        "action": "blackout",
+        "cooldownSeconds": 45,
+        "payload": { "durationSeconds": 8, "text": "틀렸어요. 불이 꺼지기 전에 정신 차리세요." }
+      },
+      {
+        "id": "rule-enter-morgue",
+        "trigger": { "kind": "roomEntered", "spaceId": "space-r4" },
+        "action": "whisper",
+        "cooldownSeconds": 120,
+        "payload": { "text": "2층 영안실은 차갑죠. 5번 냉동고 안쪽은 아직 식지 않았을 텐데요." }
+      },
+      {
+        "id": "rule-help-barter",
+        "trigger": { "kind": "helpRequested" },
+        "action": "barter",
+        "cooldownSeconds": 30,
+        "payload": {
+          "challenge": "힌트를 원하시면 지금 서 있는 방의 기물 중 혈흔이 묻은 곳을 먼저 확인하세요.",
+          "rewardHint": "각 방의 5번째 자물쇠가 다음 공간으로 가는 문을 엽니다."
+        }
+      }
+    ]
   }
 }

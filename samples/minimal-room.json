@@ -19,6 +19,12 @@
         [4.0, 3.0],
         [0.0, 3.0]
       ],
+      "materials": {
+        "wall": "plaster",
+        "floor": "tile",
+        "wallTint": "#c8c2b4",
+        "floorTint": "#8a867c"
+      },
       "props": [
         {
           "id": "desk-01",

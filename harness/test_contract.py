@@ -24,10 +24,17 @@ def run_contract_harness():
     with open(sample_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # 3. 필수 루트 키 검증
+    # 3. 필수 루트 키 및 v2 스키마 확장 필드 검증
     for key in schema.get("required", []):
         assert key in data, f"루트 필수 키 누락: {key}"
-    print(f"  ✅ 루트 필수 키 검증 완료 ({schema['required']})")
+    prop_props = schema["properties"]["spaces"]["items"]["properties"]["props"]["items"]["properties"]
+    assert "modelUrl" in prop_props and prop_props["modelUrl"].get("type") == "string", "스키마 props[].modelUrl(string) 누락"
+    space_props = schema["properties"]["spaces"]["items"]["properties"]
+    assert "lights" in space_props, "스키마 spaces[].lights 누락"
+    light_props = space_props["lights"]["items"]["properties"]
+    assert set(light_props.keys()) >= {"id", "kind", "pos", "color", "intensity", "distance", "flicker"}, "스키마 lights[] 속성 누락"
+    assert set(light_props["kind"]["enum"]) == {"fluorescent", "surgical", "emergency", "lamp", "candle"}, "스키마 lights[].kind enum 불일치"
+    print(f"  ✅ 루트 필수 키 및 v2 스키마(props[].modelUrl, spaces[].lights) 검증 완료 ({schema['required']})")
 
     # 4. 도메인 불변식 (Axiom Assertions)
     # 4-1. 공간(Space) 폴리곤 검증
@@ -74,18 +81,78 @@ def run_contract_harness():
         for g in full_data["logicGraph"]["gates"]:
             assert g["unlocks"] in (f_doors | f_conts), f"6방 테마 게이트 {g['id']} 고아 타겟 참조: {g['unlocks']}"
         
-        # 4-4. 소품(Prop) - 단서(Clue) 결속 및 기믹 온톨로지 무결성 검증
+        # 4-4. 소품(Prop) - 단서(Clue) 결속, 좌표 경계 및 기믹 온톨로지 무결성 검증
         all_props = {}
         for sp in full_data["spaces"]:
+            assert "materials" in sp and "wall" in sp["materials"] and "floor" in sp["materials"], f"공간 {sp['id']} materials(wall/floor) 누락"
+            xs = [pt[0] for pt in sp["polygon"]]
+            zs = [pt[1] for pt in sp["polygon"]]
+            min_x, max_x, min_z, max_z = min(xs), max(xs), min(zs), max(zs)
             for pr in sp.get("props", []):
                 all_props[pr["id"]] = pr
                 assert "transform" in pr and "pos" in pr["transform"], f"소품 {pr['id']} transform 누락"
+                px, _, pz = pr["transform"]["pos"]
+                assert min_x <= px <= max_x and min_z <= pz <= max_z, (
+                    f"소품 {pr['id']} 좌표 ({px}, {pz})가 공간 {sp['id']} 경계 ([{min_x}..{max_x}], [{min_z}..{max_z}]) 밖임"
+                )
                 if "gimmick" in pr:
                     assert "kind" in pr["gimmick"] and "description" in pr["gimmick"], f"소품 {pr['id']} gimmick 스키마 불완전"
         for c in full_data["logicGraph"]["clues"]:
             prop_ref = c.get("propRef")
             assert prop_ref in all_props, f"단서 {c['id']}가 존재하지 않는 소품 참조: {prop_ref}"
-        print(f"  ✅ 소품-단서 결속 및 기믹 온톨로지 무결성 검증 완료 (Props: {len(all_props)}개, Clues: {len(f_clues)}개)")
+        print(f"  ✅ 소품-단서 결속, 공간 경계 및 재질(materials) 무결성 검증 완료 (Props: {len(all_props)}개, Clues: {len(f_clues)}개)")
+
+        # 4-5. RaC v2 온톨로지 검증 (items/interactions 4원자, mechanism 5종, director.persona/rules)
+        f_items = {it["id"] for it in full_data["logicGraph"].get("items", [])}
+        f_ixs = full_data["logicGraph"].get("interactions", [])
+        assert len(f_items) >= 4, "6방 테마 items[] 정의 부족"
+        valid_effects = {"unlock", "revealClue", "activate", "combine"}
+        seen_effects = set()
+        for ix in f_ixs:
+            assert ix["itemId"] in f_items, f"상호작용 {ix['id']} 고아 itemId 참조: {ix['itemId']}"
+            assert ix["effect"] in valid_effects, f"상호작용 {ix['id']} 미허용 effect: {ix['effect']}"
+            seen_effects.add(ix["effect"])
+        assert seen_effects == valid_effects, f"상호작용 4원자 효과 누락: {valid_effects - seen_effects}"
+
+        mech_gates = {g["id"]: g.get("mechanism") for g in full_data["logicGraph"]["gates"] if g.get("mechanism")}
+        for req_gid in ("gate-03", "gate-06", "gate-19", "gate-22", "gate-26"):
+            assert req_gid in mech_gates and "kind" in mech_gates[req_gid] and "targetState" in mech_gates[req_gid], (
+                f"게이트 {req_gid} mechanism 계약 누락"
+            )
+
+        f_dir = full_data.get("director", {})
+        assert "persona" in f_dir and "name" in f_dir["persona"], "director.persona 누락"
+        assert isinstance(f_dir.get("rules"), list) and len(f_dir["rules"]) >= 1, "director.rules 누락"
+        print(f"  ✅ RaC v2 온톨로지(items {len(f_items)}개 · 4원자 interactions · mechanism 5종 · director persona/rules) 검증 완료")
+
+        # 4-6. 조명(Light) 스키마, 온톨로지(kind) 및 3D 공간 경계 무결성 검증
+        valid_light_kinds = {"fluorescent", "surgical", "emergency", "lamp", "candle"}
+        all_lights = {}
+        for sp in full_data["spaces"]:
+            assert "lights" in sp and len(sp["lights"]) >= 1, f"공간 {sp['id']} lights[] 부재"
+            xs = [pt[0] for pt in sp["polygon"]]
+            zs = [pt[1] for pt in sp["polygon"]]
+            min_x, max_x, min_z, max_z = min(xs), max(xs), min(zs), max(zs)
+            floor_y = sp.get("floorHeight", 0.0)
+            ceil_y = floor_y + sp["wallHeight"]
+            for lt in sp["lights"]:
+                lid = lt["id"]
+                assert lid not in all_lights, f"중복 조명 ID: {lid}"
+                all_lights[lid] = lt
+                assert lt["kind"] in valid_light_kinds, f"조명 {lid} 미허용 kind: {lt['kind']}"
+                assert len(lt["pos"]) == 3, f"조명 {lid} pos 3차원 아님"
+                lx, ly, lz = lt["pos"]
+                assert min_x <= lx <= max_x and min_z <= lz <= max_z, (
+                    f"조명 {lid} 좌표 ({lx}, {lz})가 공간 {sp['id']} XZ 경계 ([{min_x}..{max_x}], [{min_z}..{max_z}]) 밖임"
+                )
+                assert floor_y <= ly <= ceil_y, (
+                    f"조명 {lid} Y 좌표 ({ly})가 공간 {sp['id']} Y 경계 ([{floor_y}..{ceil_y}]) 밖임"
+                )
+                assert lt["color"].startswith("#") and len(lt["color"]) in (4, 7), f"조명 {lid} 색상 포맷 오류: {lt['color']}"
+                assert isinstance(lt["intensity"], (int, float)) and lt["intensity"] > 0, f"조명 {lid} intensity 비양수: {lt['intensity']}"
+                assert isinstance(lt["distance"], (int, float)) and lt["distance"] > 0, f"조명 {lid} distance 비양수: {lt['distance']}"
+                assert isinstance(lt.get("flicker", False), bool), f"조명 {lid} flicker 타입 오류"
+        print(f"  ✅ 조명(lights) 스키마·5대 온톨로지·3D 바운딩 볼륨 무결성 검증 완료 (Lights: {len(all_lights)}개)")
         print("  ✅ 6방 30문제 공포 테마(horror-6rooms-30puzzles.json) 데이터 계약 및 무결성 검증 완료")
 
     print("\n🎉 [RaC Harness PASS] 1단계 데이터 계약 및 닫힌 세계 불변식 100% 통과 (결함 0개)")
